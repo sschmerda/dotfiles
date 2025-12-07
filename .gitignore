@@ -1,0 +1,83 @@
+# ---------------------------
+# macOS system files
+# ---------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.VolumeIcon.icns
+
+# macOS: folder attributes
+*.localized
+
+# ---------------------------
+# Linux system / temp files
+# ---------------------------
+*~
+.cache/
+.thumbs/
+.Trash-*
+.nfs*
+
+# ---------------------------
+# Editor temporary files
+# ---------------------------
+*.swp
+*.swo
+*.swx
+*.tmp
+
+# Vim/Neovim backup files
+*.un~
+*.bk
+
+# VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/keybindings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# JetBrains
+.idea/
+
+# ---------------------------
+# Shell history files
+# (should NOT be versioned)
+# ---------------------------
+.zsh_history
+.bash_history
+.fish_history
+
+# ---------------------------
+# SSH / GPG (secrets)
+# NEVER track these
+# ---------------------------
+.ssh/
+.gnupg/
+
+# ---------------------------
+# Python cache
+# ---------------------------
+__pycache__/
+*.pyc
+
+# ---------------------------
+# Brew / Linux package manager caches
+# ---------------------------
+.brewfile.lock.json
+.var/
+
+# ---------------------------
+# Node / npm / yarn
+# ---------------------------
+node_modules/
+
+# ---------------------------
+# Logs
+# ---------------------------
+*.log

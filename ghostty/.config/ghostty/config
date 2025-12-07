@@ -1,0 +1,30 @@
+### general ###
+mouse-hide-while-typing = true
+
+### theme ###
+#theme = "Catppuccin Frappe"
+theme = "Purple Rain"
+#background = #000000
+background-opacity = 0.9
+
+### font ###
+#font-family = "Hack Regular Nerd Font Complete Mono"
+font-family = "Hack Nerd Font Mono"
+font-size = 16
+font-feature = -liga
+
+### window ###
+window-decoration = false
+window-padding-balance = true
+window-padding-x = 0,0
+window-padding-y = 0,0
+window-padding-color = extend
+
+### cells ###
+adjust-cell-height = 5
+cursor-style = block
+cursor-style = block
+
+### macos ###
+macos-titlebar-style = hidden
+window-step-resize = false

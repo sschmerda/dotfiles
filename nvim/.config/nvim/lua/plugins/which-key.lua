@@ -1,0 +1,11 @@
+-- return {
+--   "folke/which-key.nvim",
+--   opts = {
+--     defaults = {
+--       ["<leader>m"] = { name = "+custom" },
+--       ["<leader>mq"] = { name = "+quarto" },
+--       ["<leader>mt"] = { name = "+t" },
+--     },
+--   },
+-- }
+return {}
