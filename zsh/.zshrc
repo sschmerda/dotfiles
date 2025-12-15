@@ -131,7 +131,7 @@ export QUARTO_PYTHON=$(which jupyter)
 
 
 ################################################################################
-# individual app config
+# individual app config based on operating system
 ################################################################################
 
 if [[ "$OSTYPE" == darwin* ]] && [[ -f "$HOME/.config/zsh/macos.zsh" ]]; then
