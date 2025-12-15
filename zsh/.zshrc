@@ -122,6 +122,7 @@ unset __conda_setup
 # <<< conda initialize <<<
 
 # fzf
+source <(fzf --zsh)
 export PATH="$PATH:$HOME/.local/bin"
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
