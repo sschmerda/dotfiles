@@ -137,11 +137,15 @@ export QUARTO_PYTHON=$(which jupyter)
 
 
 ################################################################################
-# individual app config based on operating system
+# individual app config based on operating system or containerization
 ################################################################################
 
 if [[ "$OSTYPE" == darwin* ]] && [[ -f "$HOME/.config/zsh/macos.zsh" ]]; then
     source "$HOME/.config/zsh/macos.zsh"
 elif [[ "$OSTYPE" == linux* ]] && [[ -f "$HOME/.config/zsh/linux.zsh" ]]; then
     source "$HOME/.config/zsh/linux.zsh"
+fi
+
+if [ -f /.dockerenv ] || [ -f /run/.containerenv ]; then
+  source "$HOME/.config/zsh/container.zsh"
 fi
