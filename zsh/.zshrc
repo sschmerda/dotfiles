@@ -8,7 +8,7 @@
 
 # prevent error message at start-up of dockercontainer caused by consoles stdout
 if [[ -f /.dockerenv ]]; then
-  typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet
+  typeset -g POWERLEVEL9K_INSTANT_PROMPT=off
 fi
 
 # Enable Powerlevel10k instant prompt
