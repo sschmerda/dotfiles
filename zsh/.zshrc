@@ -6,6 +6,11 @@
 # zsh + oh-my-zsh + powerlevel10k
 ################################################################################
 
+# prevent error message at start-up of dockercontainer caused by consoles stdout
+if [[ -f /.dockerenv ]]; then
+  typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet
+fi
+
 # Enable Powerlevel10k instant prompt
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
