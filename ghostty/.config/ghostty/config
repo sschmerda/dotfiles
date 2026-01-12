@@ -25,6 +25,9 @@ adjust-cell-height = 5
 cursor-style = block
 cursor-style = block
 
+### mouse ###
+mouse-hide-while-typing = true
+
 ### macos ###
 macos-titlebar-style = hidden
 window-step-resize = false
