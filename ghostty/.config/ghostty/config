@@ -31,3 +31,4 @@ mouse-hide-while-typing = true
 ### macos ###
 macos-titlebar-style = hidden
 window-step-resize = false
+macos-option-as-alt = true
