@@ -13,7 +13,7 @@ stow -t ~ nvim
 All confgs:
 
 ```bash
-stow -t ~ .
+stow -t ~ */
 ```
 
 ## Programs to install
