@@ -6,5 +6,11 @@
 # individual app config
 ################################################################################
 
-# fd -> debian based systems need remap of fdfind to fd
-command -v fd >/dev/null || command -v fdfind >/dev/null && alias fd=fdfind
+# Linux-only: Debian/Ubuntu command remaps
+if [[ -r /etc/os-release ]]; then
+  . /etc/os-release
+  if [[ "${ID:-}" == "debian" || "${ID:-}" == "ubuntu" || "${ID_LIKE:-}" == *debian* ]]; then
+    command -v fd >/dev/null 2>&1 || { command -v fdfind >/dev/null 2>&1 && alias fd='fdfind'; }
+    command -v bat >/dev/null 2>&1 || { command -v batcat >/dev/null 2>&1 && alias bat='batcat'; }
+  fi
+fi
