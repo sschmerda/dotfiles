@@ -82,25 +82,33 @@ if command -v lsd >/dev/null 2>&1; then
   alias tree="lsd --tree"
 fi
 
-# fzf-powered directory change using fd
-if command -v fd >/dev/null 2>&1 && command -v fzf >/dev/null 2>&1; then
-  alias sd='cd && cd $(fd --type d\
-                          --hidden\
-                          --exclude Documents\
-                          --exclude Library\
-                          --exclude Pictures\
-                          --exclude .Trash\
-                          --exclude .vscode\
-                          --exclude .SpaceVim\
-                          --exclude .cargo\
-                          --exclude .emacs\
-                          --exclude .emacs.d\
-                          --exclude .rstudio-desktop\
-                          --exclude .Rproj.user\
-                          --exclude .git\
-                          --exclude .cache\
-                          --exclude .local\
-                        | fzf)'
+if command -v fzf >/dev/null 2>&1; then
+  if command -v fd >/dev/null 2>&1; then
+    _sd_fd_cmd='fd'
+  elif command -v fdfind >/dev/null 2>&1; then
+    _sd_fd_cmd='fdfind'
+  fi
+
+  if [[ -n "${_sd_fd_cmd:-}" ]]; then
+    alias sd="cd && cd \$($_sd_fd_cmd --type d \
+      --hidden \
+      --exclude Documents \
+      --exclude Library \
+      --exclude Pictures \
+      --exclude .Trash \
+      --exclude .vscode \
+      --exclude .SpaceVim \
+      --exclude .cargo \
+      --exclude .emacs \
+      --exclude .emacs.d \
+      --exclude .rstudio-desktop \
+      --exclude .Rproj.user \
+      --exclude .git \
+      --exclude .cache \
+      --exclude .local \
+      | fzf)"
+  fi
+  unset _sd_fd_cmd
 fi
 
 
