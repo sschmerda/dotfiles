@@ -52,6 +52,7 @@
 .zsh_history
 .bash_history
 .fish_history
+zsh/.config/zsh/local.zsh
 
 # ---------------------------
 # SSH / GPG (secrets)

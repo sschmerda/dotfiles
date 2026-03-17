@@ -1,0 +1,31 @@
+################################################################################
+# local zsh config template
+################################################################################
+
+# Copy this file to:
+#   ~/.config/zsh/local.zsh
+# and keep that real file untracked for machine-specific settings.
+
+################################################################################
+# general
+################################################################################
+
+################################################################################
+# examples of host-specific config
+################################################################################
+
+# Local Anaconda initialization (example only).
+# __conda_setup="$("$HOME/anaconda3/bin/conda" "shell.zsh" "hook" 2> /dev/null)"
+# if [ $? -eq 0 ]; then
+#     eval "$__conda_setup"
+# else
+#     if [ -f "$HOME/anaconda3/etc/profile.d/conda.sh" ]; then
+#         . "$HOME/anaconda3/etc/profile.d/conda.sh"
+#     else
+#         export PATH="$HOME/anaconda3/bin:$PATH"
+#     fi
+# fi
+# unset __conda_setup
+
+# Host-specific Quarto override (normally not needed in the devcontainer).
+# export QUARTO_PYTHON="$(which python)"

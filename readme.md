@@ -16,6 +16,32 @@ All confgs:
 stow -t ~ */
 ```
 
+## Zsh Config Layout
+
+The shared zsh config is split by scope:
+
+- `zsh/.zshrc`
+  - portable base config
+  - guards optional tools like `nvim`, `lsd`, `fd`, `fzf`, and `oh-my-zsh`
+- `zsh/.config/zsh/macos.zsh`
+  - macOS-specific config
+  - contains host OS settings such as `LANG` and macOS-only PATH additions
+- `zsh/.config/zsh/linux.zsh`
+  - Linux-specific config
+  - contains Debian/Ubuntu command remaps such as `fd -> fdfind` and `bat -> batcat`
+- `zsh/.config/zsh/container.zsh`
+  - container-only config
+  - contains container session fallbacks such as the `TERM` default
+- `zsh/.config/zsh/local.zsh`
+  - machine-local config
+  - sourced last
+  - intended for host-specific settings that should not live in the shared dotfiles repo
+  - ignored by Git
+- `zsh/.config/zsh/local.zsh.example`
+  - template for the local machine-specific file
+
+Use `local.zsh` for machine-specific shell integration such as local Anaconda setup or one-off PATH additions. Keep shared `.zshrc` portable and free of hardcoded host-specific runtime state.
+
 ## Programs to install
 
 ### General
