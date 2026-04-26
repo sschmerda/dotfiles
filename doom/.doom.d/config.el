@@ -100,10 +100,10 @@
 
 ;; show a vertical guide at 80 characters
 (setq-default display-fill-column-indicator-column 80
-              display-fill-column-indicator-character ?\s)
+              display-fill-column-indicator-character ?│)
 (set-face-attribute 'fill-column-indicator nil
                     :foreground "#3f444c"
-                    :background "#3f444c")
+                    :background nil)
 (global-display-fill-column-indicator-mode 1)
 
 ;; Toggle Olivetti buffer centering without hiding modelines or other windows.
