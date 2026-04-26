@@ -125,6 +125,10 @@ if [[ -f ~/.fzf.zsh ]]; then
   source ~/.fzf.zsh
 fi
 
+# doom emacs
+if [[ -d "$HOME/.emacs.d/bin" ]]; then
+  export PATH="$HOME/.emacs.d/bin:$PATH"
+fi
 
 ################################################################################
 # individual config / app config based on operating system
