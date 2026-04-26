@@ -33,6 +33,7 @@
 ;; available. You can either set `doom-theme' or manually load a theme with the
 ;; `load-theme' function. This is the default:
 (setq doom-theme 'doom-shades-of-purple)
+(setq doom-font (font-spec :family "Hack Nerd Font Mono" :size 16))
 
 ;; Match the VS Code Shades of Purple cursor color.
 (when (eq doom-theme 'doom-shades-of-purple)
