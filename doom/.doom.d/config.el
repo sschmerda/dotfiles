@@ -109,6 +109,12 @@
                     :background nil)
 (global-display-fill-column-indicator-mode 1)
 
+;; Open Treemacs from Doom's open menu.
+(map! :leader
+      (:prefix ("o" . "open")
+       :desc "Treemacs"
+       "t" #'+treemacs/toggle))
+
 ;; Toggle Olivetti buffer centering without hiding modelines or other windows.
 (use-package! olivetti
   :commands (olivetti-mode my/olivetti-toggle-all)
