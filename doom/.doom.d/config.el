@@ -163,7 +163,7 @@
       (my/olivetti-disable-all-buffers)))
   (map! :leader
         :desc "Center buffers"
-        "t C" #'my/olivetti-toggle-all)
+        "t o" #'my/olivetti-toggle-all)
   (add-hook 'olivetti-mode-hook #'my/olivetti-set-border-h)
   (add-hook 'buffer-list-update-hook #'my/olivetti-refresh-h)
   (add-hook 'window-state-change-functions #'my/olivetti-refresh-h)
