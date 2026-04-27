@@ -92,6 +92,9 @@
       ns-option-modifier 'meta
       ns-command-modifier 'super)
 
+;; Make Doom's Command +/- font zoom use smaller steps.
+(setq doom-font-increment 1)
+
 ;; frame customization
 (add-to-list 'default-frame-alist '(undecorated . t))
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
