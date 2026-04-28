@@ -124,6 +124,13 @@
                     :background nil)
 (global-display-fill-column-indicator-mode 1)
 
+;; Show full PDF pages by default so each page fits vertically without scrolling.
+(after! pdf-view
+  (setq-default pdf-view-display-size 'fit-height)
+  (add-hook! 'pdf-view-mode-hook
+    (defun my/pdf-fit-height-h ()
+      (pdf-view-fit-height-to-window))))
+
 ;; Open Treemacs from Doom's open menu.
 (map! :leader
       (:prefix ("o" . "open")
@@ -140,6 +147,7 @@
   (defun my/olivetti-buffer-eligible-p ()
     (and (not (minibufferp))
          (buffer-file-name)
+         (not (derived-mode-p 'pdf-view-mode))
          (not (string-prefix-p " " (buffer-name)))
          (not (string-prefix-p "*" (buffer-name)))))
   (defun my/olivetti-enable-buffer (buffer)
