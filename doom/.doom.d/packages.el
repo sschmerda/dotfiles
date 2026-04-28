@@ -55,3 +55,7 @@
 
 ;; Add a focused buffer-centering mode that keeps normal UI chrome visible.
 (package! olivetti)
+
+;; Add an online English thesaurus backend for Doom lookup synonyms.
+(package! powerthesaurus
+  :recipe (:host github :repo "doomelpa/powerthesaurus"))
