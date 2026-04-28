@@ -118,7 +118,7 @@
 (map! :leader
       (:prefix ("o" . "open")
        :desc "Treemacs"
-       "t" #'+treemacs/toggle))
+       "x" #'+treemacs/toggle))
 
 ;; Toggle Olivetti buffer centering without hiding modelines or other windows.
 (use-package! olivetti
