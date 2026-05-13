@@ -5,7 +5,7 @@ mouse-hide-while-typing = true
 #theme = "Catppuccin Frappe"
 theme = "Purple Rain"
 #background = #000000
-background-opacity = 0.9
+background-opacity = 1
 
 ### font ###
 #font-family = "Hack Regular Nerd Font Complete Mono"
