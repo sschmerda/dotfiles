@@ -130,6 +130,29 @@ if [[ -d "$HOME/.emacs.d/bin" ]]; then
   export PATH="$HOME/.emacs.d/bin:$PATH"
 fi
 
+# tmux
+_sd_tmux_update_context_icon() {
+  [[ -n "${TMUX:-}" ]] || return
+  command -v tmux >/dev/null 2>&1 || return
+
+  local active_pane icon
+  active_pane=$(tmux display-message -p '#{pane_id}' 2>/dev/null) || return
+  [[ "$active_pane" == "${TMUX_PANE:-}" ]] || return
+
+  if command -v git >/dev/null 2>&1 && git -C "$PWD" rev-parse --show-toplevel >/dev/null 2>&1; then
+    icon=""
+  else
+    icon=""
+  fi
+
+  tmux set-option -gq @shades_context_icon "$icon"
+}
+
+autoload -Uz add-zsh-hook
+add-zsh-hook chpwd _sd_tmux_update_context_icon
+add-zsh-hook precmd _sd_tmux_update_context_icon
+
+
 ################################################################################
 # individual config / app config based on operating system
 ################################################################################
