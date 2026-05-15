@@ -135,9 +135,9 @@ _sd_tmux_update_context_icon() {
   [[ -n "${TMUX:-}" ]] || return
   command -v tmux >/dev/null 2>&1 || return
 
-  local active_pane icon
-  active_pane=$(tmux display-message -p '#{pane_id}' 2>/dev/null) || return
-  [[ "$active_pane" == "${TMUX_PANE:-}" ]] || return
+  local pane_active icon
+  pane_active=$(tmux display-message -p -t "${TMUX_PANE:-}" '#{pane_active}' 2>/dev/null) || return
+  [[ "$pane_active" == "1" ]] || return
 
   if command -v git >/dev/null 2>&1 && git -C "$PWD" rev-parse --show-toplevel >/dev/null 2>&1; then
     icon=""
