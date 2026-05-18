@@ -4,6 +4,7 @@
 
 -- Allow terminal neovim to yank to host clipboard
 vim.opt.clipboard = "unnamedplus"
+vim.opt.smoothscroll = true
 
 local ok, osc52 = pcall(require, "vim.ui.clipboard.osc52")
 if ok then
