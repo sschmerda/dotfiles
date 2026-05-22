@@ -14,7 +14,11 @@ render() {
   clear
   printf 'image: %s\n' "$img" >"$log"
 
-  chafa "$img" 2>>"$log"
+  if [ -n "$TMUX" ]; then
+    chafa --format=kitty --passthrough=tmux "$img" 2>>"$log"
+  else
+    chafa "$img" 2>>"$log"
+  fi
 
   status=$?
   if [ "$status" -ne 0 ]; then
