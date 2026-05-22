@@ -1,45 +1,48 @@
 #!/usr/bin/env sh
 
-log="${TMPDIR:-/tmp}/yazi-chafa-inspect.log"
+img=$1
 
-render() {
-  img=$1
+if [ -z "$img" ]; then
+  printf 'No image path provided.\n'
+  exit 1
+fi
 
-  if [ -z "$img" ]; then
-    printf 'No image path provided.\n' >"$log"
-    cat "$log"
-    return 1
-  fi
+if [ ! -r "$img" ]; then
+  printf 'Image is not readable: %s\n' "$img"
+  exit 1
+fi
 
-  clear
-  printf 'image: %s\n' "$img" >"$log"
+if [ -r /dev/tty ] && [ -w /dev/tty ]; then
+  exec </dev/tty >/dev/tty
+fi
 
-  if [ -n "$TMUX" ]; then
-    chafa --format=kitty --passthrough=tmux "$img" 2>>"$log"
-  else
-    chafa "$img" 2>>"$log"
-  fi
+old_tty=$(stty -g 2>/dev/null || true)
+trap 'if [ -n "$old_tty" ]; then stty "$old_tty" 2>/dev/null; fi' EXIT INT TERM
 
-  status=$?
-  if [ "$status" -ne 0 ]; then
-    printf '\nChafa failed. Log:\n'
-    cat "$log"
-  fi
+rows=$(tput lines 2>/dev/null || printf '24')
+cols=$(tput cols 2>/dev/null || printf '80')
+height=$((rows - 3))
+if [ "$height" -lt 1 ]; then
+  height=1
+fi
 
-  printf '\nPress any key to return to Yazi...'
-  old_tty=$(stty -g 2>/dev/null || true)
-  stty -echo -icanon time 0 min 1 2>/dev/null
-  dd bs=1 count=1 of=/dev/null 2>/dev/null
-  if [ -n "$old_tty" ]; then
-    stty "$old_tty" 2>/dev/null
-  else
-    stty sane 2>/dev/null
-  fi
+clear
+chafa --format=kitty --passthrough=tmux --align=mid,mid --size="${cols}x${height}" "$img"
+status=$?
 
-  clear
-  if [ -n "$TMUX" ]; then
-    tmux clear-history 2>/dev/null || true
-  fi
-}
+if [ "$status" -ne 0 ]; then
+  printf '\nChafa failed with status %s.\n' "$status"
+fi
 
-render "$1"
+printf '\nPress any key to return to Yazi...'
+stty -echo -icanon time 0 min 1 2>/dev/null || true
+dd bs=1 count=1 of=/dev/null 2>/dev/null || true
+
+if [ -n "$old_tty" ]; then
+  stty "$old_tty" 2>/dev/null || true
+fi
+
+clear
+if [ -n "$TMUX" ]; then
+  tmux clear-history 2>/dev/null || true
+fi
