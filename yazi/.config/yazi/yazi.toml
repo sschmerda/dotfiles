@@ -1,0 +1,13 @@
+[preview]
+max_width = 1000
+max_height = 1000
+
+[opener]
+chafa-inspect = [
+  { run = '~/.config/yazi/scripts/chafa-inspect.sh %s1', block = true, for = "unix" },
+]
+
+[open]
+prepend_rules = [
+  { mime = "image/*", use = "chafa-inspect" },
+]
