@@ -3,7 +3,7 @@ mouse-hide-while-typing = true
 
 ### theme ###
 #theme = "Catppuccin Frappe"
-theme = "Purple Rain"
+theme = "Shades of purple"
 #background = #000000
 background-opacity = 1
 
