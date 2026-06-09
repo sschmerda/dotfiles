@@ -420,6 +420,15 @@ popup_width = "95%"
 popup_height = "90%"
 
 [[commands]]
+title = "Yazi"
+description = "Open yazi in a new window at the current session root"
+category = "Tools"
+aliases = ["yz"]
+icon = ""
+action = "tmux"
+command = "new-window -n yazi -c '#{session_path}' yazi"
+
+[[commands]]
 title = "Git Status"
 description = "Show short git status in a popup"
 category = "Git"
