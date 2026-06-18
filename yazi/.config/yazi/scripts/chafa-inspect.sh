@@ -2,15 +2,28 @@
 
 img=$1
 
+is_image() {
+  [ -f "$1" ] && [ -r "$1" ] || return 1
+
+  mime=$(file -b --mime-type "$1" 2>/dev/null || true)
+  case "$mime" in
+    image/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 if [ -z "$img" ]; then
   printf 'No image path provided.\n'
   exit 1
 fi
 
-if [ ! -r "$img" ]; then
-  printf 'Image is not readable: %s\n' "$img"
+if ! is_image "$img"; then
+  printf 'Not a readable image: %s\n' "$img"
   exit 1
 fi
+
+dir=$(dirname "$img")
+img="$dir/$(basename "$img")"
 
 if [ -r /dev/tty ] && [ -w /dev/tty ]; then
   exec </dev/tty >/dev/tty
@@ -29,6 +42,49 @@ fi
 stty -echo -icanon time 0 min 1 2>/dev/null || true
 zoom=100
 esc=$(printf '\033')
+
+next_image() {
+  first=
+  found_current=false
+
+  for candidate in "$dir"/* "$dir"/.[!.]* "$dir"/..?*; do
+    is_image "$candidate" || continue
+    [ -n "$first" ] || first=$candidate
+
+    if [ "$found_current" = true ]; then
+      img=$candidate
+      return
+    fi
+
+    if [ "$candidate" = "$img" ]; then
+      found_current=true
+    fi
+  done
+
+  [ -n "$first" ] && img=$first
+}
+
+previous_image() {
+  previous=
+  last=
+
+  for candidate in "$dir"/* "$dir"/.[!.]* "$dir"/..?*; do
+    is_image "$candidate" || continue
+    last=$candidate
+
+    if [ "$candidate" = "$img" ]; then
+      if [ -n "$previous" ]; then
+        img=$previous
+        return
+      fi
+      continue
+    fi
+
+    previous=$candidate
+  done
+
+  [ -n "$last" ] && img=$last
+}
 
 render() {
   rows=$(tput lines 2>/dev/null || printf '24')
@@ -55,15 +111,34 @@ render() {
     printf '\nChafa failed with status %s.\n' "$status"
   fi
 
-  printf '\nq/Esc: return to Yazi    +/-: zoom (%s%%)' "$zoom"
+  printf '\n←/→: previous/next image    q/Esc: return    +/-: zoom (%s%%)' "$zoom"
 }
 
 render
 while true; do
   key=$(dd bs=1 count=1 2>/dev/null || true)
   case "$key" in
-    q|"$esc")
+    q)
       break
+      ;;
+    "$esc")
+      stty min 0 time 1 2>/dev/null || true
+      sequence=$(dd bs=1 count=2 2>/dev/null || true)
+      stty min 1 time 0 2>/dev/null || true
+
+      case "$sequence" in
+        '[C'|'OC')
+          next_image
+          render
+          ;;
+        '[D'|'OD')
+          previous_image
+          render
+          ;;
+        '')
+          break
+          ;;
+      esac
       ;;
     +|=)
       if [ "$zoom" -lt 400 ]; then
