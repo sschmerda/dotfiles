@@ -387,6 +387,15 @@ action = "tmux"
 command = "source-file ~/.tmux.conf \\; display-message 'tmux config reloaded'"
 
 [[commands]]
+title = "Time"
+description = "Show the tmux clock"
+category = "Tmux"
+aliases = ["time"]
+icon = "󰥔"
+action = "tmux"
+command = "clock"
+
+[[commands]]
 title = "Lazygit"
 description = "Open lazygit in a popup"
 category = "Tools"
