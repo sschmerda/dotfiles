@@ -438,6 +438,15 @@ action = "tmux"
 command = "new-window -n yazi -c '#{session_path}' yazi"
 
 [[commands]]
+title = "Yazi Home"
+description = "Open yazi in a new window in the home directory"
+category = "Tools"
+aliases = ["yzh"]
+icon = ""
+action = "tmux"
+command = "new-window -n yazi -c '~' yazi"
+
+[[commands]]
 title = "Git Status"
 description = "Show short git status in a popup"
 category = "Git"
