@@ -1,0 +1,10 @@
+git:
+  paging:
+    colorArg: always
+    pager: delta --dark --paging=never --line-numbers --features=lazygit
+
+os:
+  editPreset: nvim
+
+gui:
+  sidePanelWidth: 0.2
