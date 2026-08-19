@@ -1,3 +1,6 @@
+-- Keep rendered Markdown opt-in for both .md and .qmd buffers. The shared
+-- <leader>M commands toggle this view and expose preview commands without
+-- occupying LazyVim's generic <leader>q or <leader>c mappings.
 return {
   {
     "MeanderingProgrammer/render-markdown.nvim",
@@ -8,6 +11,8 @@ return {
     ---@type render.md.UserConfig
     ft = { "markdown", "quarto" },
     opts = {
+      -- Concealed Markdown can collide with Molten virtual images, so start off.
+      enabled = false,
       heading = {
         -- Useful context to have when evaluating values.
         -- | level    | the number of '#' in the heading marker         |
@@ -116,6 +121,16 @@ return {
         },
         scope_priority = nil,
       },
+    },
+    config = function(_, opts)
+      require("render-markdown").setup(opts)
+    end,
+  },
+  {
+    "iamcco/markdown-preview.nvim",
+    optional = true,
+    keys = {
+      { "<leader>cp", false, ft = "markdown" },
     },
   },
 }
