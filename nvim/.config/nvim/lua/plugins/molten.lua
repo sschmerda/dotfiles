@@ -9,6 +9,9 @@ return {
     dependencies = {
       {
         "3rd/image.nvim",
+        -- magick_cli uses the system ImageMagick binary; do not build the
+        -- optional Lua rock or provision hererocks in minimal containers.
+        build = false,
         opts = {
           backend = "kitty",
           kitty_method = "normal",
