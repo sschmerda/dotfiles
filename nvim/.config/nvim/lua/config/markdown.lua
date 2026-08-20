@@ -60,6 +60,38 @@ local function browse_snippets(buf)
   end)
 end
 
+-- Quarto cannot open the host browser from inside the devcontainer. Bind the
+-- preview server to the forwarded port instead and show the host URL to open.
+-- Requiring both signals avoids changing preview behavior in unrelated Docker
+-- containers or on hosts that happen to define QUARTO_PORT.
+local function quarto_preview()
+  local in_devcontainer = vim.fn.filereadable("/.dockerenv") == 1
+    and vim.env.QUARTO_PORT ~= nil
+    and vim.env.QUARTO_PORT ~= ""
+
+  if not in_devcontainer then
+    require("quarto").quartoPreview()
+    return
+  end
+
+  local port = tonumber(vim.env.QUARTO_PORT) or 4200
+  if port < 1 or port > 65535 or port % 1 ~= 0 then
+    port = 4200
+  end
+
+  require("quarto").quartoPreview({
+    args = string.format("--host 0.0.0.0 --port %d --no-browser", port),
+  })
+
+  vim.schedule(function()
+    vim.notify(
+      string.format("Open this address in the host browser:\nhttp://localhost:%d", port),
+      vim.log.levels.INFO,
+      { title = "Quarto preview", timeout = 10000 }
+    )
+  end)
+end
+
 local function attach(buf)
   if not vim.api.nvim_buf_is_valid(buf) then
     return
@@ -82,9 +114,7 @@ local function attach(buf)
   end
 
   if filetype == "quarto" then
-    map(buf, "<leader>Mp", function()
-      require("quarto").quartoPreview()
-    end, "Quarto preview")
+    map(buf, "<leader>Mp", quarto_preview, "Quarto preview")
     map(buf, "<leader>Mc", "<cmd>QuartoClosePreview<cr>", "Close Quarto preview")
   elseif filetype == "markdown" or filetype == "markdown.mdx" then
     map(buf, "<leader>Mp", "<cmd>MarkdownPreviewToggle<cr>", "Markdown preview")
