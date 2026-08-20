@@ -6,6 +6,9 @@
 vim.opt.clipboard = "unnamedplus"
 vim.opt.smoothscroll = true
 
+-- Avoid routine language-server stderr and warnings growing lsp.log.
+vim.lsp.log.set_level(vim.log.levels.OFF)
+
 local ok, osc52 = pcall(require, "vim.ui.clipboard.osc52")
 if ok then
   vim.g.clipboard = {
