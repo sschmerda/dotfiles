@@ -1,6 +1,109 @@
 -- Molten is the Jupyter-kernel backend. It keeps textual results as virtual
 -- text and plots as image.nvim virtual images below executed code cells.
 -- config.repl owns initialization, execution, output limits, and image sizing.
+local in_devcontainer = vim.fn.filereadable("/.dockerenv") == 1
+
+local function setup_image_nvim(_, opts)
+  if in_devcontainer then
+    -- Match image.nvim's own module names exactly. Lua caches slash- and
+    -- dot-separated require names independently even when they resolve to the
+    -- same file, so using dot names would patch an unused module instance.
+    local term = require("image/utils/term")
+
+    if not term.molten_devcontainer_tty_applied then
+      local get_tty = term.get_tty
+      term.get_tty = function()
+        local uv = vim.uv or vim.loop
+        local resolved = uv and uv.fs_readlink and uv.fs_readlink("/proc/self/fd/1") or nil
+        if type(resolved) == "string" and resolved:match("^/dev/") then
+          return resolved
+        end
+
+        local tty = get_tty()
+        if type(tty) == "string" and tty:match("^/dev/") then
+          return tty
+        end
+
+        return nil
+      end
+      term.molten_devcontainer_tty_applied = true
+    end
+
+    -- Host Ghostty cannot open image paths inside the container. image.nvim
+    -- selects direct Kitty transmission for SSH sessions, so use that path for
+    -- this Neovim process and load the backend only after fixing TTY discovery.
+    if not vim.env.SSH_CLIENT and not vim.env.SSH_TTY then
+      vim.env.SSH_CLIENT = "devcontainer"
+    end
+
+    local backend = require("image/backends/kitty")
+    local helpers = require("image/backends/kitty/helpers")
+    if not backend.molten_devcontainer_placement_applied then
+      local codes = require("image/backends/kitty/codes")
+      local utils = require("image/utils")
+      local active_width, active_height
+      local backend_render = backend.render
+
+      backend.render = function(image, x, y, width, height)
+        active_width, active_height = width, height
+        local ok, result = xpcall(function()
+          return backend_render(image, x, y, width, height)
+        end, debug.traceback)
+        active_width, active_height = nil, nil
+        if not ok then
+          error(result)
+        end
+        return result
+      end
+
+      local function graphics_control_sequence(config)
+        local control = {}
+        for name, value in pairs(config) do
+          local key = codes.control.keys[name]
+          if key and value ~= nil then
+            if type(value) == "number" then
+              value = string.format("%d", value)
+            end
+            control[#control + 1] = key .. "=" .. tostring(value)
+          end
+        end
+        return "\x1b_G" .. table.concat(control, ",") .. "\x1b\\"
+      end
+
+      helpers.write_graphics_at = function(config, x, y)
+        config = vim.deepcopy(config)
+        config.display_zindex = 0
+        config.display_columns = active_width or config.display_columns
+        config.display_rows = active_height or config.display_rows
+
+        if utils.tmux.is_tmux then
+          local pane = utils.tmux.get_pane_position()
+          x = x + pane.left
+          y = y + pane.top
+        end
+
+        local tty = term.get_tty()
+        if not tty then
+          error("image.nvim: could not resolve the devcontainer terminal")
+        end
+
+        local sequence = "\x1b[?2026h\x1b[s\x1b["
+          .. y
+          .. ";"
+          .. x
+          .. "H"
+          .. graphics_control_sequence(config)
+          .. "\x1b[u\x1b[?2026l"
+        helpers.write(sequence, tty, true)
+      end
+
+      backend.molten_devcontainer_placement_applied = true
+    end
+  end
+
+  require("image").setup(opts)
+end
+
 return {
   {
     "benlubas/molten-nvim",
@@ -22,11 +125,12 @@ return {
           max_height_window_percentage = math.huge,
           tmux_show_only_in_active_window = true,
           editor_only_render_when_focused = false,
-          window_overlap_clear_enabled = true,
+          window_overlap_clear_enabled = not in_devcontainer,
           integrations = {
             markdown = { enabled = false },
           },
         },
+        config = setup_image_nvim,
       },
     },
     lazy = false,
@@ -55,6 +159,12 @@ return {
       vim.g.molten_virt_text_output = true
       vim.g.molten_virt_text_max_lines = 40
       vim.g.molten_virt_lines_off_by_1 = false
+
+      -- The host-specific placement adjustments below conflict with Ghostty's
+      -- Docker PTY path. Keep Molten's default virtual-line placement there.
+      if in_devcontainer then
+        return
+      end
 
       local function set_virt_lines_offset(enabled)
         local ok, status = pcall(require, "molten.status")
@@ -86,6 +196,22 @@ return {
       })
     end,
     config = function()
+      if in_devcontainer then
+        -- Preserve the namespace used by the buffer-local image resize controls
+        -- without applying the host-specific render offsets below.
+        local bridge = require("load_image_nvim").image_api
+        if not bridge.molten_devcontainer_namespace_applied then
+          local from_file = bridge.from_file
+          bridge.from_file = function(path, opts)
+            opts = opts or {}
+            opts.namespace = opts.namespace or "molten"
+            return from_file(path, opts)
+          end
+          bridge.molten_devcontainer_namespace_applied = true
+        end
+        return
+      end
+
       -- Normal Kitty placement scrolls smoothly in Ghostty/tmux. Partial top
       -- cropping is unreliable in that stack, so Molten images are hidden when
       -- their anchor reaches the viewport top; bottom cropping remains native.
