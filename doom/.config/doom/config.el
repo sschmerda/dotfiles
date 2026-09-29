@@ -129,6 +129,17 @@
 
 ;; Custom Config
 
+;; SPC t t shows a centred floating clock (a bottom popup in terminal Emacs).
+(load! "lisp/time-popup")
+(set-popup-rule! "^\\*Local Clock\\*$"
+  :side 'bottom :size 0.45 :select t :quit t :ttl 0 :modeline nil)
+(map! :leader :desc "Time and date" "t t" #'my/time-popup-toggle)
+(after! evil
+  (evil-set-initial-state 'my/time-popup-mode 'normal)
+  (evil-define-key 'normal my/time-popup-mode-map
+    (kbd "q") #'my/time-popup-close
+    (kbd "<escape>") #'my/time-popup-close))
+
 ;; Format R files on save via Apheleia; requires styler in the R environment Emacs uses.
 (after! apheleia
   (setf (alist-get 'ess-r-mode apheleia-mode-alist) 'r-styler))
@@ -223,7 +234,8 @@
           (push (window-left-column window) left-edges)))
       (> (length (delete-dups left-edges)) 1)))
   (defun my/olivetti-refresh-h (&rest _)
-    (when my/olivetti-enabled
+    (when (and my/olivetti-enabled
+               (not (frame-parameter (selected-frame) 'my/time-popup)))
       (if (my/olivetti-vertical-split-p)
           (my/olivetti-disable-all-buffers)
         (mapc #'my/olivetti-enable-buffer (buffer-list))
