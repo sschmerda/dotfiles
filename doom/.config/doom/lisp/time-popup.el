@@ -3,6 +3,8 @@
 (defvar-local my/time-popup-timer nil)
 (defvar my/time-popup--frame nil
   "The floating frame displaying the clock, if any.")
+(defvar my/time-popup--parent-cursor nil
+  "Saved cursor setting of the buffer behind the clock.")
 (defvar my/time-popup-world-zones
   '(("UTC" "UTC0")
     ("London" "Europe/London")
@@ -19,6 +21,17 @@
     (cancel-timer my/time-popup-timer))
   (setq my/time-popup-timer nil))
 
+(defun my/time-popup-restore-parent-cursor ()
+  "Restore the cursor setting of the buffer behind the clock."
+  (when my/time-popup--parent-cursor
+    (pcase-let ((`(,buffer ,was-local ,value) my/time-popup--parent-cursor))
+      (when (buffer-live-p buffer)
+        (with-current-buffer buffer
+          (if was-local
+              (setq-local cursor-in-non-selected-windows value)
+            (kill-local-variable 'cursor-in-non-selected-windows))))))
+  (setq my/time-popup--parent-cursor nil))
+
 (defun my/time-popup-close ()
   "Close the clock popup and stop refreshing it."
   (interactive)
@@ -29,6 +42,7 @@
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
         (my/time-popup-stop)))
+    (my/time-popup-restore-parent-cursor)
     (setq my/time-popup--frame nil)
     (if (frame-live-p frame)
         (progn
@@ -51,6 +65,12 @@
 (define-derived-mode my/time-popup-mode special-mode "Clock"
   "Display local time and date without editing the buffer."
   (setq-local cursor-type nil
+              evil-normal-state-cursor '(nil)
+              evil-motion-state-cursor '(nil)
+              evil-insert-state-cursor '(nil)
+              evil-visual-state-cursor '(nil)
+              evil-replace-state-cursor '(nil)
+              evil-emacs-state-cursor '(nil)
               display-line-numbers nil
               display-fill-column-indicator nil
               mode-line-format nil
@@ -99,6 +119,7 @@
 (defun my/time-popup-show-frame (buffer)
   "Show BUFFER in a child frame centred over the current frame."
   (let* ((parent (selected-frame))
+         (parent-buffer (window-buffer (selected-window)))
          (frame (make-frame
                  `((parent-frame . ,parent)
                    (minibuffer . nil)
@@ -107,8 +128,6 @@
                    (height . 16)
                    (undecorated . t)
                    (cursor-type . nil)
-                   (no-accept-focus . t)
-                   (no-focus-on-map . t)
                    (child-frame-border-width . 1)
                    (internal-border-width . 12)
                    (menu-bar-lines . 0)
@@ -122,6 +141,12 @@
                    (my/time-popup . t)
                    (visibility . nil)))))
     (setq my/time-popup--frame frame)
+    (setq my/time-popup--parent-cursor
+          (list parent-buffer
+                (local-variable-p 'cursor-in-non-selected-windows parent-buffer)
+                (buffer-local-value 'cursor-in-non-selected-windows parent-buffer)))
+    (with-current-buffer parent-buffer
+      (setq-local cursor-in-non-selected-windows nil))
     (set-face-attribute 'child-frame-border frame
                         :background (face-foreground 'vertical-border parent t))
     (set-window-buffer (frame-root-window frame) buffer)
@@ -130,7 +155,7 @@
      (max 0 (/ (- (frame-pixel-width parent) (frame-pixel-width frame)) 2))
      (max 0 (/ (- (frame-pixel-height parent) (frame-pixel-height frame)) 2)))
     (make-frame-visible frame)
-    (select-frame-set-input-focus parent)))
+    (select-frame-set-input-focus frame)))
 
 (defun my/time-popup-toggle ()
   "Toggle a popup showing the system's local time and date."
