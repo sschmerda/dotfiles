@@ -182,12 +182,6 @@
     (defun my/pdf-fit-height-h ()
       (pdf-view-fit-height-to-window))))
 
-;; Open Treemacs from Doom's open menu.
-(map! :leader
-      (:prefix ("o" . "open")
-       :desc "Treemacs"
-       "x" #'+treemacs/toggle))
-
 ;; Toggle Olivetti buffer centering without hiding modelines or other windows.
 (use-package! olivetti
   :commands (olivetti-mode my/olivetti-toggle-all)
