@@ -95,6 +95,14 @@
 ;; change `org-directory'. It must be set before org loads!
 (setq org-directory "~/org/")
 
+;; Doom snippets aliases `%` to `yas-selected-text`, making it dynamic. Doom's
+;; `fn!` also uses `%` as a lexical argument; keep the alias but clear that
+;; declaration so loading Doom documentation does not warn.
+(with-eval-after-load 'doom-snippets-lib
+  (when (and (fboundp 'internal-make-var-non-special)
+             (eq (indirect-variable '%) 'yas-selected-text))
+    (internal-make-var-non-special '%)))
+
 
 ;; Whenever you reconfigure a package, make sure to wrap your config in an
 ;; `with-eval-after-load' block, otherwise Doom's defaults may override your
