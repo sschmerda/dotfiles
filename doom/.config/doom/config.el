@@ -167,13 +167,16 @@
 (set-frame-parameter nil 'undecorated t)
 (set-frame-parameter nil 'fullscreen 'maximized)
 
-;; show a vertical guide at 80 characters
+;; Show the 80-column guide everywhere except in Ghostel terminals.
 (setq-default display-fill-column-indicator-column 80
               display-fill-column-indicator-character ?│)
 (set-face-attribute 'fill-column-indicator nil
                     :foreground "#3f444c"
                     :background nil)
 (global-display-fill-column-indicator-mode 1)
+(add-hook 'ghostel-mode-hook
+          (defun my/hide-terminal-column-guide-h ()
+            (display-fill-column-indicator-mode -1)))
 
 ;; Show full PDF pages by default so each page fits vertically without scrolling.
 (after! pdf-view
