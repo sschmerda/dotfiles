@@ -1,0 +1,127 @@
+#+title: Doom Emacs configuration
+#+startup: overview
+#+property: header-args:emacs-lisp :tangle config.el :comments no
+
+* Using this configuration
+This file is the source of truth for the configuration loader. Each section
+explains a part of the setup and loads its implementation from =lisp/=. Edit
+those Lisp files for implementation changes and this document for imports and
+explanations.
+
+Doom's =:config literate= module tangles the source blocks into =config.el=
+during =doom sync= and when saving this document once the module is active.
+Do not edit the generated =config.el= directly. Tangling updates the file on
+disk; restart Emacs to apply configuration changes to the running session.
+
+The imports below run in document order. Keep the macOS native compilation
+setup first, and set the Org directory before loading any code that needs Org.
+
+#+begin_src emacs-lisp
+;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
+;; Generated from config.org. Edit config.org or the files under lisp/ instead.
+#+end_src
+
+* macOS
+[[file:lisp/macos-config.el][macos-config.el]] discovers the active macOS SDK so native compilation can
+find libSystem without a fixed SDK path. It also configures Option as Meta
+and Command as Super. The SDK setup is guarded so it only runs on macOS.
+
+#+begin_src emacs-lisp
+(load! "lisp/macos-config")
+#+end_src
+
+* Appearance
+[[file:lisp/appearance-config.el][appearance-config.el]] sets the theme, fonts, relative line numbers, font
+zoom steps, frame appearance and the 80-column guide. Package-specific window
+centring remains in the separate Olivetti configuration.
+
+#+begin_src emacs-lisp
+(load! "lisp/appearance-config")
+#+end_src
+
+* Org
+[[file:lisp/org-config.el][org-config.el]] sets the notes directory and uses visible-line numbering
+in Org buffers so folded text does not contribute hidden lines to the count.
+The directory must be configured before Org loads.
+
+#+begin_src emacs-lisp
+(load! "lisp/org-config")
+#+end_src
+
+* Spelling
+[[file:lisp/spell-config.el][spell-config.el]] keeps Flyspell off by default in the configured text and
+Git buffers. Use =SPC t s= to toggle spelling for a buffer when needed.
+
+#+begin_src emacs-lisp
+(load! "lisp/spell-config")
+#+end_src
+
+* Snippets
+[[file:lisp/snippets-config.el][snippets-config.el]] handles the conflict between Doom snippets' dynamic
+=%= alias and Doom's lexical use of that name. The compatibility adjustment
+runs after the snippets library loads.
+
+#+begin_src emacs-lisp
+(load! "lisp/snippets-config")
+#+end_src
+
+* Python environments and language server
+[[file:lisp/python-config.el][python-config.el]] repairs Conda environment switching and refreshes Python
+LSP after environment changes. It also enables Pyright to inspect library
+source when type information is unavailable. These settings remain deferred
+until their respective packages load.
+
+#+begin_src emacs-lisp
+(load! "lisp/python-config")
+#+end_src
+
+* Time popup
+[[file:lisp/time-popup.el][time-popup.el]] provides the local and world clock, its popup behaviour and
+the =SPC t t= binding. Graphical Emacs uses a centred child frame; terminal
+Emacs uses a bottom popup.
+
+#+begin_src emacs-lisp
+(load! "lisp/time-popup")
+#+end_src
+
+* Formatting
+[[file:lisp/format-config.el][format-config.el]] selects Apheleia's =r-styler= formatter for ESS R buffers.
+Formatting requires the R =styler= package in the environment Emacs uses.
+
+#+begin_src emacs-lisp
+(load! "lisp/format-config")
+#+end_src
+
+* Terminals
+[[file:lisp/terminal-config.el][terminal-config.el]] configures Ghostel's Docker shell selection and
+terminal-specific display settings. Its shell lookup uses the remote user's
+ID and retains a fallback for containers without a suitable login shell.
+
+#+begin_src emacs-lisp
+(load! "lisp/terminal-config")
+#+end_src
+
+* Remote access
+[[file:lisp/tramp-config.el][tramp-config.el]] includes the remote connection's own PATH in TRAMP's
+search paths so tools such as micromamba can be discovered. This applies to
+Docker and SSH connections.
+
+#+begin_src emacs-lisp
+(load! "lisp/tramp-config")
+#+end_src
+
+* PDF viewing
+[[file:lisp/pdf-config.el][pdf-config.el]] fits PDF pages vertically when opening them with PDF Tools.
+
+#+begin_src emacs-lisp
+(load! "lisp/pdf-config")
+#+end_src
+
+* Buffer centring
+[[file:lisp/olivetti-config.el][olivetti-config.el]] centres eligible file buffers, manages their borders,
+and disables centring while vertical editing splits are present. Centring
+returns when those splits are closed. Use =SPC t o= to toggle this behaviour.
+
+#+begin_src emacs-lisp
+(load! "lisp/olivetti-config")
+#+end_src
