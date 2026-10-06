@@ -8,17 +8,19 @@
   (defvar my/olivetti-enabled nil)
   (defvar-local my/olivetti-border-face-cookie nil)
   (defun my/olivetti-buffer-eligible-p ()
+    "Allow file, Dired and shell buffers, excluding internal and display buffers."
     (and (not (minibufferp))
-         (buffer-file-name)
-         (not (derived-mode-p 'pdf-view-mode))
-         (not (string-prefix-p " " (buffer-name)))
-         (not (string-prefix-p "*" (buffer-name)))))
+         (not (bound-and-true-p +popup-buffer-mode))
+         (not (derived-mode-p 'pdf-view-mode 'my/time-popup-mode))
+         (not (string-prefix-p " " (buffer-name)))))
   (defun my/olivetti-enable-buffer (buffer)
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
-        (when (and (my/olivetti-buffer-eligible-p)
-                   (not (bound-and-true-p olivetti-mode)))
-          (olivetti-mode 1)))))
+        (when (get-buffer-window buffer (selected-frame))
+          (if (my/olivetti-buffer-eligible-p)
+              (unless (bound-and-true-p olivetti-mode)
+                (olivetti-mode 1))
+            (my/olivetti-disable-buffer buffer))))))
   (defun my/olivetti-disable-buffer (buffer)
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
@@ -26,9 +28,6 @@
           (olivetti-mode -1)))))
   (defun my/olivetti-disable-all-buffers ()
     (mapc #'my/olivetti-disable-buffer (buffer-list)))
-  (defun my/olivetti-ignored-window-p (window)
-    (with-current-buffer (window-buffer window)
-      (derived-mode-p 'treemacs-mode)))
   (defun my/olivetti-refresh-visible-windows ()
     (walk-windows
      (lambda (window)
@@ -48,10 +47,10 @@
         (setq my/olivetti-border-face-cookie nil))
       (set-window-fringes nil nil nil t)))
   (defun my/olivetti-vertical-split-p ()
+    "Return non-nil when any windows in this frame are side by side."
     (let ((left-edges nil))
       (dolist (window (window-list nil 'no-minibuf))
-        (unless (my/olivetti-ignored-window-p window)
-          (push (window-left-column window) left-edges)))
+        (push (window-left-column window) left-edges))
       (> (length (delete-dups left-edges)) 1)))
   (defun my/olivetti-refresh-h (&rest _)
     (when (and my/olivetti-enabled
@@ -72,6 +71,8 @@
   (add-hook 'olivetti-mode-hook #'my/olivetti-set-border-h)
   (add-hook 'buffer-list-update-hook #'my/olivetti-refresh-h)
   (add-hook 'window-state-change-functions #'my/olivetti-refresh-h)
+  ;; Popup windows keep their normal width, including SPC o t terminals.
+  (add-hook '+popup-create-window-hook #'my/olivetti-refresh-h)
   (add-hook! 'doom-first-buffer-hook
     (defun my/olivetti-enable-on-startup-h ()
       (setq my/olivetti-enabled t)
