@@ -1,265 +1,37 @@
 ;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
 
-;; Place your private configuration here! Remember, you do not need to run 'doom
-;; sync' after modifying this file!
+;; macOS config; set up native compilation before loading other custom code.
+(load! "lisp/macos-config")
 
-(defun my/setup-macos-native-comp-library-path ()
-  "Let native compilation find libSystem in the active macOS SDK."
-  (when (and (eq system-type 'darwin)
-             (fboundp 'native-comp-available-p)
-             (native-comp-available-p)
-             (executable-find "xcrun"))
-    (with-temp-buffer
-      (when (eq 0 (call-process "xcrun" nil (list t nil) nil
-                               "--sdk" "macosx" "--show-sdk-path"))
-        (let* ((sdk (string-trim (buffer-string)))
-               (lib (expand-file-name "usr/lib" sdk))
-               (existing (getenv "LIBRARY_PATH")))
-          ;; Discover the SDK instead of pinning an Xcode, SDK, or Homebrew version.
-          ;; Preserve existing compiler paths and avoid duplicates on config reload.
-          (when (and (file-name-absolute-p sdk)
-                     (file-exists-p (expand-file-name "libSystem.tbd" lib))
-                     (not (member lib (split-string (or existing "") ":" t))))
-            (setenv "LIBRARY_PATH"
-                    (if (and existing (not (string-empty-p existing)))
-                        (concat existing ":" lib)
-                      lib))))))))
+;; Appearance config.
+(load! "lisp/appearance-config")
 
-(my/setup-macos-native-comp-library-path)
+;; Org config; set its directory before Org loads.
+(load! "lisp/org-config")
 
+;; Spell config.
+(load! "lisp/spell-config")
 
-;; Some functionality uses this to identify you, e.g. GPG configuration, email
-;; clients, file templates and snippets. It is optional.
-;; (setq user-full-name "John Doe"
-;;       user-mail-address "john@doe.com")
+;; Snippets config.
+(load! "lisp/snippets-config")
 
-;; Doom exposes five (optional) variables for controlling fonts in Doom:
-;;
-;; - `doom-font' -- the primary font to use
-;; - `doom-variable-pitch-font' -- a non-monospace font (where applicable)
-;; - `doom-big-font' -- used for `doom-big-font-mode'; use this for
-;;   presentations or streaming.
-;; - `doom-symbol-font' -- for symbols
-;; - `doom-serif-font' -- for the `fixed-pitch-serif' face
-;;
-;; See 'C-h v doom-font' for documentation and more examples of what they
-;; accept. For example:
-;;
-;;(setq doom-font (font-spec :family "Fira Code" :size 12 :weight 'semi-light)
-;;      doom-variable-pitch-font (font-spec :family "Fira Sans" :size 13))
-;;
-;; If you or Emacs can't find your font, use 'M-x describe-font' to look them
-;; up, `M-x eval-region' to execute elisp code, and 'M-x doom/reload-font' to
-;; refresh your font settings. If Emacs still can't find your font, it likely
-;; wasn't installed correctly. Font issues are rarely Doom issues!
+;; Python config.
+(load! "lisp/python-config")
 
-;; There are two ways to load a theme. Both assume the theme is installed and
-;; available. You can either set `doom-theme' or manually load a theme with the
-;; `load-theme' function. This is the default:
-(setq doom-theme 'doom-shades-of-purple)
-(setq doom-font (font-spec :family "Hack Nerd Font Mono" :size 16))
-
-;; Match the VS Code Shades of Purple cursor color.
-(when (eq doom-theme 'doom-shades-of-purple)
-  (setq evil-normal-state-cursor '("#fad000" box)
-        evil-insert-state-cursor '("#fad000" bar)
-        evil-visual-state-cursor '("#fad000" box)
-        evil-replace-state-cursor '("#fad000" hbar)
-        evil-motion-state-cursor '("#fad000" box))
-  (set-cursor-color "#fad000"))
-
-;; This determines the style of line numbers in effect. If set to `nil', line
-;; numbers are disabled. For relative line numbers, set this to `relative'.
-(setq display-line-numbers-type 'relative)
-
-;; Use visible-line relative numbers in Org so folded sections do not count hidden lines.
-(add-hook! 'org-mode-hook
-  (defun my/org-use-visual-line-numbers-h ()
-    (setq-local display-line-numbers 'visual)))
-
-;; Keep spell checking off by default; use SPC t s to toggle it per buffer.
-(after! flyspell
-  (defun my/disable-flyspell-h ()
-    (flyspell-mode -1))
-  (remove-hook 'org-mode-hook #'flyspell-mode)
-  (remove-hook 'markdown-mode-hook #'flyspell-mode)
-  (remove-hook 'TeX-mode-hook #'flyspell-mode)
-  (remove-hook 'rst-mode-hook #'flyspell-mode)
-  (remove-hook 'mu4e-compose-mode-hook #'flyspell-mode)
-  (remove-hook 'message-mode-hook #'flyspell-mode)
-  (remove-hook 'git-commit-mode-hook #'flyspell-mode)
-  (add-hook 'git-commit-mode-hook #'my/disable-flyspell-h)
-  (add-hook 'magit-mode-hook #'my/disable-flyspell-h))
-
-;; If you use `org' and don't want your org files in the default location below,
-;; change `org-directory'. It must be set before org loads!
-(setq org-directory "~/org/")
-
-;; Doom snippets aliases `%` to `yas-selected-text`, making it dynamic. Doom's
-;; `fn!` also uses `%` as a lexical argument; keep the alias but clear that
-;; declaration so loading Doom documentation does not warn.
-(with-eval-after-load 'doom-snippets-lib
-  (when (and (fboundp 'internal-make-var-non-special)
-             (eq (indirect-variable '%) 'yas-selected-text))
-    (internal-make-var-non-special '%)))
-
-
-;; Whenever you reconfigure a package, make sure to wrap your config in an
-;; `with-eval-after-load' block, otherwise Doom's defaults may override your
-;; settings. E.g.
-;;
-;;   (with-eval-after-load 'PACKAGE
-;;     (setq x y))
-;;
-;; The exceptions to this rule:
-;;
-;;   - Setting file/directory variables (like `org-directory')
-;;   - Setting variables which explicitly tell you to set them before their
-;;     package is loaded (see 'C-h v VARIABLE' to look them up).
-;;   - Setting doom variables (which start with 'doom-' or '+').
-;;
-;; Here are some additional functions/macros that will help you configure Doom.
-;;
-;; - `load!' for loading external *.el files relative to this one
-;; - `add-load-path!' for adding directories to the `load-path', relative to
-;;   this file. Emacs searches the `load-path' when you load packages with
-;;   `require' or `use-package'.
-;; - `map!' for binding new keys
-;;
-;; To get information about any of these functions/macros, move the cursor over
-;; the highlighted symbol at press 'K' (non-evil users must press 'C-c c k').
-;; This will open documentation for it, including demos of how they are used.
-;; Alternatively, use `C-h o' to look up a symbol (functions, variables, faces,
-;; etc).
-;;
-;; You can also try 'gd' (or 'C-c c d') to jump to their definition and see how
-;; they are implemented.
-
-;; Custom Config
-
-;; SPC t t shows a centred floating clock (a bottom popup in terminal Emacs).
+;; Time popup config.
 (load! "lisp/time-popup")
-(set-popup-rule! "^\\*Local Clock\\*$"
-  :side 'bottom :size 0.45 :select t :quit t :ttl 0 :modeline nil)
-(map! :leader :desc "Time and date" "t t" #'my/time-popup-toggle)
-(after! evil
-  (evil-set-initial-state 'my/time-popup-mode 'normal)
-  (evil-define-key 'normal my/time-popup-mode-map
-    (kbd "q") #'my/time-popup-close
-    (kbd "<escape>") #'my/time-popup-close))
 
-;; Format R files on save via Apheleia; requires styler in the R environment Emacs uses.
-(after! apheleia
-  (setf (alist-get 'ess-r-mode apheleia-mode-alist) 'r-styler))
+;; Formatting config.
+(load! "lisp/format-config")
 
-;; macOS modifier keys
-(setq mac-option-modifier 'meta
-      mac-command-modifier 'super
-      ns-option-modifier 'meta
-      ns-command-modifier 'super)
+;; Terminal config.
+(load! "lisp/terminal-config")
 
-;; Make Doom's Command +/- font zoom use smaller steps.
-(setq doom-font-increment 1)
+;; TRAMP config.
+(load! "lisp/tramp-config")
 
-;; frame customization
-(add-to-list 'default-frame-alist '(undecorated . t))
-(add-to-list 'default-frame-alist '(fullscreen . maximized))
-(set-frame-parameter nil 'undecorated t)
-(set-frame-parameter nil 'fullscreen 'maximized)
+;; PDF config.
+(load! "lisp/pdf-config")
 
-;; Show the 80-column guide everywhere except in Ghostel terminals.
-(setq-default display-fill-column-indicator-column 80
-              display-fill-column-indicator-character ?│)
-(set-face-attribute 'fill-column-indicator nil
-                    :foreground "#3f444c"
-                    :background nil)
-(global-display-fill-column-indicator-mode 1)
-(add-hook 'ghostel-mode-hook
-          (defun my/hide-terminal-column-guide-h ()
-            (display-fill-column-indicator-mode -1)))
-
-;; Show full PDF pages by default so each page fits vertically without scrolling.
-(after! pdf-view
-  (setq-default pdf-view-display-size 'fit-height)
-  (add-hook! 'pdf-view-mode-hook
-    (defun my/pdf-fit-height-h ()
-      (pdf-view-fit-height-to-window))))
-
-;; Toggle Olivetti buffer centering without hiding modelines or other windows.
-(use-package! olivetti
-  :commands (olivetti-mode my/olivetti-toggle-all)
-  :init
-  (setq olivetti-body-width 120)
-  (defvar my/olivetti-enabled nil)
-  (defvar-local my/olivetti-border-face-cookie nil)
-  (defun my/olivetti-buffer-eligible-p ()
-    (and (not (minibufferp))
-         (buffer-file-name)
-         (not (derived-mode-p 'pdf-view-mode))
-         (not (string-prefix-p " " (buffer-name)))
-         (not (string-prefix-p "*" (buffer-name)))))
-  (defun my/olivetti-enable-buffer (buffer)
-    (when (buffer-live-p buffer)
-      (with-current-buffer buffer
-        (when (and (my/olivetti-buffer-eligible-p)
-                   (not (bound-and-true-p olivetti-mode)))
-          (olivetti-mode 1)))))
-  (defun my/olivetti-disable-buffer (buffer)
-    (when (buffer-live-p buffer)
-      (with-current-buffer buffer
-        (when (bound-and-true-p olivetti-mode)
-          (olivetti-mode -1)))))
-  (defun my/olivetti-disable-all-buffers ()
-    (mapc #'my/olivetti-disable-buffer (buffer-list)))
-  (defun my/olivetti-ignored-window-p (window)
-    (with-current-buffer (window-buffer window)
-      (derived-mode-p 'treemacs-mode)))
-  (defun my/olivetti-refresh-visible-windows ()
-    (walk-windows
-     (lambda (window)
-       (with-current-buffer (window-buffer window)
-         (when (bound-and-true-p olivetti-mode)
-           (olivetti-set-window window))))
-     nil t))
-  (defun my/olivetti-set-border-h ()
-    (if olivetti-mode
-        (progn
-          (unless my/olivetti-border-face-cookie
-            (setq my/olivetti-border-face-cookie
-                  (face-remap-add-relative 'fringe :background "#2d2640")))
-          (set-window-fringes nil 1 1 t))
-      (when my/olivetti-border-face-cookie
-        (face-remap-remove-relative my/olivetti-border-face-cookie)
-        (setq my/olivetti-border-face-cookie nil))
-      (set-window-fringes nil nil nil t)))
-  (defun my/olivetti-vertical-split-p ()
-    (let ((left-edges nil))
-      (dolist (window (window-list nil 'no-minibuf))
-        (unless (my/olivetti-ignored-window-p window)
-          (push (window-left-column window) left-edges)))
-      (> (length (delete-dups left-edges)) 1)))
-  (defun my/olivetti-refresh-h (&rest _)
-    (when (and my/olivetti-enabled
-               (not (frame-parameter (selected-frame) 'my/time-popup)))
-      (if (my/olivetti-vertical-split-p)
-          (my/olivetti-disable-all-buffers)
-        (mapc #'my/olivetti-enable-buffer (buffer-list))
-        (my/olivetti-refresh-visible-windows))))
-  (defun my/olivetti-toggle-all ()
-    (interactive)
-    (setq my/olivetti-enabled (not my/olivetti-enabled))
-    (if my/olivetti-enabled
-        (my/olivetti-refresh-h)
-      (my/olivetti-disable-all-buffers)))
-  (map! :leader
-        :desc "Center buffers"
-        "t o" #'my/olivetti-toggle-all)
-  (add-hook 'olivetti-mode-hook #'my/olivetti-set-border-h)
-  (add-hook 'buffer-list-update-hook #'my/olivetti-refresh-h)
-  (add-hook 'window-state-change-functions #'my/olivetti-refresh-h)
-  (add-hook! 'doom-first-buffer-hook
-    (defun my/olivetti-enable-on-startup-h ()
-      (setq my/olivetti-enabled t)
-      (my/olivetti-refresh-h)))
-  :config
-  (setq olivetti-body-width 120))
+;; Olivetti config.
+(load! "lisp/olivetti-config")

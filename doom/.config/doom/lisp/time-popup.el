@@ -177,5 +177,15 @@
         (setq my/time-popup-timer
               (run-at-time 1 1 #'my/time-popup-tick buffer))))))
 
+;; Doom popup and keybinding configuration.
+(set-popup-rule! "^\\*Local Clock\\*$"
+  :side 'bottom :size 0.45 :select t :quit t :ttl 0 :modeline nil)
+(map! :leader :desc "Time and date" "t t" #'my/time-popup-toggle)
+(after! evil
+  (evil-set-initial-state 'my/time-popup-mode 'normal)
+  (evil-define-key 'normal my/time-popup-mode-map
+    (kbd "q") #'my/time-popup-close
+    (kbd "<escape>") #'my/time-popup-close))
+
 (provide 'time-popup)
 ;;; time-popup.el ends here
