@@ -26,6 +26,9 @@
 (setq doom-theme 'doom-gruvbox-light)
 (setq doom-font (font-spec :family "Hack Nerd Font Mono" :size 16))
 
+;; Use Helvetica for proportional prose in mixed-pitch buffers.
+(setq doom-variable-pitch-font (font-spec :family "Helvetica" :size 16))
+
 ;; Match the VS Code Shades of Purple cursor color.
 (when (eq doom-theme 'doom-shades-of-purple)
   (setq evil-normal-state-cursor '("#fad000" box)
