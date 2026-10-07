@@ -23,6 +23,8 @@
 
 (load! "lisp/browsing-config")
 
+(load! "lisp/magit-config")
+
 (load! "lisp/tramp-config")
 
 (load! "lisp/pdf-config")

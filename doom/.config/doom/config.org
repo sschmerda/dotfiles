@@ -119,6 +119,17 @@ popup. The rule also covers buffers renamed to the loaded page's title.
 (load! "lisp/browsing-config")
 #+end_src
 
+* Git
+[[file:lisp/magit-config.el][magit-config.el]] enables visible-line relative numbers in Magit buffers for
+counted Evil motions such as =5j= and =3k=. Folded section contents do not
+contribute hidden lines to the count; =TAB= toggles the current section.
+Counted upward motions repeat single visible-line steps to avoid an Emacs 29
+off-by-one movement at folded section boundaries.
+
+#+begin_src emacs-lisp
+(load! "lisp/magit-config")
+#+end_src
+
 * Remote access
 [[file:lisp/tramp-config.el][tramp-config.el]] includes the remote connection's own PATH in TRAMP's
 search paths so tools such as micromamba can be discovered. This applies to
