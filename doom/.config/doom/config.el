@@ -7,6 +7,8 @@
 
 (load! "lisp/org-config")
 
+(load! "lisp/markdown-config")
+
 (load! "lisp/spell-config")
 
 (load! "lisp/snippets-config")

@@ -42,10 +42,20 @@ centring remains in the separate Olivetti configuration.
 * Org
 [[file:lisp/org-config.el][org-config.el]] sets the notes directory and uses visible-line numbering
 in Org buffers so folded text does not contribute hidden lines to the count.
+It enables mixed-pitch typography for Org: proportional prose with monospace
+code and tables. Use =SPC m v= to toggle it in the current Org buffer.
 The directory must be configured before Org loads.
 
 #+begin_src emacs-lisp
 (load! "lisp/org-config")
+#+end_src
+
+* Markdown
+[[file:lisp/markdown-config.el][markdown-config.el]] enables mixed-pitch typography in Markdown and
+GitHub-flavoured Markdown buffers. Use =SPC m v= to toggle it in the current buffer.
+
+#+begin_src emacs-lisp
+(load! "lisp/markdown-config")
 #+end_src
 
 * Spelling
