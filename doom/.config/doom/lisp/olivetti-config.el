@@ -35,23 +35,24 @@
          (when (bound-and-true-p olivetti-mode)
            (olivetti-set-window window))))
      nil t))
-  (defun my/olivetti-set-border-h ()
-    (if olivetti-mode
-        (progn
-          (unless my/olivetti-border-face-cookie
-            (setq my/olivetti-border-face-cookie
-                  (face-remap-add-relative 'fringe :background "#2d2640")))
-          (set-window-fringes nil 1 1 t))
-      (when my/olivetti-border-face-cookie
-        (face-remap-remove-relative my/olivetti-border-face-cookie)
-        (setq my/olivetti-border-face-cookie nil))
-      (set-window-fringes nil nil nil t)))
   (defun my/olivetti-vertical-split-p ()
     "Return non-nil when any windows in this frame are side by side."
     (let ((left-edges nil))
       (dolist (window (window-list nil 'no-minibuf))
         (push (window-left-column window) left-edges))
       (> (length (delete-dups left-edges)) 1)))
+  (defun my/olivetti-set-border-h ()
+    "Draw the Olivetti edges using one-pixel fringes."
+    (if olivetti-mode
+        (progn
+          (unless my/olivetti-border-face-cookie
+            (setq my/olivetti-border-face-cookie
+                  (face-remap-add-relative 'fringe :background "#2d2640")))
+          (set-window-fringes nil 1 1 nil))
+      (when my/olivetti-border-face-cookie
+        (face-remap-remove-relative my/olivetti-border-face-cookie)
+        (setq my/olivetti-border-face-cookie nil))
+      (set-window-fringes nil nil nil t)))
   (defun my/olivetti-refresh-h (&rest _)
     (when (and my/olivetti-enabled
                (not (frame-parameter (selected-frame) 'my/time-popup)))
@@ -78,4 +79,12 @@
       (setq my/olivetti-enabled t)
       (my/olivetti-refresh-h)))
   :config
+  ;; Olivetti resets fringe widths during every layout update.
+  (defun my/olivetti-restore-thin-border-h (window-or-frame)
+    "Restore one-pixel edges after Olivetti lays out a window."
+    (when (window-live-p window-or-frame)
+      (with-selected-window window-or-frame
+        (when (bound-and-true-p olivetti-mode)
+          (my/olivetti-set-border-h)))))
+  (advice-add 'olivetti-set-window :after #'my/olivetti-restore-thin-border-h)
   (setq olivetti-body-width 120))
