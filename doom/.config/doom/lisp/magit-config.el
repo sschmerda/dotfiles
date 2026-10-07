@@ -5,6 +5,19 @@
   (setq-local display-line-numbers-type 'visual)
   (display-line-numbers-mode 1))
 
+(defun my/magit-clear-file-filter ()
+  "Clear active and suspended file filters in the current Magit buffer."
+  (interactive)
+  (setq magit-buffer-diff-files nil
+        magit-buffer-diff-files-suspended nil)
+  (magit-refresh))
+
+(after! magit-diff
+  ;; Add an explicit reset beside Magit's existing file-filter toggle.
+  (unless (ignore-errors (transient-get-suffix 'magit-diff-refresh "C"))
+    (transient-append-suffix 'magit-diff-refresh "F"
+      '("C" "Clear file filter" my/magit-clear-file-filter))))
+
 (after! magit
   ;; Doom disables numbers in Magit by default; replace that hook.
   (remove-hook 'magit-mode-hook #'doom-disable-line-numbers-h)
