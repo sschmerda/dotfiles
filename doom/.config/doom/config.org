@@ -39,6 +39,16 @@ centring remains in the separate Olivetti configuration.
 (load! "lisp/appearance-config")
 #+end_src
 
+* Interface spacing
+[[file:lisp/spacing-config.el][spacing-config.el]] enables spacious-padding by default, with modest interface
+spacing and thin visible dividers between split windows. Use =SPC t P= (capital
+=P=) to toggle it. Olivetti retains its own window fringes and can be toggled
+separately with =SPC t o=.
+
+#+begin_src emacs-lisp
+(load! "lisp/spacing-config")
+#+end_src
+
 * Org
 [[file:lisp/org-config.el][org-config.el]] sets the notes directory and uses visible-line numbering
 in Org buffers so folded text does not contribute hidden lines to the count.
