@@ -101,6 +101,14 @@ ID and retains a fallback for containers without a suitable login shell.
 (load! "lisp/terminal-config")
 #+end_src
 
+* Browsing
+[[file:lisp/browsing-config.el][browsing-config.el]] makes EWW open in a normal window instead of a bottom
+popup. The rule also covers buffers renamed to the loaded page's title.
+
+#+begin_src emacs-lisp
+(load! "lisp/browsing-config")
+#+end_src
+
 * Remote access
 [[file:lisp/tramp-config.el][tramp-config.el]] includes the remote connection's own PATH in TRAMP's
 search paths so tools such as micromamba can be discovered. This applies to

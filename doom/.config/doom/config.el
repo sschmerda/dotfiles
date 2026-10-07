@@ -19,6 +19,8 @@
 
 (load! "lisp/terminal-config")
 
+(load! "lisp/browsing-config")
+
 (load! "lisp/tramp-config")
 
 (load! "lisp/pdf-config")
