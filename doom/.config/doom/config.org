@@ -52,8 +52,25 @@ separately with =SPC t o=.
 * Org
 [[file:lisp/org-config.el][org-config.el]] sets the notes directory and uses visible-line numbering
 in Org buffers so folded text does not contribute hidden lines to the count.
-It enables mixed-pitch typography for Org: proportional prose with monospace
-code and tables. Use =SPC m v= to toggle it in the current Org buffer.
+Org starts in editing view: proportional prose with monospace code and tables,
+with hidden markup revealed at the text cursor. The =SPC m v= view menu offers:
+
+| Key | Action                                                      |
+|-----+-------------------------------------------------------------|
+| e   | Editing: mixed pitch, markup at cursor, editable              |
+| r   | Reading: mixed pitch, hidden markup, read-only                |
+| s   | Source: monospace, visible markup, editable                   |
+| m   | Toggle mixed pitch                                          |
+| h   | Toggle revealing hidden markup at the cursor                 |
+| w   | Toggle read-only                                            |
+
+Selecting a preset resets these options; individual toggles adjust the buffer.
+Source view also disables Org Modern decorations and image/LaTeX previews.
+Markdown retains its direct =SPC m v= mixed-pitch toggle.
+The read-only toggle is the same command as =SPC t r=. Doom's =SPC t v=
+Visible mode reveals all invisible text rather than only markup at the cursor;
+selecting an Org view turns it off. Wrapping (=SPC t w=), line numbers (=SPC t l=),
+centring (=SPC t o=), padding (=SPC t P=), Zen and slides remain separate controls.
 The directory must be configured before Org loads.
 
 #+begin_src emacs-lisp
