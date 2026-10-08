@@ -42,6 +42,18 @@
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
 (setq display-line-numbers-type 'relative)
 
+;; Leave one pixel between the split divider and Doom's left Git bars.
+(after! diff-hl
+  (defun my/vc-gutter-inset-bar-a (original bitmap bits &optional height width align)
+    "Move the pretty Git bar inward without changing its width."
+    (when (and (eq bitmap 'diff-hl-bmp-middle)
+               (eq diff-hl-side 'left)
+               (modulep! :ui vc-gutter +pretty))
+      (setq bits (vconcat (mapcar (lambda (row) (ash row -1)) bits))))
+    (funcall original bitmap bits height width align))
+  (advice-add 'define-fringe-bitmap :around #'my/vc-gutter-inset-bar-a)
+  (diff-hl-define-bitmaps))
+
 ;; Make Doom's Command +/- font zoom use smaller steps.
 (setq doom-font-increment 1)
 
