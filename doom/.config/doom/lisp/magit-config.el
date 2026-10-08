@@ -42,6 +42,18 @@
   (remove-hook 'magit-mode-hook #'doom-disable-line-numbers-h)
   (add-hook 'magit-mode-hook #'my/magit-enable-relative-line-numbers-h))
 
+(after! magit-margin
+  ;; Magit normally hides these overlays by giving the right margin no width.
+  ;; Olivetti's padding also uses that margin, so skip disabled annotations.
+  (defun my/magit-respect-margin-visibility-a (original &rest args)
+    "Create margin annotations only when Magit's margin is enabled."
+    (when (magit--right-margin-active)
+      (apply original args)))
+  (advice-add 'magit-make-margin-overlay :around
+              #'my/magit-respect-margin-visibility-a)
+  ;; Toggling the margin must rebuild annotations removed while disabled.
+  (advice-add 'magit-toggle-margin :after #'magit-refresh))
+
 (after! (evil magit)
   ;; On Emacs 29, multi-line visual motion can undercount folded boundaries.
   ;; Single screen-line steps consistently skip Magit's invisible overlays.

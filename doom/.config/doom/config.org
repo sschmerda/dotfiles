@@ -154,6 +154,8 @@ Counted upward motions repeat single visible-line steps to avoid an Emacs 29
 off-by-one movement at folded section boundaries.
 Use =D /= in Magit to filter changes by directory. Selecting the repository root
 removes the filter. Use =D C= to clear active and remembered file filters.
+Commit-age annotations respect Magit's margin visibility setting, so Olivetti's
+outer padding cannot expose disabled annotations.
 
 #+begin_src emacs-lisp
 (load! "lisp/magit-config")
