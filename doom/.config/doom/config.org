@@ -135,7 +135,8 @@ counted Evil motions such as =5j= and =3k=. Folded section contents do not
 contribute hidden lines to the count; =TAB= toggles the current section.
 Counted upward motions repeat single visible-line steps to avoid an Emacs 29
 off-by-one movement at folded section boundaries.
-Use =D C= in Magit to clear active and remembered file filters and show all files.
+Use =D /= in Magit to filter changes by directory. Selecting the repository root
+removes the filter. Use =D C= to clear active and remembered file filters.
 
 #+begin_src emacs-lisp
 (load! "lisp/magit-config")

@@ -12,11 +12,30 @@
         magit-buffer-diff-files-suspended nil)
   (magit-refresh))
 
+(defun my/magit-filter-directory (directory)
+  "Limit the current Magit buffer to DIRECTORY inside this repository."
+  (interactive
+   (list (let ((default-directory (magit-toplevel)))
+           (read-directory-name "Filter by directory: " default-directory nil t))))
+  (let* ((root (magit-toplevel))
+         (directory (file-name-as-directory (expand-file-name directory))))
+    (unless (or (equal (file-truename directory) (file-truename root))
+                (file-in-directory-p directory root))
+      (user-error "Choose a directory inside this repository"))
+    (setq magit-buffer-diff-files
+          (unless (equal (file-truename directory) (file-truename root))
+            (list (file-relative-name directory root)))
+          magit-buffer-diff-files-suspended nil)
+    (magit-refresh)))
+
 (after! magit-diff
   ;; Add an explicit reset beside Magit's existing file-filter toggle.
   (unless (ignore-errors (transient-get-suffix 'magit-diff-refresh "C"))
     (transient-append-suffix 'magit-diff-refresh "F"
-      '("C" "Clear file filter" my/magit-clear-file-filter))))
+      '("C" "Clear file filter" my/magit-clear-file-filter)))
+  (unless (ignore-errors (transient-get-suffix 'magit-diff-refresh "/"))
+    (transient-append-suffix 'magit-diff-refresh "C"
+      '("/" "Filter by directory" my/magit-filter-directory))))
 
 (after! magit
   ;; Doom disables numbers in Magit by default; replace that hook.
