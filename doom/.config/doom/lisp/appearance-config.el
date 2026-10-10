@@ -63,10 +63,5 @@
 (set-frame-parameter nil 'undecorated t)
 (set-frame-parameter nil 'fullscreen 'maximized)
 
-;; Show the 80-column guide everywhere except in Ghostel terminals.
-(setq-default display-fill-column-indicator-column 80
-              display-fill-column-indicator-character ?│)
-(set-face-attribute 'fill-column-indicator nil
-                    :foreground "#3f444c"
-                    :background nil)
-(global-display-fill-column-indicator-mode 1)
+;; Overflow highlighting in text-layout-config replaces the vertical guide.
+(global-display-fill-column-indicator-mode -1)

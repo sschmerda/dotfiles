@@ -32,11 +32,24 @@ and Command as Super. The SDK setup is guarded so it only runs on macOS.
 
 * Appearance
 [[file:lisp/appearance-config.el][appearance-config.el]] sets the theme, fonts, relative line numbers, font
-zoom steps, frame appearance and the 80-column guide. Package-specific window
-centring remains in the separate Olivetti configuration.
+zoom steps and frame appearance. Package-specific window centring remains in
+the separate Olivetti configuration.
 
 #+begin_src emacs-lisp
 (load! "lisp/appearance-config")
+#+end_src
+
+* Text layout and line length
+[[file:lisp/text-layout-config.el][text-layout-config.el]] replaces the vertical column guide with a
+theme-aware background tint on excess source columns in code. The default code
+limit is 80, Python uses 88, and Rust uses 100. Org and Markdown prose, terminals
+and generated buffers such as Magit and help are excluded from overflow highlighting.
+Code files remain unwrapped and use their formatter. Project-specific
+=fill-column= values in =.dir-locals.el= override the defaults; code highlighting
+follows =fill-column=. Formatter settings remain independent.
+
+#+begin_src emacs-lisp
+(load! "lisp/text-layout-config")
 #+end_src
 
 * Interface spacing

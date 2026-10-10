@@ -5,6 +5,8 @@
 
 (load! "lisp/appearance-config")
 
+(load! "lisp/text-layout-config")
+
 (load! "lisp/spacing-config")
 
 (load! "lisp/org-config")
