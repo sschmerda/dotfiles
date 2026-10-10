@@ -57,19 +57,30 @@
     (my/text-layout-overflow-colour)))
 
 (defun my/text-layout-setup-h ()
-  "Set code widths and wrapping before project-local overrides load."
-  (when (and (my/text-layout-eligible-p) (not (my/text-layout-prose-p)))
+  "Set per-mode widths and wrapping before project-local overrides load."
+  (when (my/text-layout-eligible-p)
     (unless my/text-layout-initialized
       (setq my/text-layout-initialized t)
       (unless (or (assq 'fill-column dir-local-variables-alist)
                   (assq 'fill-column file-local-variables-alist))
         (setq-local fill-column
-                    (cond ((derived-mode-p 'python-mode 'python-ts-mode) 88)
+                    (cond ((my/text-layout-prose-p) 100)
+                          ((derived-mode-p 'python-mode 'python-ts-mode) 88)
                           ((derived-mode-p 'rust-mode 'rust-ts-mode 'rustic-mode) 100)
                           (t 80))))
-      (auto-fill-mode -1)
-      (when (bound-and-true-p +word-wrap-mode) (+word-wrap-mode -1))
-      (visual-line-mode -1))
+      (if (my/text-layout-prose-p)
+          (progn
+            (if (fboundp '+word-wrap-mode)
+                (+word-wrap-mode 1)
+              (visual-line-mode 1))
+            ;; Prose paragraphs wrap on screen, without inserting source newlines.
+            (setq-local normal-auto-fill-function
+                        (if (derived-mode-p 'org-mode)
+                            #'org-auto-fill-function #'do-auto-fill))
+            (auto-fill-mode -1))
+        (auto-fill-mode -1)
+        (when (bound-and-true-p +word-wrap-mode) (+word-wrap-mode -1))
+        (visual-line-mode -1)))
     (my/text-layout-refresh)))
 
 (defun my/text-layout-theme-h ()

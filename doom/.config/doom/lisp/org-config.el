@@ -10,6 +10,21 @@
 (setq org-directory "~/org/")
 
 (after! org
+  ;; Prose paragraphs occupy one source line, so navigate their screen rows.
+  ;; Leave operator-state motions (for example dj) on source lines.
+  (map! :map org-mode-map
+        :nv "j" #'evil-next-visual-line
+        :nv "k" #'evil-previous-visual-line)
+
+  ;; Hidden link targets and markup still count towards the source line limit.
+  ;; Otherwise filling in editing view produces longer lines than source view.
+  (defun my/org-fill-source-columns-a (original &rest args)
+    "Count invisible source characters while filling Org text."
+    (let ((buffer-invisibility-spec nil))
+      (apply original args)))
+  (advice-add 'org-fill-paragraph :around #'my/org-fill-source-columns-a)
+  (advice-add 'org-auto-fill-function :around #'my/org-fill-source-columns-a)
+
   ;; Replace the former direct mixed-pitch toggle with a view menu.
   (map! :map org-mode-map :localleader "v" nil)
   (map! :map org-mode-map
