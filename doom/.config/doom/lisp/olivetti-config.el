@@ -121,6 +121,51 @@
     (advice-add 'diff-hl-define-bitmaps :after #'my/olivetti-define-gutter-bar-h))
   (add-hook 'olivetti-mode-hook #'my/olivetti-sync-gutter-bitmap-h)
   (add-hook 'diff-hl-mode-on-hook #'my/olivetti-sync-gutter-bitmap-h)
+  (defvar-local my/olivetti-original-fringe-indicators nil)
+  (defun my/olivetti-empty-line-bitmap (width height)
+    "Return a WIDTH by HEIGHT bitmap with a border and an inset tilde."
+    (setq width (max 3 (min 16 width))
+          height (max 2 height))
+    (let ((bitmap (intern (format "my/olivetti-empty-line-%dx%d" width height))))
+      (unless (fringe-bitmap-p bitmap)
+        (let* ((border (ash 1 (1- width)))
+               (rows (make-vector height border))
+               (mask (1- (ash 1 (- width 2))))
+               (middle (1- (/ height 2))))
+          ;; Reserve the outer pixel for the border and the next for a gap.
+          (aset rows middle (logior border (logand #b011001 mask)))
+          (aset rows (1+ middle) (logior border (logand #b100110 mask)))
+          (define-fringe-bitmap bitmap rows height width '(center t))
+          (set-fringe-bitmap-face bitmap 'fringe)))
+      bitmap))
+  (defun my/olivetti-sync-empty-line-indicator (window enabled)
+    "Keep WINDOW's border beside end-of-buffer markers when ENABLED."
+    (if enabled
+        (let* ((frame (window-frame window))
+               (scale (if (boundp 'text-scale-mode-amount)
+                          (expt text-scale-mode-step text-scale-mode-amount) 1))
+               (spacing (or line-spacing 0))
+               (spacing (if (consp spacing) (+ (car spacing) (cdr spacing)) spacing))
+               (height (+ (ceiling (* (frame-char-height frame) scale))
+                          (if (floatp spacing)
+                              (truncate (* (frame-char-height frame) spacing)) spacing)))
+               (bitmap (my/olivetti-empty-line-bitmap
+                        (car (window-fringes window)) height)))
+          (unless my/olivetti-original-fringe-indicators
+            (setq my/olivetti-original-fringe-indicators
+                  (list (local-variable-p 'fringe-indicator-alist)
+                        fringe-indicator-alist)))
+          (unless (eq (cdr (assq 'empty-line fringe-indicator-alist)) bitmap)
+            (setq-local fringe-indicator-alist
+                        (cons (cons 'empty-line bitmap)
+                              (assq-delete-all 'empty-line
+                                               (copy-tree fringe-indicator-alist))))))
+      (when my/olivetti-original-fringe-indicators
+        (if (car my/olivetti-original-fringe-indicators)
+            (setq-local fringe-indicator-alist
+                        (cadr my/olivetti-original-fringe-indicators))
+          (kill-local-variable 'fringe-indicator-alist))
+        (setq my/olivetti-original-fringe-indicators nil))))
   (defun my/olivetti-clear-fringe-border (window)
     "Remove WINDOW's local patterned fringe face."
     (when-let ((entry (window-parameter window 'my/olivetti-fringe-face)))
@@ -138,6 +183,8 @@
                ;; NS and older PGTK builds do not render stipples reliably.
                (supported (or (memq backend '(mac x))
                               (and (eq backend 'pgtk) (>= emacs-major-version 30)))))
+          (my/olivetti-sync-empty-line-indicator
+           window (and (bound-and-true-p olivetti-mode) supported))
           (if (not (and (bound-and-true-p olivetti-mode) supported))
               (my/olivetti-clear-fringe-border window)
             (let* ((edges (window-inside-pixel-edges window))
