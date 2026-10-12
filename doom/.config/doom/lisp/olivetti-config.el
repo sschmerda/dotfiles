@@ -146,7 +146,9 @@
                    (left (- (car edges) (car fringes)))
                    (right (1- (+ (nth 2 edges) (cadr fringes))))
                    (background (face-attribute 'default :background frame t))
-                   (state (list (current-buffer) width left right background)))
+                   ;; Follow the theme, using the same face as split dividers.
+                   (border (face-attribute 'shadow :foreground frame t))
+                   (state (list (current-buffer) width left right background border)))
               (unless (equal state (window-parameter window 'my/olivetti-fringe-state))
                 (my/olivetti-clear-fringe-border window)
                 ;; Stipples are tiled from the frame origin, not the fringe origin.
@@ -165,7 +167,7 @@
                          (face-remap-add-relative
                           'fringe
                           `(:filtered (:window my/olivetti-fringe-token ,token)
-                            (:foreground "#2d2640" :background ,background
+                            (:foreground ,border :background ,background
                              :stipple (,width 1 ,(string-make-unibyte bits)))))))
                   (set-window-parameter window 'my/olivetti-fringe-state state)))))))))
   (defun my/olivetti-update-fringe-borders-h (&rest _)
