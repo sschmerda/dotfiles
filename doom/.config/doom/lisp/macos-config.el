@@ -24,8 +24,16 @@
 
 (my/setup-macos-native-comp-library-path)
 
-;; macOS modifier keys
+;; Both Option keys act as Meta; Command acts as Super.
 (setq mac-option-modifier 'meta
+      mac-right-option-modifier 'meta
       mac-command-modifier 'super
       ns-option-modifier 'meta
+      ns-alternate-modifier 'meta
+      ns-right-alternate-modifier 'meta
       ns-command-modifier 'super)
+
+;; Keep Command+X as Cut; Option+X opens the command menu.
+(when (eq system-type 'darwin)
+  (map! "s-x" (cmds! (doom-region-active-p) #'kill-region
+                     #'ignore)))
