@@ -9,6 +9,7 @@
   (defun my/olivetti-buffer-eligible-p ()
     "Allow file, Dired and shell buffers, excluding internal and display buffers."
     (and (not (minibufferp))
+         (not (bound-and-true-p org-tree-slide-mode))
          (not (bound-and-true-p +popup-buffer-mode))
          (not (derived-mode-p 'pdf-view-mode 'my/time-popup-mode))
          (not (string-prefix-p " " (buffer-name)))))
@@ -174,6 +175,17 @@
           (face-remap-remove-relative (cdr entry)))))
     (set-window-parameter window 'my/olivetti-fringe-face nil)
     (set-window-parameter window 'my/olivetti-fringe-state nil))
+  (defun my/olivetti-fringe-border-live-p (window)
+    "Return non-nil if WINDOW's cached border still has its face remapping."
+    (when-let ((entry (window-parameter window 'my/olivetti-fringe-face)))
+      (and (eq (car entry) (window-buffer window))
+           (with-current-buffer (car entry)
+             (let* ((spec (cddr entry))
+                    (faces (cdr (assq 'fringe face-remapping-alist))))
+               (and (listp faces)
+                    (memq spec faces)
+                    (eq (nth 2 (nth 1 spec))
+                        (window-parameter window 'my/olivetti-fringe-token))))))))
   (defun my/olivetti-pattern-fringes (window)
     "Paint one-pixel outer stripes without reducing the Git gutter width."
     (when (window-live-p window)
@@ -196,7 +208,8 @@
                    ;; Follow the theme, using the same face as split dividers.
                    (border (face-attribute 'shadow :foreground frame t))
                    (state (list (current-buffer) width left right background border)))
-              (unless (equal state (window-parameter window 'my/olivetti-fringe-state))
+              (unless (and (equal state (window-parameter window 'my/olivetti-fringe-state))
+                           (my/olivetti-fringe-border-live-p window))
                 (my/olivetti-clear-fringe-border window)
                 ;; Stipples are tiled from the frame origin, not the fringe origin.
                 ;; A frame-wide tile gives each outer edge exactly one set pixel.
@@ -231,6 +244,27 @@
           (set-window-fringes window-or-frame nil nil nil)))
       (my/olivetti-pattern-fringes window-or-frame)))
   (advice-add 'olivetti-set-window :after #'my/olivetti-fringe-after-layout-h)
+  (defun my/olivetti-slide-layout-a (original &rest args)
+    "Suspend centering during slides and rebuild it after Doom restores Org."
+    (let ((presenting (bound-and-true-p org-tree-slide-mode)))
+      (when presenting
+        (my/olivetti-disable-buffer (current-buffer)))
+      (prog1 (apply original args)
+        (unless presenting
+          ;; Doom calls `org-mode', which can remove buffer-local remappings
+          ;; while leaving the window's cached border coordinates unchanged.
+          (dolist (window (get-buffer-window-list (current-buffer) nil t))
+            (my/olivetti-clear-fringe-border window))
+          (my/olivetti-refresh-h)
+          (my/olivetti-update-fringe-borders-h)))))
+  (advice-add '+org-present-prettify-slide-h :around #'my/olivetti-slide-layout-a)
+  (defun my/olivetti-refresh-buffer-display-h ()
+    "Restore visible buffer centering and markers after a major-mode change."
+    (when (get-buffer-window (current-buffer) t)
+      (my/olivetti-refresh-h)
+      (dolist (window (get-buffer-window-list (current-buffer) nil t))
+        (my/olivetti-pattern-fringes window))))
+  (add-hook 'after-change-major-mode-hook #'my/olivetti-refresh-buffer-display-h t)
   (add-hook 'olivetti-mode-hook #'my/olivetti-update-fringe-borders-h)
   (add-hook 'doom-load-theme-hook #'my/olivetti-update-fringe-borders-h)
   (setq olivetti-body-width 120))
