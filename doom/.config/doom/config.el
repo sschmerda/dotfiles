@@ -27,6 +27,8 @@
 
 (load! "lisp/browsing-config")
 
+(load! "lisp/lookup-config")
+
 (load! "lisp/magit-config")
 
 (load! "lisp/tramp-config")

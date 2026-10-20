@@ -118,6 +118,13 @@ Selecting a preset resets these options; individual toggles adjust the buffer. S
 (load! "lisp/browsing-config")
 #+end_src
 
+* Dictionary lookup
+[[file:lisp/lookup-config.el][lookup-config.el]] displays dictionary results in a bottom popup, consistently across repeated lookups. This covers macOS Dictionary, all =define-word= services and offline WordNet through WordNut. Online definitions use a dedicated dictionary buffer rather than the shared evaluation output buffer.
+
+#+begin_src emacs-lisp
+(load! "lisp/lookup-config")
+#+end_src
+
 * Git
 [[file:lisp/magit-config.el][magit-config.el]] enables visible-line relative numbers in Magit buffers for counted Evil motions such as =5j= and =3k=. Folded section contents do not contribute hidden lines to the count; =TAB= toggles the current section. Counted upward motions repeat single visible-line steps to avoid an Emacs 29 off-by-one movement at folded section boundaries. Use =D /= in Magit to filter changes by directory. Selecting the repository root removes the filter. Use =D C= to clear active and remembered file filters. Commit-age annotations respect Magit's margin visibility setting, so Olivetti's outer padding cannot expose disabled annotations.
 
