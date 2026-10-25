@@ -9,6 +9,8 @@ Doom's =:config literate= module tangles the source blocks into =config.el= duri
 
 The imports below run in document order. Keep the macOS native compilation setup first, and set the Org directory before loading any code that needs Org.
 
+Custom commands intended for =M-x= or keybindings use =my/=. Internal helpers, hooks and advice use =my--=; custom variables use =my-=. Internal modes and their associated keymaps keep the shared =my--= prefix so Emacs can derive their related names consistently.
+
 #+begin_src emacs-lisp
 ;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
 ;; Generated from config.org. Edit config.org or the files under lisp/ instead.

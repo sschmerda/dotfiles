@@ -1,6 +1,6 @@
 ;;; macos-config.el -*- lexical-binding: t; -*-
 
-(defun my/setup-macos-native-comp-library-path ()
+(defun my--setup-macos-native-comp-library-path ()
   "Let native compilation find libSystem in the active macOS SDK."
   (when (and (eq system-type 'darwin)
              (fboundp 'native-comp-available-p)
@@ -22,7 +22,7 @@
                         (concat existing ":" lib)
                       lib))))))))
 
-(my/setup-macos-native-comp-library-path)
+(my--setup-macos-native-comp-library-path)
 
 ;; Both Option keys act as Meta; Command acts as Super.
 (setq mac-option-modifier 'meta

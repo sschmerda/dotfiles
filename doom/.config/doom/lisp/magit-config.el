@@ -1,6 +1,6 @@
 ;;; magit-config.el -*- lexical-binding: t; -*-
 
-(defun my/magit-enable-relative-line-numbers-h ()
+(defun my--magit-enable-relative-line-numbers-h ()
   "Count visible lines for relative motions across folded Magit sections."
   (setq-local display-line-numbers-type 'visual)
   (display-line-numbers-mode 1))
@@ -40,17 +40,17 @@
 (after! magit
   ;; Doom disables numbers in Magit by default; replace that hook.
   (remove-hook 'magit-mode-hook #'doom-disable-line-numbers-h)
-  (add-hook 'magit-mode-hook #'my/magit-enable-relative-line-numbers-h))
+  (add-hook 'magit-mode-hook #'my--magit-enable-relative-line-numbers-h))
 
 (after! magit-margin
   ;; Magit normally hides these overlays by giving the right margin no width.
   ;; Olivetti's padding also uses that margin, so skip disabled annotations.
-  (defun my/magit-respect-margin-visibility-a (original &rest args)
+  (defun my--magit-respect-margin-visibility-a (original &rest args)
     "Create margin annotations only when Magit's margin is enabled."
     (when (magit--right-margin-active)
       (apply original args)))
   (advice-add 'magit-make-margin-overlay :around
-              #'my/magit-respect-margin-visibility-a)
+              #'my--magit-respect-margin-visibility-a)
   ;; Toggling the margin must rebuild annotations removed while disabled.
   (advice-add 'magit-toggle-margin :after #'magit-refresh))
 

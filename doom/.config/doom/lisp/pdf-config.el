@@ -4,5 +4,5 @@
 (after! pdf-view
   (setq-default pdf-view-display-size 'fit-height)
   (add-hook! 'pdf-view-mode-hook
-    (defun my/pdf-fit-height-h ()
+    (defun my--pdf-fit-height-h ()
       (pdf-view-fit-height-to-window))))

@@ -2,7 +2,7 @@
 
 ;; Proportional prose with monospace code; also applies to derived GFM buffers.
 (add-hook! 'markdown-mode-hook
-  (defun my/markdown-enable-mixed-pitch-h ()
+  (defun my--markdown-enable-mixed-pitch-h ()
     (mixed-pitch-mode 1)))
 
 (after! markdown-mode

@@ -4,7 +4,7 @@
 (set-popup-rule! "^\\*\\(?:osx-dictionary\\|WordNut\\|Dictionary\\)\\*$"
   :side 'bottom :size 0.35 :select t :quit t :ttl nil)
 
-(defun my/dictionary-display-results (output)
+(defun my--dictionary-display-results (output)
   "Display online dictionary OUTPUT in a dedicated bottom popup."
   (let ((buffer (get-buffer-create "*Dictionary*")))
     (with-current-buffer buffer
@@ -19,21 +19,21 @@
 
 (after! define-word
   ;; Route every service, including services added later, through the same UI.
-  (defun my/dictionary-display-function-a (_service)
-    #'my/dictionary-display-results)
+  (defun my--dictionary-display-function-a (_service)
+    #'my--dictionary-display-results)
   (advice-add 'define-word-displayfn :override
-              #'my/dictionary-display-function-a))
+              #'my--dictionary-display-function-a))
 
 ;; WordNut already uses `pop-to-buffer', so the shared popup rule is enough.
 (after! osx-dictionary
 
   ;; The package's other-window switch bypasses Doom's popup placement.
   ;; Keep its saved layout so its own quit command still restores the windows.
-  (defun my/osx-dictionary-display-bottom-a (word)
+  (defun my--osx-dictionary-display-bottom-a (word)
     (setq osx-dictionary-previous-window-configuration
           (current-window-configuration))
     (pop-to-buffer (osx-dictionary--get-buffer word)))
   (advice-add 'osx-dictionary--goto-dictionary :override
-              #'my/osx-dictionary-display-bottom-a))
+              #'my--osx-dictionary-display-bottom-a))
 
 ;;; lookup-config.el ends here

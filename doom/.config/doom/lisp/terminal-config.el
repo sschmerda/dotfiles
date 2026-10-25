@@ -3,7 +3,7 @@
 ;; Docker TRAMP processes may lack LOGNAME, which Ghostel's built-in login-shell
 ;; lookup uses. Query the effective user ID instead, without assuming a username
 ;; or that Zsh is installed. Keep the configured fallback and shell arguments.
-(defun my/ghostel-docker-login-shell-a (original method)
+(defun my--ghostel-docker-login-shell-a (original method)
   (if (and (equal method "docker")
            (equal (file-remote-p default-directory 'method) "docker")
            (eq (cadr (assoc method ghostel-tramp-shells)) 'login-shell))
@@ -31,10 +31,10 @@
   (setf (alist-get "docker" ghostel-tramp-shells nil nil #'equal)
         '(login-shell "/bin/sh"))
   (advice-add 'ghostel--tramp-shell-spec :around
-              #'my/ghostel-docker-login-shell-a))
+              #'my--ghostel-docker-login-shell-a))
 
 ;; Keep the code/text column guide out of terminal buffers.
-(defun my/hide-terminal-column-guide-h ()
+(defun my--hide-terminal-column-guide-h ()
   (display-fill-column-indicator-mode -1))
 
-(add-hook 'ghostel-mode-hook #'my/hide-terminal-column-guide-h)
+(add-hook 'ghostel-mode-hook #'my--hide-terminal-column-guide-h)

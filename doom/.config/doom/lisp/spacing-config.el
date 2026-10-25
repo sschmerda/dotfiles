@@ -15,7 +15,7 @@
           :scroll-bar-width 8
           :fringe-width 8))
   :config
-  (defun my/spacious-padding-visible-dividers-h (&rest _)
+  (defun my--spacious-padding-visible-dividers-h (&rest _)
     "Keep a contrasting thin separator while spacious padding is enabled."
     (when spacious-padding-mode
       (let ((color (face-attribute 'shadow :foreground nil t))
@@ -26,5 +26,5 @@
           (custom-theme-set-faces 'spacious-padding
             `(,face ((t (:foreground ,color :background ,color)))))))))
   (advice-add 'spacious-padding-set-faces :after
-              #'my/spacious-padding-visible-dividers-h)
+              #'my--spacious-padding-visible-dividers-h)
   (spacious-padding-mode 1))

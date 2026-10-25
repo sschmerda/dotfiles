@@ -1,11 +1,11 @@
 ;;; time-popup.el --- Local clock popup -*- lexical-binding: t; -*-
 
-(defvar-local my/time-popup-timer nil)
-(defvar my/time-popup--frame nil
+(defvar-local my-time-popup-timer nil)
+(defvar my-time-popup-frame nil
   "The floating frame displaying the clock, if any.")
-(defvar my/time-popup--parent-cursor nil
+(defvar my-time-popup-parent-cursor nil
   "Saved cursor setting of the buffer behind the clock.")
-(defvar my/time-popup-world-zones
+(defvar my-time-popup-world-zones
   '(("UTC" "UTC0")
     ("London" "Europe/London")
     ("New York" "America/New_York")
@@ -15,35 +15,35 @@
     ("Sydney" "Australia/Sydney"))
   "World clock entries as (LABEL TIME-ZONE), using named zones for daylight saving.")
 
-(defun my/time-popup-stop ()
+(defun my--time-popup-stop ()
   "Stop this clock buffer's refresh timer."
-  (when (timerp my/time-popup-timer)
-    (cancel-timer my/time-popup-timer))
-  (setq my/time-popup-timer nil))
+  (when (timerp my-time-popup-timer)
+    (cancel-timer my-time-popup-timer))
+  (setq my-time-popup-timer nil))
 
-(defun my/time-popup-restore-parent-cursor ()
+(defun my--time-popup-restore-parent-cursor ()
   "Restore the cursor setting of the buffer behind the clock."
-  (when my/time-popup--parent-cursor
-    (pcase-let ((`(,buffer ,was-local ,value) my/time-popup--parent-cursor))
+  (when my-time-popup-parent-cursor
+    (pcase-let ((`(,buffer ,was-local ,value) my-time-popup-parent-cursor))
       (when (buffer-live-p buffer)
         (with-current-buffer buffer
           (if was-local
               (setq-local cursor-in-non-selected-windows value)
             (kill-local-variable 'cursor-in-non-selected-windows))))))
-  (setq my/time-popup--parent-cursor nil))
+  (setq my-time-popup-parent-cursor nil))
 
 (defun my/time-popup-close ()
   "Close the clock popup and stop refreshing it."
   (interactive)
   (let* ((buffer (get-buffer "*Local Clock*"))
-         (frame my/time-popup--frame)
+         (frame my-time-popup-frame)
          (parent (and (frame-live-p frame)
                       (frame-parameter frame 'parent-frame))))
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
-        (my/time-popup-stop)))
-    (my/time-popup-restore-parent-cursor)
-    (setq my/time-popup--frame nil)
+        (my--time-popup-stop)))
+    (my--time-popup-restore-parent-cursor)
+    (setq my-time-popup-frame nil)
     (if (frame-live-p frame)
         (progn
           (delete-frame frame t)
@@ -54,7 +54,7 @@
     (when (buffer-live-p buffer)
       (kill-buffer buffer))))
 
-(defvar my/time-popup-mode-map
+(defvar my--time-popup-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map special-mode-map)
     (define-key map (kbd "q") #'my/time-popup-close)
@@ -62,7 +62,7 @@
     (define-key map (kbd "C-g") #'my/time-popup-close)
     map))
 
-(define-derived-mode my/time-popup-mode special-mode "Clock"
+(define-derived-mode my--time-popup-mode special-mode "Clock"
   "Display local time and date without editing the buffer."
   (setq-local cursor-type nil
               evil-normal-state-cursor '(nil)
@@ -76,9 +76,9 @@
               mode-line-format nil
               header-line-format nil
               truncate-lines t)
-  (add-hook 'kill-buffer-hook #'my/time-popup-stop nil t))
+  (add-hook 'kill-buffer-hook #'my--time-popup-stop nil t))
 
-(defun my/time-popup-render ()
+(defun my--time-popup-render ()
   "Render large local time and understated world clocks using theme colors."
   (let* ((inhibit-read-only t)
          (now (current-time))
@@ -95,7 +95,7 @@
             "\n\n    "
             (propertize "World clock" 'face 'shadow)
             "\n\n")
-    (dolist (entry my/time-popup-world-zones)
+    (dolist (entry my-time-popup-world-zones)
       (insert
        (propertize
         (format "    %-12s %s\n" (car entry)
@@ -108,15 +108,15 @@
       (set-window-point window (point)))
     (set-buffer-modified-p nil)))
 
-(defun my/time-popup-tick (buffer)
+(defun my--time-popup-tick (buffer)
   "Refresh BUFFER while visible; stop the timer when hidden."
   (when (buffer-live-p buffer)
     (with-current-buffer buffer
       (if (get-buffer-window buffer t)
-          (my/time-popup-render)
-        (my/time-popup-stop)))))
+          (my--time-popup-render)
+        (my--time-popup-stop)))))
 
-(defun my/time-popup-show-frame (buffer)
+(defun my--time-popup-show-frame (buffer)
   "Show BUFFER in a child frame centred over the current frame."
   (let* ((parent (selected-frame))
          (parent-buffer (window-buffer (selected-window)))
@@ -138,10 +138,10 @@
                    (no-other-frame . t)
                    (skip-taskbar . t)
                    (unsplittable . t)
-                   (my/time-popup . t)
+                   (my--time-popup . t)
                    (visibility . nil)))))
-    (setq my/time-popup--frame frame)
-    (setq my/time-popup--parent-cursor
+    (setq my-time-popup-frame frame)
+    (setq my-time-popup-parent-cursor
           (list parent-buffer
                 (local-variable-p 'cursor-in-non-selected-windows parent-buffer)
                 (buffer-local-value 'cursor-in-non-selected-windows parent-buffer)))
@@ -162,28 +162,28 @@
   (interactive)
   (let* ((buffer (get-buffer "*Local Clock*"))
          (window (and buffer (get-buffer-window buffer t))))
-    (if (or (frame-live-p my/time-popup--frame) window)
+    (if (or (frame-live-p my-time-popup-frame) window)
         (my/time-popup-close)
       (setq buffer (get-buffer-create "*Local Clock*"))
       (with-current-buffer buffer
-        (unless (derived-mode-p 'my/time-popup-mode)
-          (my/time-popup-mode))
-        (my/time-popup-stop)
-        (my/time-popup-render))
+        (unless (derived-mode-p 'my--time-popup-mode)
+          (my--time-popup-mode))
+        (my--time-popup-stop)
+        (my--time-popup-render))
       (if (display-graphic-p)
-          (my/time-popup-show-frame buffer)
+          (my--time-popup-show-frame buffer)
         (pop-to-buffer buffer))
       (with-current-buffer buffer
-        (setq my/time-popup-timer
-              (run-at-time 1 1 #'my/time-popup-tick buffer))))))
+        (setq my-time-popup-timer
+              (run-at-time 1 1 #'my--time-popup-tick buffer))))))
 
 ;; Doom popup and keybinding configuration.
 (set-popup-rule! "^\\*Local Clock\\*$"
   :side 'bottom :size 0.45 :select t :quit t :ttl 0 :modeline nil)
 (map! :leader :desc "Time and date" "t t" #'my/time-popup-toggle)
 (after! evil
-  (evil-set-initial-state 'my/time-popup-mode 'normal)
-  (evil-define-key 'normal my/time-popup-mode-map
+  (evil-set-initial-state 'my--time-popup-mode 'normal)
+  (evil-define-key 'normal my--time-popup-mode-map
     (kbd "q") #'my/time-popup-close
     (kbd "<escape>") #'my/time-popup-close))
 
