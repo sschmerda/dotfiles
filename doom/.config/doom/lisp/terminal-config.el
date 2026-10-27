@@ -28,6 +28,9 @@
 
 ;; Docker terminals use the container user's login shell, falling back to sh.
 (after! ghostel
+  ;; Emacs may inherit NO_COLOR from its launcher. Ghostel supports colours;
+  ;; a bare environment entry unsets the variable for its shell processes.
+  (add-to-list 'ghostel-environment "NO_COLOR")
   (setf (alist-get "docker" ghostel-tramp-shells nil nil #'equal)
         '(login-shell "/bin/sh"))
   (advice-add 'ghostel--tramp-shell-spec :around
