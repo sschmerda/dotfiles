@@ -64,6 +64,10 @@
 
 (define-derived-mode my--time-popup-mode special-mode "Clock"
   "Display local time and date without editing the buffer."
+  ;; Doom enables hl-line in special-mode buffers. Keep the clock unhighlighted,
+  ;; including when global-hl-line-mode checks this buffer again later.
+  (setq-local global-hl-line-modes nil)
+  (hl-line-mode -1)
   (setq-local cursor-type nil
               evil-normal-state-cursor '(nil)
               evil-motion-state-cursor '(nil)
@@ -77,6 +81,18 @@
               header-line-format nil
               truncate-lines t)
   (add-hook 'kill-buffer-hook #'my--time-popup-stop nil t))
+
+(defun my--time-popup-allow-nav-flash-p (&rest _)
+  "Allow navigation flashes only outside the clock buffer and window."
+  ;; Delayed flashes can run with the previous buffer current even after
+  ;; focus has moved to the clock's child frame.
+  (not (or (derived-mode-p 'my--time-popup-mode)
+           (with-current-buffer (window-buffer (selected-window))
+             (derived-mode-p 'my--time-popup-mode)))))
+
+(after! nav-flash
+  (advice-add 'nav-flash-show :before-while
+              #'my--time-popup-allow-nav-flash-p))
 
 (defun my--time-popup-render ()
   "Render large local time and understated world clocks using theme colors."
