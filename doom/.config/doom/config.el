@@ -3,6 +3,8 @@
 
 (load! "lisp/macos-config")
 
+(load! "lisp/completion-config")
+
 (load! "lisp/appearance-config")
 
 (load! "lisp/text-layout-config")

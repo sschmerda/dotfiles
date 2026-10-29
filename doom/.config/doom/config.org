@@ -23,6 +23,13 @@ Custom commands intended for =M-x= or keybindings use =my/=. Internal helpers, h
 (load! "lisp/macos-config")
 #+end_src
 
+* Completion and documentation
+[[file:lisp/completion-config.el][completion-config.el]] reduces automatic completion's idle delay to 150 ms. Completion documentation appears after 250 ms initially and 500 ms when changing candidates; echo-area documentation uses a 300 ms idle delay.
+
+#+begin_src emacs-lisp
+(load! "lisp/completion-config")
+#+end_src
+
 * Appearance
 [[file:lisp/appearance-config.el][appearance-config.el]] sets the theme, fonts, relative line numbers, font zoom steps and frame appearance. Package-specific window centring remains in the separate Olivetti configuration.
 
