@@ -140,12 +140,12 @@
                  `((parent-frame . ,parent)
                    (minibuffer . nil)
                    (name . "Local Clock")
-                   (width . 48)
-                   (height . 16)
+                   (width . 52)
+                   (height . 19)
                    (undecorated . t)
                    (cursor-type . nil)
                    (child-frame-border-width . 1)
-                   (internal-border-width . 12)
+                   (internal-border-width . 15)
                    (menu-bar-lines . 0)
                    (tool-bar-lines . 0)
                    (tab-bar-lines . 0)
@@ -163,6 +163,10 @@
                 (buffer-local-value 'cursor-in-non-selected-windows parent-buffer)))
     (with-current-buffer parent-buffer
       (setq-local cursor-in-non-selected-windows nil))
+    ;; Scale the frame's base font so every element keeps its relative size.
+    (set-face-attribute 'default frame
+                        :height (round (* 1.25 (face-attribute 'default :height parent))))
+    (set-frame-size frame 52 19)
     (set-face-attribute 'child-frame-border frame
                         :background (face-foreground 'vertical-border parent t))
     (set-window-buffer (frame-root-window frame) buffer)
