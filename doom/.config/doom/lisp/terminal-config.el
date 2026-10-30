@@ -1,5 +1,366 @@
 ;;; terminal-config.el -*- lexical-binding: t; -*-
 
+;; This terminal has its own shell; Doom's SPC o t and SPC o T stay independent.
+(defvar-local my-terminal-popup-buffer nil
+  "Non-nil in a terminal managed by `my/terminal-popup-toggle'.")
+
+(defvar my-terminal-popup-side-padding 8
+  "Horizontal inset in pixels on each side of the fullscreen terminal.")
+
+(defvar my-terminal-popup-keymap
+  (let ((map (make-sparse-keymap)))
+    (dolist (key '("C-=" "C-+"))
+      (define-key map (kbd key) #'text-scale-increase))
+    (define-key map (kbd "C--") #'text-scale-decrease)
+    (dolist (key '("s-=" "s-+"))
+      (define-key map (kbd key) #'doom/increase-font-size))
+    (define-key map (kbd "s--") #'doom/decrease-font-size)
+    map)
+  "Zoom keys reserved for Emacs in the floating terminal's input modes.")
+
+(defvar my-terminal-popup-keymap-alist
+  `((my-terminal-popup-buffer . ,my-terminal-popup-keymap))
+  "Popup-only overrides ahead of Ghostel's direct terminal input map.")
+
+(after! ghostel
+  (add-to-list 'emulation-mode-map-alists 'my-terminal-popup-keymap-alist))
+
+(defvar-local my-terminal-popup-canvas-color nil
+  "Application background currently used for the fullscreen frame's canvas.")
+
+(defvar-local my-terminal-popup-canvas-tick nil
+  "Buffer modification tick of the last terminal edge-colour update.")
+
+(defun my--terminal-popup-extend-rows (fallback)
+  "Extend row backgrounds to the right edge; return the last row's colour.
+Use FALLBACK for cells without an explicit terminal background."
+  (let ((background fallback))
+    (save-excursion
+      (goto-char (or (ghostel--viewport-start) (point-min)))
+      (with-silent-modifications
+        (let ((inhibit-read-only t))
+          (while (< (point) (point-max))
+            (let* ((end (line-end-position))
+                   ;; Empty rows must not reuse our previous newline face.
+                   (face (and (> end (point))
+                              (get-text-property (1- end) 'face))))
+              (setq background
+                    (or (and (listp face)
+                             (plist-get face (if (plist-get face :inverse-video)
+                                                 :foreground :background)))
+                        fallback))
+              (when (< end (point-max))
+                (put-text-property end (1+ end) 'face
+                                   `(:background ,background :extend t)))
+              (forward-line 1))))))
+    background))
+
+(defun my--terminal-popup-set-background (frame parent color)
+  "Use application COLOR for FRAME's canvas and insets.
+With nil COLOR, restore the corresponding face colours from PARENT."
+  (dolist (face '(default solaire-default-face fringe solaire-fringe-face))
+    (when (facep face)
+      (let ((background (or color (face-background face parent t))))
+        (unless (equal background (face-background face frame t))
+          (set-face-background face background frame))))))
+
+(defun my--terminal-popup-fill-canvas (buffer)
+  "Extend BUFFER's application backgrounds over unused fullscreen pixels."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (when (and my-terminal-popup-buffer ghostel--term
+                 (not ghostel--pending-redraw))
+        (dolist (window (get-buffer-window-list buffer nil t))
+          (let* ((frame (window-frame window))
+                 (parent (frame-parameter frame 'parent-frame)))
+            (when (and (frame-parameter frame 'my--terminal-popup)
+                       (frame-live-p parent))
+              ;; Buffer pickers can replace the root buffer without reopening
+              ;; the popup, resetting its window-local fringe widths.
+              (unless (equal (seq-take (window-fringes window) 2)
+                             (list my-terminal-popup-side-padding
+                                   my-terminal-popup-side-padding))
+                (set-window-fringes window my-terminal-popup-side-padding
+                                    my-terminal-popup-side-padding)
+                (ghostel--adjust-size window))
+              (if (not (ghostel-alt-screen-p))
+                  (setq my-terminal-popup-canvas-color nil
+                        my-terminal-popup-canvas-tick nil)
+                (unless (equal my-terminal-popup-canvas-tick (buffer-modified-tick))
+                  (let ((fallback (face-background
+                                    (if (memq 'solaire-default-face
+                                              (cdr (assq 'default face-remapping-alist)))
+                                        'solaire-default-face 'default)
+                                    parent t)))
+                    (setq my-terminal-popup-canvas-color
+                          (my--terminal-popup-extend-rows fallback)
+                          my-terminal-popup-canvas-tick (buffer-modified-tick)))))
+              ;; Apply per frame even when the shared buffer did not change:
+              ;; a theme update or another terminal may have changed its faces.
+              (my--terminal-popup-set-background
+               frame parent my-terminal-popup-canvas-color))))))))
+
+(defvar-local my-terminal-popup-saved-input nil
+  "Shell input settings saved while an alternate-screen application runs.")
+
+(defvar-local my-terminal-popup-shell-redraw-timer nil
+  "Pending redraw recovery after returning from an alternate-screen app.")
+
+(defun my--terminal-popup-redraw-shell-h (buffer)
+  "Recover BUFFER's shell if an app left synchronized output enabled."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (setq my-terminal-popup-shell-redraw-timer nil)
+      (when (and ghostel--term (not (ghostel-alt-screen-p)))
+        ;; A detached tmux client can leave DEC 2026 set in the emulator.
+        ;; Clear it locally, not by sending input to the shell. Defer until
+        ;; outside the native output callback and its final screen changes.
+        (when (ghostel--mode-enabled ghostel--term 2026)
+          (ghostel--write-vt ghostel--term "\e[?2026l"))
+        (ghostel--redraw-now buffer t)))))
+
+(defun my--terminal-popup-sync-input (buffer)
+  "Suspend Evil in popup BUFFER's alternate screen; restore it at the shell."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (when (and my-terminal-popup-buffer ghostel--term)
+        (cond
+         ((ghostel-alt-screen-p)
+          (when (timerp my-terminal-popup-shell-redraw-timer)
+            (cancel-timer my-terminal-popup-shell-redraw-timer)
+            (setq my-terminal-popup-shell-redraw-timer nil))
+          ;; Save first: changing input mode can trigger another redraw.
+          (unless my-terminal-popup-saved-input
+            (setq my-terminal-popup-saved-input
+                  (list (bound-and-true-p evil-local-mode)
+                        (bound-and-true-p evil-ghostel-mode)
+                        (and (boundp 'evil-state) evil-state)
+                        ghostel--input-mode)))
+          (when (bound-and-true-p evil-ghostel-mode) (evil-ghostel-mode -1))
+          (when (bound-and-true-p evil-local-mode) (evil-local-mode -1))
+          (unless (eq ghostel--input-mode 'char) (ghostel-char-mode))
+          (ghostel--apply-cursor-style))
+         ((and (not (ghostel-alt-screen-p)) my-terminal-popup-saved-input)
+          (pcase-let ((`(,evil ,integration ,state ,input)
+                       my-terminal-popup-saved-input))
+            (setq my-terminal-popup-saved-input nil)
+            (pcase input
+              ('char (ghostel-char-mode))
+              ('copy (ghostel-copy-mode))
+              ('emacs (ghostel-emacs-mode))
+              ('line (ghostel-line-mode))
+              (_ (ghostel-semi-char-mode)))
+            (when evil (evil-local-mode 1))
+            (when (and integration (not (bound-and-true-p evil-ghostel-mode)))
+              (evil-ghostel-mode 1))
+            (when evil
+              (evil-normalize-keymaps)
+              (when state (evil-change-state state)))
+            (setq my-terminal-popup-shell-redraw-timer
+                  (run-with-timer 0.1 nil #'my--terminal-popup-redraw-shell-h
+                                  buffer)))))))))
+
+(defvar-local my-terminal-popup-refreshing nil
+  "Non-nil while updating terminal input and canvas after a redraw.")
+
+(defun my--terminal-popup-after-redraw-a (buffer &rest _)
+  "Update popup BUFFER's input mode and canvas after Ghostel renders it."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (when (and my-terminal-popup-buffer (not my-terminal-popup-refreshing))
+        ;; Input transitions may request another synchronous Ghostel redraw.
+        (let ((my-terminal-popup-refreshing t))
+          (my--terminal-popup-sync-input buffer)
+          (my--terminal-popup-fill-canvas buffer))))))
+
+(after! ghostel
+  (advice-add 'ghostel--redraw-now :after #'my--terminal-popup-after-redraw-a))
+
+(defvar consult-buffer-filter)
+
+(defun my--terminal-popup-filter-workspace-buffers-a (original &rest args)
+  "Omit floating terminals only while reading the workspace buffer picker."
+  (require 'consult)
+  (let ((consult-buffer-filter
+         (cons "\\`\\*Floating Ghostel:" consult-buffer-filter)))
+    (apply original args)))
+
+(advice-add '+vertico/switch-workspace-buffer :around
+            #'my--terminal-popup-filter-workspace-buffers-a)
+
+(defun my--terminal-popup-hide (frame)
+  "Hide terminal FRAME without stopping its shell, and return to its parent."
+  (let ((parent (frame-parameter frame 'parent-frame))
+        (window (frame-parameter frame 'my--terminal-return-window)))
+    (make-frame-invisible frame t)
+    (when (frame-live-p parent)
+      (select-frame-set-input-focus parent)
+      (when (window-live-p window)
+        (select-window window)))))
+
+(defun my--terminal-popup-buffer-killed-h ()
+  "Hide any floating frame displaying this terminal when its shell exits."
+  (when (timerp my-terminal-popup-shell-redraw-timer)
+    (cancel-timer my-terminal-popup-shell-redraw-timer)
+    (setq my-terminal-popup-shell-redraw-timer nil))
+  (dolist (frame (frame-list))
+    (when (and (frame-parameter frame 'my--terminal-popup)
+               (eq (window-buffer (frame-root-window frame)) (current-buffer)))
+      (my--terminal-popup-hide frame))))
+
+(defun my--terminal-popup-resize-h (parent)
+  "Fill PARENT with its floating terminal frame."
+  (let ((frame (frame-parameter parent 'my--terminal-popup-frame)))
+    (when (frame-live-p frame)
+      (set-frame-size frame
+                      (frame-pixel-width parent)
+                      (frame-pixel-height parent) t)
+      (set-frame-position frame 0 0))))
+
+(defun my--terminal-popup-theme-h ()
+  "Refresh terminal canvas colours after a theme change."
+  (dolist (frame (frame-list))
+    (when (frame-parameter frame 'my--terminal-popup)
+      (with-current-buffer (window-buffer (frame-root-window frame))
+        (setq my-terminal-popup-canvas-tick nil)
+        (my--terminal-popup-fill-canvas (current-buffer))))))
+
+(defun my--terminal-popup-no-padding-h (&rest _)
+  "Exclude spacious-padding, retaining the terminal's small side insets."
+  (dolist (frame (frame-list))
+    (when (frame-parameter frame 'my--terminal-popup)
+      (modify-frame-parameters
+       frame '((child-frame-border-width . 0)
+               (internal-border-width . 0)
+               (left-fringe . 0) (right-fringe . 0)
+               (right-divider-width . 0) (bottom-divider-width . 0)
+               (scroll-bar-width . 0)))
+      (dolist (window (window-list frame 'no-minibuffer))
+        (set-window-fringes window my-terminal-popup-side-padding
+                            my-terminal-popup-side-padding)
+        (set-window-margins window 0 0))
+      (dolist (face '(mode-line mode-line-active mode-line-inactive
+                     header-line tab-line tab-bar))
+        (when (facep face) (set-face-attribute face frame :box nil)))
+      (my--terminal-popup-fill-canvas (window-buffer (frame-root-window frame))))))
+
+;; Spacious-padding is global. Reapply the frame-local exception after its
+;; layout and face updates, including toggling the mode or changing themes.
+(after! spacious-padding
+  (advice-add 'spacious-padding-modify-frame-parameters :after
+              #'my--terminal-popup-no-padding-h)
+  (advice-add 'spacious-padding-set-faces :after
+              #'my--terminal-popup-no-padding-h))
+
+(defun my--terminal-popup-frame (parent)
+  "Return or create PARENT's floating terminal frame."
+  (or (let ((frame (frame-parameter parent 'my--terminal-popup-frame)))
+        (and (frame-live-p frame) frame))
+      (let ((frame (make-frame
+                    `((parent-frame . ,parent)
+                      (minibuffer . nil)
+                      (name . "Project terminal")
+                      (font . ,(frame-parameter parent 'font))
+                      (undecorated . t)
+                      (child-frame-border-width . 0)
+                      (internal-border-width . 0)
+                      (left-fringe . 0)
+                      (right-fringe . 0)
+                      (right-divider-width . 0)
+                      (bottom-divider-width . 0)
+                      (menu-bar-lines . 0)
+                      (tool-bar-lines . 0)
+                      (tab-bar-lines . 0)
+                      (vertical-scroll-bars . nil)
+                      (horizontal-scroll-bars . nil)
+                      (no-other-frame . t)
+                      (skip-taskbar . t)
+                      (unsplittable . t)
+                      (my--terminal-popup . t)
+                      (visibility . nil)))))
+        (set-frame-parameter parent 'my--terminal-popup-frame frame)
+        (my--terminal-popup-no-padding-h)
+        (my--terminal-popup-resize-h parent)
+        (my--terminal-popup-theme-h)
+        frame)))
+
+(defun my--terminal-popup-open (name root floating)
+  "Show the persistent terminal NAME at ROOT, using FLOATING display when non-nil."
+  (let* ((default-directory root)
+         (ghostel-buffer-name name)
+         (ghostel-buffer-name-function nil)
+         ;; A floating shell must appear only in its child frame's root window.
+         (display-buffer-overriding-action
+          (when floating '(display-buffer-same-window)))
+         (buffer (get-buffer name)))
+    (when (and buffer
+               (not (with-current-buffer buffer (process-live-p ghostel--process))))
+      (kill-buffer buffer))
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer (display-line-numbers-mode -1)))
+    (setq buffer (ghostel))
+    (with-current-buffer buffer
+      (setq-local my-terminal-popup-buffer t)
+      (display-line-numbers-mode -1)
+      (when (bound-and-true-p olivetti-mode) (olivetti-mode -1))
+      ;; Switching buffers can reset window-local fringe widths.
+      (when floating
+        (my--terminal-popup-no-padding-h)
+        (when-let ((window (get-buffer-window buffer (selected-frame))))
+          (ghostel--adjust-size window)))
+      (add-hook 'kill-buffer-hook #'my--terminal-popup-buffer-killed-h nil t)
+      (my--terminal-popup-after-redraw-a buffer)
+      ;; Avoid re-entering insert state before a new terminal has its cursor data.
+      (when (and (bound-and-true-p evil-local-mode) (not (evil-insert-state-p)))
+        (evil-insert-state)))
+    buffer))
+
+(defun my/terminal-popup-toggle ()
+  "Open or focus a separate floating project terminal; hide it when focused."
+  (interactive)
+  (cond
+   ((frame-parameter nil 'my--terminal-popup)
+    (my--terminal-popup-hide (selected-frame)))
+   ((and my-terminal-popup-buffer (+popup-window-p))
+    (delete-window))
+   (t
+    (require 'ghostel)
+    (let* ((root (file-name-as-directory (or (doom-project-root) default-directory)))
+           (root (if (file-remote-p root) root (file-truename root)))
+           (workspace (if (bound-and-true-p persp-mode)
+                          (safe-persp-name (get-current-persp)) "main"))
+           ;; Use the full root, so equally named projects get different shells.
+           (name (format "*Floating Ghostel:%s:%s*"
+                         (file-name-nondirectory (directory-file-name root))
+                         (secure-hash 'sha1 (prin1-to-string (list root workspace))))))
+      (if (display-graphic-p)
+          (let* ((parent (selected-frame))
+                 (window (selected-window))
+                 (frame (my--terminal-popup-frame parent)))
+            (set-frame-parameter frame 'my--terminal-return-window window)
+            (my--terminal-popup-resize-h parent)
+            (condition-case err
+                (progn
+                  ;; A hidden frame may hold a fallback file buffer after its
+                  ;; terminal was killed. Do not display that buffer on entry.
+                  (let ((inhibit-redisplay t))
+                    (select-frame frame)
+                    (my--terminal-popup-open name root t))
+                  (make-frame-visible frame)
+                  (select-frame-set-input-focus frame))
+              (error
+               (my--terminal-popup-hide frame)
+               (signal (car err) (cdr err)))))
+        (let ((window (get-buffer-window name)))
+          (if window (select-window window)
+            (my--terminal-popup-open name root nil))))))))
+
+(map! "C-'" #'my/terminal-popup-toggle)
+(set-popup-rule! "^\\*Floating Ghostel:"
+  :side 'bottom :size 0.9 :select t :quit nil :ttl nil :modeline nil)
+(add-hook 'window-size-change-functions #'my--terminal-popup-resize-h)
+(add-hook 'doom-load-theme-hook #'my--terminal-popup-theme-h)
+
 ;; Docker TRAMP processes may lack LOGNAME, which Ghostel's built-in login-shell
 ;; lookup uses. Query the effective user ID instead, without assuming a username
 ;; or that Zsh is installed. Keep the configured fallback and shell arguments.
@@ -28,6 +389,9 @@
 
 ;; Docker terminals use the container user's login shell, falling back to sh.
 (after! ghostel
+  ;; Keep the shortcut available in terminal input modes as well as code buffers.
+  (define-key ghostel-mode-map (kbd "C-'") #'my/terminal-popup-toggle)
+  (define-key ghostel-char-mode-map (kbd "C-'") #'my/terminal-popup-toggle)
   ;; Emacs may inherit NO_COLOR from its launcher. Ghostel supports colours;
   ;; a bare environment entry unsets the variable for its shell processes.
   (add-to-list 'ghostel-environment "NO_COLOR")

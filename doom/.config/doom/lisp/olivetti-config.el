@@ -9,6 +9,7 @@
   (defun my--olivetti-buffer-eligible-p ()
     "Allow file, Dired and shell buffers, excluding internal and display buffers."
     (and (not (minibufferp))
+         (not (bound-and-true-p my-terminal-popup-buffer))
          (not (bound-and-true-p org-tree-slide-mode))
          (not (bound-and-true-p +popup-buffer-mode))
          (not (derived-mode-p 'pdf-view-mode 'my--time-popup-mode))
@@ -43,7 +44,8 @@
       (> (length (delete-dups left-edges)) 1)))
   (defun my--olivetti-refresh-h (&rest _)
     (when (and my-olivetti-enabled
-               (not (frame-parameter (selected-frame) 'my--time-popup)))
+               (not (frame-parameter (selected-frame) 'my--time-popup))
+               (not (frame-parameter (selected-frame) 'my--terminal-popup)))
       (if (my--olivetti-vertical-split-p)
           (my--olivetti-disable-all-buffers)
         (mapc #'my--olivetti-enable-buffer (buffer-list))
@@ -188,7 +190,8 @@
                         (window-parameter window 'my--olivetti-fringe-token))))))))
   (defun my--olivetti-pattern-fringes (window)
     "Paint one-pixel outer stripes without reducing the Git gutter width."
-    (when (window-live-p window)
+    (when (and (window-live-p window)
+               (not (frame-parameter (window-frame window) 'my--terminal-popup)))
       (with-current-buffer (window-buffer window)
         (let* ((frame (window-frame window))
                (backend (window-system frame))
@@ -233,7 +236,8 @@
   (defun my--olivetti-update-fringe-borders-h (&rest _)
     "Refresh patterned borders when centering or the theme changes."
     (dolist (frame (frame-list))
-      (unless (frame-parameter frame 'my--time-popup)
+      (unless (or (frame-parameter frame 'my--time-popup)
+                  (frame-parameter frame 'my--terminal-popup))
         (dolist (window (window-list frame 'no-minibuf))
           (my--olivetti-pattern-fringes window)))))
   (defun my--olivetti-fringe-after-layout-h (window-or-frame)

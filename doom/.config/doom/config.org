@@ -116,6 +116,10 @@ Selecting a preset resets these options; individual toggles adjust the buffer. S
 * Terminals
 [[file:lisp/terminal-config.el][terminal-config.el]] configures Ghostel's Docker shell selection and terminal-specific display settings. Its shell lookup uses the remote user's ID and retains a fallback for containers without a suitable login shell.
 
+=C-'= opens or focuses a separate persistent project terminal. In graphical Emacs it uses a child frame filling the parent Emacs frame; terminal Emacs uses a large bottom popup. Pressing the shortcut inside it hides the terminal without stopping its shell. New shells start at Doom's detected project root, falling back to the current directory outside projects. Each full project-root path and Doom workspace gets its own shell. The terminal retains its state when hidden and does not affect the windows or Olivetti centring behind it. Its borderless fullscreen frame uses an 8-pixel inset on each side and excludes spacious-padding spacing; other frames retain their padding. Alternate-screen backgrounds extend over the unused pixels at the right and bottom edges, without changing the font size or clipping terminal cells. =SPC o t= and =SPC o T= retain Doom's original behaviour and use independent shells.
+
+The floating terminal is omitted from the =SPC b b= workspace buffer picker; it remains available through =C-'= and the broader =SPC b B= buffer picker. Other Ghostel terminals remain in the workspace picker. At the shell, the floating terminal enters Evil insert state when opened. Alternate-screen applications such as tmux, Neovim and Yazi temporarily disable Evil and use Ghostel char mode, forwarding terminal shortcuts directly. Returning to the shell restores the previous Evil and input settings. =C-'= continues to hide the terminal in either mode. =Ctrl += / =Ctrl -= scale the terminal buffer even inside these applications; =Cmd += / =Cmd -= retain Doom's global font zoom.
+
 #+begin_src emacs-lisp
 (load! "lisp/terminal-config")
 #+end_src
