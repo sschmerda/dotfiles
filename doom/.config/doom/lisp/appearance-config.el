@@ -24,10 +24,11 @@
 ;; available. You can either set `doom-theme' or manually load a theme with the
 ;; `load-theme' function. This is the default:
 (setq doom-theme 'doom-gruvbox-light)
-(setq doom-font (font-spec :family "Hack Nerd Font Mono" :size 16))
+;; Use the installed weight name so Doom's global zoom resolves its XLFD.
+(setq doom-font (font-spec :family "Hack Nerd Font Mono" :size 16 :weight 'medium))
 
 ;; Use Helvetica for proportional prose in mixed-pitch buffers.
-(setq doom-variable-pitch-font (font-spec :family "Helvetica" :size 16))
+(setq doom-variable-pitch-font (font-spec :family "Helvetica" :size 16 :weight 'medium))
 
 ;; Match the VS Code Shades of Purple cursor color.
 (when (eq doom-theme 'doom-shades-of-purple)
