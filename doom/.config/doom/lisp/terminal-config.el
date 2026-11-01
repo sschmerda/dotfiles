@@ -341,7 +341,30 @@ With nil COLOR, restore the corresponding face colours from PARENT."
     buffer))
 
 (defun my/terminal-popup-toggle ()
-  "Open or focus a separate floating project terminal; hide it when focused."
+  "Toggle a persistent fullscreen Ghostel terminal for the current project.
+Each project root and Doom workspace has its own shell.  Outside a project,
+use the current directory.  Graphical Emacs displays a borderless child
+frame with an 8-pixel inset; terminal Emacs uses a large bottom popup.
+
+Calling this command from the terminal hides it and returns to the editor.
+Hiding preserves its shell process, directory and environment.  Typing exit
+or killing its buffer stops the shell instead.
+
+All Ghostel terminals suspend Evil and use direct input while an
+alternate-screen application runs, including tmux, Neovim and Yazi.
+The application controls its own cursor.  Returning to the shell restores
+the previous Evil and input settings.  In the default shell input mode,
+C-c C-c sends an interrupt; in direct input mode, a single C-c does so.
+
+C-= or C-+ increases this buffer's text size; C-- decreases it.
+On macOS, Command +/- retains Doom's global font zoom.  Zoom and this
+terminal toggle remain available while an application has direct input.
+
+The fullscreen terminal is omitted from the workspace buffer picker
+(SPC b b) but remains available in the all-buffers picker (SPC b B).
+For Doom's other terminal layouts, see `+ghostel/toggle' (SPC o t) and
+`+ghostel/here' (SPC o T).  They share input and zoom handling but keep
+their own shells and window layouts."
   (interactive)
   (cond
    ((frame-parameter nil 'my--terminal-popup)
