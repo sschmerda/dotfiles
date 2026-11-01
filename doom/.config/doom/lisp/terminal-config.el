@@ -7,7 +7,10 @@
 (defvar my-terminal-popup-side-padding 8
   "Horizontal inset in pixels on each side of the fullscreen terminal.")
 
-(defvar my-terminal-popup-keymap
+(defvar-local my-ghostel-zoom-keys nil
+  "Non-nil in Ghostel buffers with zoom shortcuts reserved for Emacs.")
+
+(defvar my-ghostel-zoom-keymap
   (let ((map (make-sparse-keymap)))
     (dolist (key '("C-=" "C-+"))
       (define-key map (kbd key) #'text-scale-increase))
@@ -16,14 +19,14 @@
       (define-key map (kbd key) #'doom/increase-font-size))
     (define-key map (kbd "s--") #'doom/decrease-font-size)
     map)
-  "Zoom keys reserved for Emacs in the floating terminal's input modes.")
+  "Zoom keys reserved for Emacs in every Ghostel input mode.")
 
-(defvar my-terminal-popup-keymap-alist
-  `((my-terminal-popup-buffer . ,my-terminal-popup-keymap))
-  "Popup-only overrides ahead of Ghostel's direct terminal input map.")
+(defvar my-ghostel-zoom-keymap-alist
+  `((my-ghostel-zoom-keys . ,my-ghostel-zoom-keymap))
+  "Ghostel-only overrides ahead of its direct terminal input map.")
 
 (after! ghostel
-  (add-to-list 'emulation-mode-map-alists 'my-terminal-popup-keymap-alist))
+  (add-to-list 'emulation-mode-map-alists 'my-ghostel-zoom-keymap-alist))
 
 (defvar-local my-terminal-popup-canvas-color nil
   "Application background currently used for the fullscreen frame's canvas.")
@@ -100,18 +103,32 @@ With nil COLOR, restore the corresponding face colours from PARENT."
               (my--terminal-popup-set-background
                frame parent my-terminal-popup-canvas-color))))))))
 
-(defvar-local my-terminal-popup-saved-input nil
+(defvar-local my-ghostel-saved-input nil
   "Shell input settings saved while an alternate-screen application runs.")
 
-(defvar-local my-terminal-popup-shell-redraw-timer nil
+(defvar-local my-ghostel-shell-redraw-timer nil
   "Pending redraw recovery after returning from an alternate-screen app.")
 
-(defun my--terminal-popup-redraw-shell-h (buffer)
+(defun my--ghostel-cancel-redraw-h ()
+  "Cancel this Ghostel buffer's pending shell redraw recovery."
+  (when (timerp my-ghostel-shell-redraw-timer)
+    (cancel-timer my-ghostel-shell-redraw-timer)
+    (setq my-ghostel-shell-redraw-timer nil)))
+
+(defun my--ghostel-setup-h ()
+  "Enable shared input handling and zoom shortcuts in every Ghostel terminal."
+  (setq-local my-ghostel-zoom-keys t)
+  (add-hook 'kill-buffer-hook #'my--ghostel-cancel-redraw-h nil t))
+
+(add-hook 'ghostel-mode-hook #'my--ghostel-setup-h)
+
+(defun my--ghostel-redraw-shell-h (buffer)
   "Recover BUFFER's shell if an app left synchronized output enabled."
   (when (buffer-live-p buffer)
     (with-current-buffer buffer
-      (setq my-terminal-popup-shell-redraw-timer nil)
-      (when (and ghostel--term (not (ghostel-alt-screen-p)))
+      (setq my-ghostel-shell-redraw-timer nil)
+      (when (and (derived-mode-p 'ghostel-mode)
+                 ghostel--term (not (ghostel-alt-screen-p)))
         ;; A detached tmux client can leave DEC 2026 set in the emulator.
         ;; Clear it locally, not by sending input to the shell. Defer until
         ;; outside the native output callback and its final screen changes.
@@ -119,19 +136,17 @@ With nil COLOR, restore the corresponding face colours from PARENT."
           (ghostel--write-vt ghostel--term "\e[?2026l"))
         (ghostel--redraw-now buffer t)))))
 
-(defun my--terminal-popup-sync-input (buffer)
-  "Suspend Evil in popup BUFFER's alternate screen; restore it at the shell."
+(defun my--ghostel-sync-input (buffer)
+  "Suspend Evil in Ghostel BUFFER's alternate screen; restore it at the shell."
   (when (buffer-live-p buffer)
     (with-current-buffer buffer
-      (when (and my-terminal-popup-buffer ghostel--term)
+      (when (and (derived-mode-p 'ghostel-mode) ghostel--term)
         (cond
          ((ghostel-alt-screen-p)
-          (when (timerp my-terminal-popup-shell-redraw-timer)
-            (cancel-timer my-terminal-popup-shell-redraw-timer)
-            (setq my-terminal-popup-shell-redraw-timer nil))
+          (my--ghostel-cancel-redraw-h)
           ;; Save first: changing input mode can trigger another redraw.
-          (unless my-terminal-popup-saved-input
-            (setq my-terminal-popup-saved-input
+          (unless my-ghostel-saved-input
+            (setq my-ghostel-saved-input
                   (list (bound-and-true-p evil-local-mode)
                         (bound-and-true-p evil-ghostel-mode)
                         (and (boundp 'evil-state) evil-state)
@@ -140,10 +155,10 @@ With nil COLOR, restore the corresponding face colours from PARENT."
           (when (bound-and-true-p evil-local-mode) (evil-local-mode -1))
           (unless (eq ghostel--input-mode 'char) (ghostel-char-mode))
           (ghostel--apply-cursor-style))
-         ((and (not (ghostel-alt-screen-p)) my-terminal-popup-saved-input)
+         ((and (not (ghostel-alt-screen-p)) my-ghostel-saved-input)
           (pcase-let ((`(,evil ,integration ,state ,input)
-                       my-terminal-popup-saved-input))
-            (setq my-terminal-popup-saved-input nil)
+                       my-ghostel-saved-input))
+            (setq my-ghostel-saved-input nil)
             (pcase input
               ('char (ghostel-char-mode))
               ('copy (ghostel-copy-mode))
@@ -156,25 +171,25 @@ With nil COLOR, restore the corresponding face colours from PARENT."
             (when evil
               (evil-normalize-keymaps)
               (when state (evil-change-state state)))
-            (setq my-terminal-popup-shell-redraw-timer
-                  (run-with-timer 0.1 nil #'my--terminal-popup-redraw-shell-h
+            (setq my-ghostel-shell-redraw-timer
+                  (run-with-timer 0.1 nil #'my--ghostel-redraw-shell-h
                                   buffer)))))))))
 
-(defvar-local my-terminal-popup-refreshing nil
+(defvar-local my-ghostel-refreshing nil
   "Non-nil while updating terminal input and canvas after a redraw.")
 
-(defun my--terminal-popup-after-redraw-a (buffer &rest _)
-  "Update popup BUFFER's input mode and canvas after Ghostel renders it."
+(defun my--ghostel-after-redraw-a (buffer &rest _)
+  "Update Ghostel BUFFER's input mode and any fullscreen popup canvas."
   (when (buffer-live-p buffer)
     (with-current-buffer buffer
-      (when (and my-terminal-popup-buffer (not my-terminal-popup-refreshing))
+      (when (and (derived-mode-p 'ghostel-mode) (not my-ghostel-refreshing))
         ;; Input transitions may request another synchronous Ghostel redraw.
-        (let ((my-terminal-popup-refreshing t))
-          (my--terminal-popup-sync-input buffer)
+        (let ((my-ghostel-refreshing t))
+          (my--ghostel-sync-input buffer)
           (my--terminal-popup-fill-canvas buffer))))))
 
 (after! ghostel
-  (advice-add 'ghostel--redraw-now :after #'my--terminal-popup-after-redraw-a))
+  (advice-add 'ghostel--redraw-now :after #'my--ghostel-after-redraw-a))
 
 (defvar consult-buffer-filter)
 
@@ -200,9 +215,6 @@ With nil COLOR, restore the corresponding face colours from PARENT."
 
 (defun my--terminal-popup-buffer-killed-h ()
   "Hide any floating frame displaying this terminal when its shell exits."
-  (when (timerp my-terminal-popup-shell-redraw-timer)
-    (cancel-timer my-terminal-popup-shell-redraw-timer)
-    (setq my-terminal-popup-shell-redraw-timer nil))
   (dolist (frame (frame-list))
     (when (and (frame-parameter frame 'my--terminal-popup)
                (eq (window-buffer (frame-root-window frame)) (current-buffer)))
@@ -309,7 +321,7 @@ With nil COLOR, restore the corresponding face colours from PARENT."
         (when-let ((window (get-buffer-window buffer (selected-frame))))
           (ghostel--adjust-size window)))
       (add-hook 'kill-buffer-hook #'my--terminal-popup-buffer-killed-h nil t)
-      (my--terminal-popup-after-redraw-a buffer)
+      (my--ghostel-after-redraw-a buffer)
       ;; Avoid re-entering insert state before a new terminal has its cursor data.
       (when (and (bound-and-true-p evil-local-mode) (not (evil-insert-state-p)))
         (evil-insert-state)))
