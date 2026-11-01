@@ -4,8 +4,8 @@
 (defvar-local my-terminal-popup-buffer nil
   "Non-nil in a terminal managed by `my/terminal-popup-toggle'.")
 
-(defvar my-terminal-popup-side-padding 8
-  "Horizontal inset in pixels on each side of the fullscreen terminal.")
+(defvar my-terminal-popup-padding 8
+  "Inset in pixels on all four sides of the fullscreen terminal.")
 
 (defvar-local my-ghostel-zoom-keys nil
   "Non-nil in Ghostel buffers with zoom shortcuts reserved for Emacs.")
@@ -61,9 +61,18 @@ Use FALLBACK for cells without an explicit terminal background."
 (defun my--terminal-popup-set-background (frame parent color)
   "Use application COLOR for FRAME's canvas and insets.
 With nil COLOR, restore the corresponding face colours from PARENT."
-  (dolist (face '(default solaire-default-face fringe solaire-fringe-face))
+  (dolist (face '(default solaire-default-face fringe solaire-fringe-face
+                 internal-border child-frame-border))
     (when (facep face)
-      (let ((background (or color (face-background face parent t))))
+      (let ((background
+             (or color
+                 (face-background
+                  (if (memq face '(internal-border child-frame-border))
+                      (if (memq 'solaire-default-face
+                                (cdr (assq 'default face-remapping-alist)))
+                          'solaire-default-face 'default)
+                    face)
+                  parent t))))
         (unless (equal background (face-background face frame t))
           (set-face-background face background frame))))))
 
@@ -80,11 +89,8 @@ With nil COLOR, restore the corresponding face colours from PARENT."
                        (frame-live-p parent))
               ;; Buffer pickers can replace the root buffer without reopening
               ;; the popup, resetting its window-local fringe widths.
-              (unless (equal (seq-take (window-fringes window) 2)
-                             (list my-terminal-popup-side-padding
-                                   my-terminal-popup-side-padding))
-                (set-window-fringes window my-terminal-popup-side-padding
-                                    my-terminal-popup-side-padding)
+              (unless (equal (seq-take (window-fringes window) 2) '(0 0))
+                (set-window-fringes window 0 0)
                 (ghostel--adjust-size window))
               (if (not (ghostel-alt-screen-p))
                   (setq my-terminal-popup-canvas-color nil
@@ -224,9 +230,12 @@ With nil COLOR, restore the corresponding face colours from PARENT."
   "Fill PARENT with its floating terminal frame."
   (let ((frame (frame-parameter parent 'my--terminal-popup-frame)))
     (when (frame-live-p frame)
-      (set-frame-size frame
-                      (frame-pixel-width parent)
-                      (frame-pixel-height parent) t)
+      ;; `set-frame-size' specifies the text area, excluding the inset.
+      (let ((frame-resize-pixelwise t)
+            (inset (* 2 my-terminal-popup-padding)))
+        (set-frame-size frame
+                        (max 1 (- (frame-pixel-width parent) inset))
+                        (max 1 (- (frame-pixel-height parent) inset)) t))
       (set-frame-position frame 0 0))))
 
 (defun my--terminal-popup-theme-h ()
@@ -238,18 +247,20 @@ With nil COLOR, restore the corresponding face colours from PARENT."
         (my--terminal-popup-fill-canvas (current-buffer))))))
 
 (defun my--terminal-popup-no-padding-h (&rest _)
-  "Exclude spacious-padding, retaining the terminal's small side insets."
+  "Exclude spacious-padding, retaining the terminal's uniform inset."
   (dolist (frame (frame-list))
     (when (frame-parameter frame 'my--terminal-popup)
       (modify-frame-parameters
-       frame '((child-frame-border-width . 0)
-               (internal-border-width . 0)
+       ;; Emacs Mac aliases the child border and internal inset widths.
+       ;; Its border face is canvas-coloured, so this adds no visible line.
+       frame `((child-frame-border-width . ,(if (eq (window-system frame) 'mac)
+                                               my-terminal-popup-padding 0))
+               (internal-border-width . ,my-terminal-popup-padding)
                (left-fringe . 0) (right-fringe . 0)
                (right-divider-width . 0) (bottom-divider-width . 0)
                (scroll-bar-width . 0)))
       (dolist (window (window-list frame 'no-minibuffer))
-        (set-window-fringes window my-terminal-popup-side-padding
-                            my-terminal-popup-side-padding)
+        (set-window-fringes window 0 0)
         (set-window-margins window 0 0))
       (dolist (face '(mode-line mode-line-active mode-line-inactive
                      header-line tab-line tab-bar))
@@ -274,8 +285,10 @@ With nil COLOR, restore the corresponding face colours from PARENT."
                       (name . "Project terminal")
                       (font . ,(frame-parameter parent 'font))
                       (undecorated . t)
-                      (child-frame-border-width . 0)
-                      (internal-border-width . 0)
+                      (child-frame-border-width
+                       . ,(if (eq (window-system parent) 'mac)
+                              my-terminal-popup-padding 0))
+                      (internal-border-width . ,my-terminal-popup-padding)
                       (left-fringe . 0)
                       (right-fringe . 0)
                       (right-divider-width . 0)
