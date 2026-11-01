@@ -350,6 +350,8 @@ Calling this command from the terminal hides it and returns to the editor.
 Hiding preserves its shell process, directory and environment.  Typing exit
 or killing its buffer stops the shell instead.
 SPC o t p is the leader-key alias for this command.
+Use C-' to return to the editor before invoking minibuffer commands such
+as M-x.  Doom's bottom popup and normal terminal use the standard minibuffer.
 
 All Ghostel terminals suspend Evil and use direct input while an
 alternate-screen application runs, including tmux, Neovim and Yazi.
