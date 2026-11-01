@@ -55,8 +55,10 @@
   (advice-add 'define-fringe-bitmap :around #'my--vc-gutter-inset-bar-a)
   (diff-hl-define-bitmaps))
 
-;; Make Doom's Command +/- font zoom use smaller steps.
+;; Global zoom uses one-point steps; this Emacs build rounds fractional sizes.
 (setq doom-font-increment 1)
+;; Buffer zoom uses 5% changes instead of Emacs's default 20% jumps.
+(setq-default text-scale-mode-step 1.05)
 
 ;; frame customization
 (add-to-list 'default-frame-alist '(undecorated . t))

@@ -31,7 +31,7 @@ Custom commands intended for =M-x= or keybindings use =my/=. Internal helpers, h
 #+end_src
 
 * Appearance
-[[file:lisp/appearance-config.el][appearance-config.el]] sets the theme, fonts, relative line numbers, font zoom steps and frame appearance. Package-specific window centring remains in the separate Olivetti configuration.
+[[file:lisp/appearance-config.el][appearance-config.el]] sets the theme, fonts, relative line numbers and frame appearance. Buffer zoom uses 5% steps; global font zoom uses one-point steps because this Emacs build rounds fractional font sizes. Package-specific window centring remains in the separate Olivetti configuration.
 
 #+begin_src emacs-lisp
 (load! "lisp/appearance-config")
