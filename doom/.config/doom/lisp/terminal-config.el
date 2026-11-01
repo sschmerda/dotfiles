@@ -1,6 +1,6 @@
 ;;; terminal-config.el -*- lexical-binding: t; -*-
 
-;; This terminal has its own shell; Doom's SPC o t and SPC o T stay independent.
+;; This terminal has its own shell; Doom's SPC o t t and SPC o t T stay independent.
 (defvar-local my-terminal-popup-buffer nil
   "Non-nil in a terminal managed by `my/terminal-popup-toggle'.")
 
@@ -349,6 +349,7 @@ frame with an 8-pixel inset; terminal Emacs uses a large bottom popup.
 Calling this command from the terminal hides it and returns to the editor.
 Hiding preserves its shell process, directory and environment.  Typing exit
 or killing its buffer stops the shell instead.
+SPC o t p is the leader-key alias for this command.
 
 All Ghostel terminals suspend Evil and use direct input while an
 alternate-screen application runs, including tmux, Neovim and Yazi.
@@ -362,8 +363,8 @@ terminal toggle remain available while an application has direct input.
 
 The fullscreen terminal is omitted from the workspace buffer picker
 (SPC b b) but remains available in the all-buffers picker (SPC b B).
-For Doom's other terminal layouts, see `+ghostel/toggle' (SPC o t) and
-`+ghostel/here' (SPC o T).  They share input and zoom handling but keep
+For Doom's other terminal layouts, see `+ghostel/toggle' (SPC o t t) and
+`+ghostel/here' (SPC o t T).  They share input and zoom handling but keep
 their own shells and window layouts."
   (interactive)
   (cond
@@ -403,7 +404,15 @@ their own shells and window layouts."
           (if window (select-window window)
             (my--terminal-popup-open name root nil))))))))
 
-(map! "C-'" #'my/terminal-popup-toggle)
+(map! "C-'" #'my/terminal-popup-toggle
+      :leader
+      ;; Replace the flat terminal commands with a shared submenu.
+      "o t" nil
+      "o T" nil
+      (:prefix ("o t" . "terminal")
+       :desc "Toggle bottom terminal" "t" #'+ghostel/toggle
+       :desc "Open terminal buffer" "T" #'+ghostel/here
+       :desc "Toggle fullscreen project terminal" "p" #'my/terminal-popup-toggle))
 (set-popup-rule! "^\\*Floating Ghostel:"
   :side 'bottom :size 0.9 :select t :quit nil :ttl nil :modeline nil)
 (add-hook 'window-size-change-functions #'my--terminal-popup-resize-h)
