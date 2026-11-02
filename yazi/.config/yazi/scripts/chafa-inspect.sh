@@ -29,15 +29,32 @@ if [ -r /dev/tty ] && [ -w /dev/tty ]; then
   exec </dev/tty >/dev/tty
 fi
 
-old_tty=$(stty -g 2>/dev/null || true)
-trap 'if [ -n "$old_tty" ]; then stty "$old_tty" 2>/dev/null; fi' EXIT INT TERM
+# Let both terminfo and Chafa measure this TTY, rather than an exported size
+# inherited from the shell that originally started Emacs or the tmux server.
+unset LINES COLUMNS
 
-rows=$(tput lines 2>/dev/null || printf '24')
-cols=$(tput cols 2>/dev/null || printf '80')
-height=$((rows - 3))
-if [ "$height" -lt 1 ]; then
-  height=1
-fi
+old_tty=$(stty -g 2>/dev/null || true)
+
+clear_images() {
+  # d=A clears visible placements, but leaves virtual placeholder images.
+  # Remove their stored data too, so Chafa images cannot cover Yazi's preview.
+  if [ -n "$TMUX" ]; then
+    printf '\033Ptmux;\033\033_Ga=d,d=R,x=1,y=4294967295,q=2;\033\033\\\033\\'
+  else
+    printf '\033_Ga=d,d=R,x=1,y=4294967295,q=2;\033\\'
+  fi
+}
+
+cleanup() {
+  clear_images
+  if [ -n "$old_tty" ]; then
+    stty "$old_tty" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 stty -echo -icanon time 0 min 1 2>/dev/null || true
 zoom=100
@@ -87,8 +104,10 @@ previous_image() {
 }
 
 render() {
-  rows=$(tput lines 2>/dev/null || printf '24')
-  cols=$(tput cols 2>/dev/null || printf '80')
+  # Exported LINES/COLUMNS can be stale; use the actual pane's TTY size.
+  set -- $(stty size 2>/dev/null)
+  rows=${1:-24}
+  cols=${2:-80}
   height=$((rows - 3))
   if [ "$height" -lt 1 ]; then
     height=1
@@ -103,12 +122,17 @@ render() {
     render_height=1
   fi
 
+  clear_images
   clear
-  chafa --format=kitty --passthrough=tmux --align=mid,mid --size="${render_cols}x${render_height}" "$img"
+  passthrough=none
+  [ -z "$TMUX" ] || passthrough=tmux
+  chafa --format=kitty --passthrough="$passthrough" --animate=off \
+    --align=mid,mid --view-size="${cols}x${height}" \
+    --size="${render_cols}x${render_height}" "$img"
   status=$?
 
   if [ "$status" -ne 0 ]; then
-    printf '\nChafa failed with status %s.\n' "$status"
+    printf '\nImage rendering failed with status %s.\n' "$status"
   fi
 
   printf '\n←/→: previous/next image    q/Esc: return    +/-: zoom (%s%%)' "$zoom"
@@ -155,10 +179,8 @@ while true; do
   esac
 done
 
-if [ -n "$old_tty" ]; then
-  stty "$old_tty" 2>/dev/null || true
-fi
-
+cleanup
+trap - EXIT
 clear
 if [ -n "$TMUX" ]; then
   tmux clear-history 2>/dev/null || true
