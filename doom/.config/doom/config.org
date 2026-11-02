@@ -5,6 +5,8 @@
 * Using this configuration
 This file is the source of truth for the configuration loader. Each section explains a part of the setup and loads its implementation from =lisp/=. Edit those Lisp files for implementation changes and this document for imports and explanations.
 
+Deferred features and future work are tracked in [[file:ROADMAP.org][ROADMAP.org]].
+
 Doom's =:config literate= module tangles the source blocks into =config.el= during =doom sync= and when saving this document once the module is active. Do not edit the generated =config.el= directly. Tangling updates the file on disk; restart Emacs to apply configuration changes to the running session.
 
 The imports below run in document order. Keep the macOS native compilation setup first, and set the Org directory before loading any code that needs Org.

@@ -1,0 +1,23 @@
+#+title: Doom configuration roadmap
+#+startup: overview
+
+Planned work for this configuration. TODO entries are deferred ideas, not
+instructions to implement them automatically. Configuration documentation
+lives in [[file:config.org][config.org]]; implementation lives under =lisp/=.
+
+* TODO Support remote tmux terminal popups over TRAMP [0/5]
+Implement when resuming the Docker/SSH development workflow.
+
+Currently, plain fullscreen terminals support TRAMP directories, while the
+tmux variant creates and attaches sessions only for local roots.
+
+- [ ] Create and attach a project session on the Docker container or SSH host
+  associated with the current TRAMP project, using tmux installed there.
+- [ ] Identify sessions by remote connection and project root, retaining the
+  =emacs-= naming, ownership tags and UUIDs used for local sessions.
+- [ ] Scope session listing and cleanup to the intended host; preserve unrelated
+  sessions and require confirmation before terminating managed sessions.
+- [ ] Preserve terminal toggling, shell/PATH handling, direct application input
+  and zoom shortcuts. Home-directory commands continue using local =~=.
+- [ ] Verify actual Docker and SSH connections, including detach/reattach and
+  connection failures, and check that local terminals still work.
