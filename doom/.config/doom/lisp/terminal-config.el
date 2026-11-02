@@ -14,7 +14,7 @@
   "Ownership tag for sessions managed by this terminal feature.")
 
 (defvar-local my-terminal-popup-project-root nil
-  "Canonical project root associated with this fullscreen terminal.")
+  "Canonical starting directory associated with this fullscreen terminal.")
 
 (defvar-local my-terminal-popup-tmux-id nil
   "Tmux session ID attached to this fullscreen terminal.")
@@ -658,6 +658,8 @@ Hiding preserves its shell process, directory and environment.  Typing exit
 or killing its buffer stops the shell instead.
 SPC o t p is the leader-key alias for this command.  C-\" and
 `my/terminal-tmux-toggle' provide the separate tmux-backed variant.
+Use `my/terminal-popup-home-toggle' (SPC o t P) for a shell starting in
+the local home directory regardless of the current project.
 Either shortcut hides whichever fullscreen terminal is currently visible.
 Use C-' to return to the editor before invoking minibuffer commands such
 as M-x.  Doom's bottom popup and normal terminal use the standard minibuffer.
@@ -694,13 +696,37 @@ fullscreen terminal, keeping its process alive.  With the popup hidden,
 C-' opens the independent plain shell and C-\" opens the tmux client.
 Detaching closes the tmux client buffer; the session and its panes persist.
 Projects in different Doom workspaces share their project tmux session.
+Use `my/terminal-tmux-home-toggle' (SPC o t M) for the local home session.
 For input, zoom and buffer-picker behaviour, see `my/terminal-popup-toggle'."
   (interactive)
   (my--terminal-popup-toggle t))
 
-(defun my--terminal-popup-toggle (&optional tmux selected-session)
-  "Hide a visible project terminal, or open the plain or TMUX variant.
-SELECTED-SESSION is (PROGRAM . METADATA) for an explicitly selected session."
+(defun my/terminal-popup-home-toggle ()
+  "Toggle a persistent fullscreen plain terminal starting in the local home.
+SPC o t P invokes this command.  Each Doom workspace retains its own home
+shell; terminals rooted elsewhere remain separate.  Reopening preserves its
+working directory and environment; a new shell starts in the local home directory,
+including when invoked from a remote TRAMP buffer.
+If any fullscreen terminal is visible, hide it instead of opening another.
+For input and display behaviour, see `my/terminal-popup-toggle'."
+  (interactive)
+  (my--terminal-popup-toggle nil nil (expand-file-name "~/" "/")))
+
+(defun my/terminal-tmux-home-toggle ()
+  "Toggle a fullscreen tmux terminal rooted in the local home directory.
+SPC o t M invokes this command.  Create the home directory's managed tmux
+session if needed, or attach its existing session.  Doom workspaces share
+that session, separately from sessions for other project roots.
+This always uses the local home, even from a remote TRAMP buffer.
+If any fullscreen terminal is visible, hide it instead of opening another.
+For session management, see `my/terminal-tmux-toggle'."
+  (interactive)
+  (my--terminal-popup-toggle t nil (expand-file-name "~/" "/")))
+
+(defun my--terminal-popup-toggle (&optional tmux selected-session directory)
+  "Hide a visible fullscreen terminal, or open the plain or TMUX variant.
+SELECTED-SESSION is (PROGRAM . METADATA) for an explicitly selected session.
+DIRECTORY overrides project detection when no explicit session is selected."
   (let* ((selected (selected-frame))
          (parent (if (frame-parameter selected 'my--terminal-popup)
                      (frame-parameter selected 'parent-frame) selected))
@@ -716,10 +742,16 @@ SELECTED-SESSION is (PROGRAM . METADATA) for an explicitly selected session."
       (my--terminal-popup-hide popup))
      (tty-popup (delete-window tty-popup))
      (t
-      (require 'ghostel)
+      ;; The native module initializes its temporary directory at load time.
+      ;; Load the local library outside any remote buffer's TRAMP context.
+      (let ((default-directory "/"))
+        (require 'ghostel))
       (let* ((root (if selected-session
                        (plist-get (cdr selected-session) :root)
-                     (my--terminal-project-root)))
+                     (if directory
+                         (let ((default-directory "/"))
+                           (file-name-as-directory (file-truename directory)))
+                       (my--terminal-project-root))))
              (workspace (if (bound-and-true-p persp-mode)
                             (safe-persp-name (get-current-persp)) "main"))
              (session (when tmux
@@ -776,7 +808,9 @@ SELECTED-SESSION is (PROGRAM . METADATA) for an explicitly selected session."
        :desc "Toggle bottom terminal" "t" #'+ghostel/toggle
        :desc "Open terminal buffer" "T" #'+ghostel/here
        :desc "Toggle fullscreen project terminal" "p" #'my/terminal-popup-toggle
-       :desc "Toggle project tmux terminal" "m" #'my/terminal-tmux-toggle))
+       :desc "Toggle project tmux terminal" "m" #'my/terminal-tmux-toggle
+       :desc "Toggle fullscreen home terminal" "P" #'my/terminal-popup-home-toggle
+       :desc "Toggle home tmux terminal" "M" #'my/terminal-tmux-home-toggle))
 (set-popup-rule! "^\\*Floating Ghostel:"
   :side 'bottom :size 0.9 :select t :quit nil :ttl nil :modeline nil)
 (set-popup-rule! "^\\*Emacs tmux sessions\\*$"
