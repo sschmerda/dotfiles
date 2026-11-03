@@ -1,0 +1,82 @@
+#+title: Custom theme palette notes
+
+Shades of Purple dark preserves the installed VS Code source's background,
+white foreground, orange keywords, yellow functions/cursor, green strings,
+cyan types/parameters and pink constants. Transparent selection/search colors
+are flattened onto the editor background, since Emacs theme faces are opaque.
+Its comments/docstrings need a small lightness increase to meet 4.5:1 across
+all three base surfaces. Gruber retains the reference's charcoal/yellow,
+blue functions, green strings, quartz types/constants and brown comments.
+A diagnostic red correction preserves readable status text on the active line.
+Light variants are original readable adaptations, not official light ports.
+
+* Contrast adjustments to supplied source/proposed colors
+| Variant               | Role      | Before  | After   |
+|-----------------------+-----------+---------+---------|
+| shades-of-purple-dark | comment   | #B362FF | #BD76FF |
+| shades-of-purple-dark | doc-color | #B362FF | #BD76FF |
+| gruber-dark           | error     | #F43841 | #F6565E |
+
+The proposed light purple comment/doc color was deepened from =#775095= to
+=#734B91= so inactive labels remain readable on the darker modeline surface.
+
+* Rosé Pine and Catppuccin (2026-11-03)
+The seven variants retain official base and secondary backgrounds. Syntax hues
+follow Rosé Pine's reference syntax roles and Catppuccin's style guide. For
+readability in this shared face engine, text colors are adjusted in HSV while
+preserving hue: at least 4.5:1 against base, alternate and current-line surfaces;
+core light syntax targets 6.5:1, and body text targets 7:1. Catppuccin current-line
+backgrounds blend surface0 over base at 45%; diff/search surfaces use 12%/18%
+accent blends. These are local Doom adaptations, not exact upstream ports.
+
+Adjusted syntax/UI foregrounds (official to local):
+
+| Variant              | Role            | Official | Local   |
+|----------------------+-----------------+----------+---------|
+| rose-pine-main       | keyword         | #31748F  | #3F96B8 |
+| rose-pine-moon       | keyword         | #3E8FB0  | #4AACD3 |
+| rose-pine-moon       | constant        | #EB6F92  | #FA769B |
+| rose-pine-moon       | comment         | #908CAA  | #A29EBF |
+| rose-pine-moon       | error           | #EB6F92  | #FA769B |
+| rose-pine-moon       | operator-color  | #908CAA  | #A29EBF |
+| rose-pine-moon       | doc-color       | #908CAA  | #A29EBF |
+| rose-pine-dawn       | keyword         | #286983  | #22586E |
+| rose-pine-dawn       | function        | #D7827E  | #734644 |
+| rose-pine-dawn       | string          | #EA9D34  | #6F4A19 |
+| rose-pine-dawn       | type            | #56949F  | #33575E |
+| rose-pine-dawn       | constant        | #B4637A  | #774251 |
+| rose-pine-dawn       | comment         | #797593  | #6B6782 |
+| rose-pine-dawn       | accent          | #907AA9  | #746389 |
+| rose-pine-dawn       | error           | #B4637A  | #9A5569 |
+| rose-pine-dawn       | warning         | #EA9D34  | #906020 |
+| rose-pine-dawn       | success         | #56949F  | #42717A |
+| rose-pine-dawn       | info            | #907AA9  | #746389 |
+| rose-pine-dawn       | builtin-color   | #D7827E  | #734644 |
+| rose-pine-dawn       | parameter-color | #907AA9  | #5A4C6A |
+| rose-pine-dawn       | property-color  | #56949F  | #33575E |
+| rose-pine-dawn       | operator-color  | #797593  | #525064 |
+| rose-pine-dawn       | doc-color       | #797593  | #6B6782 |
+| catppuccin-latte     | keyword         | #8839EF  | #632AAF |
+| catppuccin-latte     | function        | #1E66F5  | #1546A9 |
+| catppuccin-latte     | string          | #40A02B  | #235818 |
+| catppuccin-latte     | type            | #DF8E1D  | #6B440E |
+| catppuccin-latte     | constant        | #FE640B  | #853406 |
+| catppuccin-latte     | comment         | #8C8FA1  | #626471 |
+| catppuccin-latte     | accent          | #8839EF  | #8236E4 |
+| catppuccin-latte     | error           | #D20F39  | #C80E36 |
+| catppuccin-latte     | warning         | #DF8E1D  | #8C5912 |
+| catppuccin-latte     | success         | #40A02B  | #2E731F |
+| catppuccin-latte     | info            | #04A5E5  | #036C96 |
+| catppuccin-latte     | builtin-color   | #D20F39  | #9B0B2A |
+| catppuccin-latte     | parameter-color | #E64553  | #8B2A32 |
+| catppuccin-latte     | property-color  | #7287FD  | #3D4888 |
+| catppuccin-latte     | operator-color  | #04A5E5  | #025373 |
+| catppuccin-latte     | doc-color       | #8C8FA1  | #626471 |
+| catppuccin-frappe    | comment         | #838BA7  | #9CA6C7 |
+| catppuccin-frappe    | error           | #E78284  | #F3898B |
+| catppuccin-frappe    | builtin-color   | #E78284  | #F3898B |
+| catppuccin-frappe    | doc-color       | #838BA7  | #9CA6C7 |
+| catppuccin-macchiato | comment         | #8087A2  | #8F97B5 |
+| catppuccin-macchiato | doc-color       | #8087A2  | #8F97B5 |
+| catppuccin-mocha     | comment         | #7F849C  | #888EA7 |
+| catppuccin-mocha     | doc-color       | #7F849C  | #888EA7 |

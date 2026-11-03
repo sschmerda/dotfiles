@@ -1,0 +1,100 @@
+#+title: Python highlighting audit
+#+date: 2026-11-03
+
+* Initial running configuration (before Basedpyright migration)
+A read-only inspection of the running Doom session found =python-ts-mode= at
+=treesit-font-lock-level= 4. The active =test.py= buffer has lsp-mode connected
+to a Pyright server. That server's actual initialized capabilities do not
+include =semanticTokensProvider=, and =lsp-semantic-tokens-enable= is nil.
+Other open Python buffers also use =python-ts-mode= at level 4, without LSP.
+The host Pyright command reports 1.1.414; the running server's capabilities,
+rather than an assumption about its version, establish the highlighting limit.
+
+Thus Tree-sitter supplies the coding colors in that buffer. LSP still supplies
+navigation, documentation, completion and diagnostics; a working LSP connection
+does not imply semantic syntax coloring. Enabling semantic tokens alone cannot
+make a server supply a capability it does not advertise.
+
+No server was started/restarted, no semantic-token setting was changed, and no
+personal source contents were needed for this audit.
+
+* Follow-up: Basedpyright and project-state repair
+After switching to Basedpyright, LSP startup was blocked by a persisted exclusion
+for =~/stefan/code/temp/=, which covered every open Python buffer. That broad
+exclusion was removed using lsp-mode's workspace-blocklist command. Existing
+library exclusions were retained. The two actual project directories,
+=temp/python-test= and =temp/ddia_dataset_analysis=, are registered as narrow
+workspace roots; no project marker files or source files were changed.
+
+All three open Python buffers then attached to initialized
+=/opt/homebrew/bin/basedpyright-langserver --stdio= processes/workspaces, with
+semantic tokens enabled and advertised. Live protocol requests succeeded:
+
+| Buffer                 | Document symbols | Semantic tokens |
+|------------------------+------------------+-----------------|
+| test.py                |                4 |              41 |
+| sequence_clustering.py |                6 |            2782 |
+
+These counts describe that verification snapshot, not fixed test expectations.
+The earlier Pyright/Tree-sitter observations below remain a historical provider
+audit. Basedpyright semantic tokens can now supply additional classifications
+over the Tree-sitter colors; the parser limitations do not describe the full
+current display when semantic tokens are active. This repair only changed
+saved LSP session state and live attachment, not server-selection configuration.
+
+* What was exercised
+The synthetic [[file:tests/samples/python-highlighting.py][Python fixture]] was fontified using installed Emacs Mac 29.4
+=python-mode= and =python-ts-mode=, with the installed Python grammar and
+level 4 in the isolated test process. The same standard faces are mapped by
+Landscape for regex, Tree-sitter and LSP semantic tokens when available.
+
+| Construct                  | Python Tree-sitter | Regex python-mode    | Landscape role                    |
+|----------------------------+--------------------+----------------------+-----------------------------------|
+| Keywords                   | keyword face       | keyword face         | keyword                           |
+| Class definition           | type face          | type face            | type                              |
+| Function/method definition | function-name face | function-name face   | function                          |
+| Function/method call       | function-call face | no general call face | function / ordinary text          |
+| Built-in function call     | builtin face       | builtin face         | function                          |
+| Type annotation            | type face          | builtin face for str | type / function (mode limitation) |
+| Superclass                 | type face          | no separate face     | type / ordinary text              |
+| Number                     | number face        | no separate face     | constant / ordinary text          |
+| True / None                | constant face      | constant face        | constant                          |
+| String                     | string face        | string face          | string                            |
+| Escape sequence            | escape face        | constant face        | constant                          |
+| Module/method docstring    | doc face           | doc face             | comment                           |
+| Comment                    | comment face       | comment face         | comment                           |
+| Parameter                  | variable-use face  | no separate face     | ordinary text                     |
+| Property access            | property-use face  | no separate face     | ordinary text                     |
+
+These supported classifications are exercised by the regression test
+=landscape-python-role-classification=. Existing theme tests verify the
+corresponding face colors for every palette; the GUI checks read effective
+face attributes. Earlier synthetic LSP tests exercise the renderer and modifier
+composition, but do not imply the current Pyright server supplies tokens.
+
+* Known classification limits — not missing theme faces
+| Construct              | Installed Emacs 29 behavior       | Consequence                                                                     |
+|------------------------+-----------------------------------+---------------------------------------------------------------------------------|
+| Decorator / @          | type face in both modes           | Type color, rather than intended constant color                                 |
+| self                   | explicitly keyword face           | Keyword color, rather than quiet identifier color                               |
+| Class constructor call | function-call face in Tree-sitter | Function color; grammar cannot infer that a call target is a class              |
+| str(42)                | builtin face                      | Function color; annotation str is correctly a type in Tree-sitter               |
+| LIMIT assignment       | variable-name face                | Quiet identifier; uppercase spelling alone is not treated as semantic constancy |
+| State.READY            | property-use face                 | Quiet property; no semantic enum-member classification                          |
+
+Changing the global type face to make decorators purple would also recolor
+actual classes and annotations. Guessing constants or constructor types with
+name-based regexes would be unreliable. This audit therefore preserves Python's
+provider rules instead of disguising those limitations as a theme fix.
+
+The result is correct palette mapping for the distinctions the installed
+providers actually expose, not perfect semantic classification of every Python
+expression. Correcting the exceptions would require separate Python-specific
+fontification rules or a semantic-token-capable server, outside this palette
+change. Tree-sitter and lsp-mode settings have been left unchanged.
+
+* Sources
+The installed =progmodes/python.el.gz= (=python--treesit-settings= and its
+fontification callbacks) was authoritative for Emacs 29 behavior. Live LSP
+workspace capabilities were checked directly. For upstream server context:
+[[https://github.com/microsoft/pyright/blob/main/packages/pyright-internal/src/languageServerBase.ts][Pyright language server capability implementation]].

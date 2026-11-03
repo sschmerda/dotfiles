@@ -39,6 +39,13 @@ Custom commands intended for =M-x= or keybindings use =my/=. Internal helpers, h
 (load! "lisp/appearance-config")
 #+end_src
 
+* Editor themes
+[[file:themes/README.org][Local themes]] collects all 29 custom-made themes in one directory: eighteen [[file:themes/LANDSCAPE.org][Landscape variants]] and eleven [[file:themes/REFERENCE-THEMES.org][Shades of Purple, Gruber, Rosé Pine and Catppuccin variants]]. [[file:lisp/themes-config.el][themes-config.el]] registers their shared helpers and theme entry points, and aligns informational LSP sideline labels with their diagnostic colors. Use =M-x consult-theme= and search =custom-= (or =custom-landscape-= for Landscape) to preview them. All selectable theme names use the =custom-= prefix; see the family documentation for palettes, validation and attribution.
+
+#+begin_src emacs-lisp
+(load! "lisp/themes-config")
+#+end_src
+
 * Text layout and line length
 [[file:lisp/text-layout-config.el][text-layout-config.el]] replaces the vertical column guide with a theme-aware background tint on excess source columns in code. The default code limit is 80, Python uses 88, and Rust uses 100. Org and Markdown prose, terminals and generated buffers such as Magit and help are excluded from overflow highlighting.
 

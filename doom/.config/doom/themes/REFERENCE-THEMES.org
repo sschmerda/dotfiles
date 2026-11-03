@@ -1,0 +1,165 @@
+#+title: Custom reference-inspired Doom themes
+#+startup: overview
+
+Four custom families with eleven selectable variants. The dark themes
+closely follow reference palettes; the light themes are original adaptations.
+Every selectable name begins with =custom-=:
+
+| Theme                         | Character                                                                                                                  |
+|-------------------------------+----------------------------------------------------------------------------------------------------------------------------|
+| custom-shades-of-purple-dark  | Classic VS Code purple, white text, yellow functions/cursor, orange keywords, green strings, cyan types and pink constants |
+| custom-shades-of-purple-light | Warm mauve paper, dark purple neutrals, amber functions, orange keywords, green strings and raspberry constants            |
+| custom-gruber-dark            | Gruber Darker charcoal, strong yellow keywords/cursor, blue functions, green strings and brown comments                    |
+| custom-gruber-light           | Warm parchment with deep ochre keywords, slate-blue functions, forest-green strings and earthy comments                    |
+|-------------------------------+----------------------------------------------------------------------------------------------------------------------------|
+| custom-rose-pine-main         | Rosé Pine's original dark violet base, pine keywords, rose functions and gold strings                                      |
+| custom-rose-pine-moon         | A lighter dark violet variant                                                                                              |
+| custom-rose-pine-dawn         | Warm cream base with strengthened light syntax and bold keywords                                                           |
+| custom-catppuccin-latte       | Light Latte base with stronger mauve/blue/green syntax and bold keywords                                                   |
+| custom-catppuccin-frappe      | Soft dark Frappé base and pastel accents                                                                                   |
+| custom-catppuccin-macchiato   | Deeper Macchiato base and pastel accents                                                                                   |
+| custom-catppuccin-mocha       | Deep Mocha base and pastel accents                                                                                         |
+
+* Select and preview
+Use =M-x consult-theme= and search =custom-=. This uses your existing Doom
+Vertico theme selector and switches without stacking the previous color theme.
+The current/default theme, font settings and keybindings are unchanged.
+
+Registration lives in [[file:../lisp/themes-config.el][themes-config.el]], loaded from
+[[file:../config.org][config.org]]. No package or module was added, so no =doom sync= is required.
+The literate loader is tangled into =config.el=; do not edit that file directly.
+For an already-running session, =M-x load-file= on
+=~/.config/doom/lisp/themes-config.el= registers these themes without
+restarting. The installation also registers them in the current session.
+
+For a permanent choice, change the existing =doom-theme= assignment in
+=lisp/appearance-config.el=, for example:
+
+#+begin_src emacs-lisp :tangle no
+(setq doom-theme 'custom-shades-of-purple-dark)
+#+end_src
+
+Then restart Emacs. To roll back, select the previous theme through
+=consult-theme=; no custom face setters need to be undone.
+
+* References and fidelity
+** Shades of Purple
+Ahmad Awais's installed VS Code extension =ahmadawais.shades-of-purple= 7.3.6
+was the reference. Its actual =themes/shades-of-purple-color-theme.json= was
+inspected, rather than recoloring Doom's existing port. In particular:
+
+- The editor background is =#2D2B55= and normal text is =#FFFFFF=.
+- Functions and Python builtins use =#FAD000=, matching the Python scope rules.
+- Keywords are orange, strings green, types/semantic parameters cyan, constants
+  pink, property faces pale yellow and ordinary variables pale blue-white.
+- The sidebar is deep purple, the modeline darker purple with lavender labels,
+  the current line is darker than the buffer, and the cursor is yellow.
+- Purple comments are slightly brightened for readable text contrast; opaque
+  selection/search surfaces are composited from the source's alpha colors.
+
+The VS Code reference contains many language-specific TextMate scope rules.
+Emacs Font Lock, Tree-sitter and LSP do not expose identical categories, so
+this is a close semantic palette adaptation, not a pixel-identical renderer.
+A single shared builtin face cannot reproduce every per-language VS Code
+builtin override; the Python yellow treatment is used consistently here.
+Semantic parameter colors apply when the provider identifies parameters;
+Emacs 29 can classify them as ordinary variables without semantic tokens.
+
+Official reference: [[https://github.com/ahmadawais/shades-of-purple-vscode][Shades of Purple]]. Original license and its additional
+MIT-distribution condition are preserved in [[file:licenses/Shades-of-Purple.LICENSE.md][the upstream license]]. These local
+adaptations are distributed under MIT; no wider repository license is changed.
+
+** Tsoding / Gruber Darker
+Tsoding's own [[https://github.com/rexim/dotfiles/blob/master/.emacs][Emacs configuration]] selects =gruber-darker=. The upstream
+[[https://github.com/rexim/gruber-darker-theme][Gruber Darker theme]] by Alexey Kutepov and Jason R. Blevins is the source for
+this family. The dark variant preserves its =#181818= background, =#FFDD33=
+yellow, niagara blue functions, quartz types/constants, brown comments and
+bright green strings/docstrings. Keywords retain bold emphasis when Doom's
+bold preference allows it. The original muted line-number styling is made
+more readable; diagnostics gain signs/underlines through the shared engine.
+
+The light theme adapts that restrained palette to warm parchment. Yellow
+becomes a readable deep ochre; it is not claimed to be Tsoding's own light
+configuration. Upstream attribution and MIT terms are in
+[[file:licenses/Gruber-Darker.LICENSE.txt][Gruber Darker's license]].
+
+* Implementation
+=custom-editor-palettes.el= holds the eleven color tables.
+=custom-editor-themes.el= defines the shared custom adapter and the small
+=custom-editor-define-theme= macro. Eleven =*-theme.el= entry files use the
+installed =def-doom-theme= framework. Like upstream Doom themes, these entries
+remain source (=no-byte-compile: t=); both helper files are byte-compiled in tests.
+
+Package support is intentionally reused from =landscape-faces.el=
+and =landscape-packages.el=: completion, diagnostics, Magit/diff-hl, Org/Markdown,
+Solaire, modeline, ANSI/Ghostel faces and LSP token/modifier mappings. The custom
+adapter copies palette/face forms before applying its reference-specific
+changes, so selecting a custom theme cannot mutate Landscape's definitions.
+The custom collection therefore requires those local support files. Registration
+adds this shared helper directory explicitly; =load-path= and
+=custom-theme-load-path= are configured separately and no lookup depends on cwd.
+
+No fonts, heading sizes, Org display modes, parsers, language-server selection
+or semantic-token settings are changed by the themes. Existing neutral LSP
+modifier handling remains theme-owned and restores when switching away. The
+shared face-cache watcher remains one idempotent watcher; the custom layer
+adds no timers, hooks or fontification advice.
+
+Existing Spacious Padding and Olivetti overrides continue to own their spacing
+and thin divider/fringe behavior. Those can override a decorative border color.
+Applications using literal RGB colors and user face remaps can override theme
+colors. ANSI bright colors deliberately retain readable normal color values,
+as in the shared engine; limited-color terminal approximations are not audited.
+
+* Validation
+Run =tests/run-tests.sh= from any directory. It discovers the installed Doom
+Straight build using the Emacs version; override =EMACS= or
+=LANDSCAPE_DOOM_BUILD= when needed. It uses =emacs -Q=, never personal notes.
+
+Tests cover eleven-theme discovery, reference colors, syntax/LSP mappings,
+contrast, ANSI colors, theme switching/rollback, late package loading, shared
+Python/Org/Markdown/Lisp fixtures, unchanged typography and helper compilation.
+Both families run together by default; append =custom= or =landscape= to select one.
+
+[[file:CUSTOM-VALIDATION.org][Validation results and limitations]] distinguish numeric/effective-face checks
+from untested interactive features. [[file:PALETTE-NOTES.org][Palette notes]] record the minimal contrast
+corrections. No screenshots are committed. Optional GUI captures can be written
+outside the repository for review, then removed.
+
+* Stronger light syntax (2026-11-03)
+All light variants use deeper, more saturated syntax colors. Keywords are bold; function definitions and types use normal weight.
+Stronger syntax colors provide the remaining emphasis. This covers Font Lock, built-in
+Tree-sitter's inherited faces, external Tree-sitter faces when installed, and
+LSP semantic faces when the server supplies the corresponding categories.
+Doom's =doom-themes-enable-bold= preference still applies. Warm backgrounds,
+ordinary text, comments and dark variants retain their existing treatment.
+The five core syntax roles have at least 6.5:1 contrast against the buffer,
+alternate and current-line surfaces. Color contrast alone does not guarantee
+perceptual distinction; Landscape's separate color-distance checks remain.
+
+* Rosé Pine and Catppuccin
+The palettes come from [[https://github.com/rose-pine/palette][Rosé Pine's palette source]] and
+[[https://github.com/catppuccin/palette][Catppuccin's palette source]] (palette version 1.8.0).
+Syntax roles follow [[https://github.com/rose-pine/neovim][Rosé Pine's reference implementation]] and
+[[https://github.com/catppuccin/catppuccin/blob/main/docs/style-guide.md][Catppuccin's style guide]], adapted to Emacs faces rather than layered over
+another enabled theme. These use the same installed =def-doom-theme= framework
+and shared package support as the other custom themes.
+
+Dawn and Latte are explicitly declared light despite their flavor names not
+ending in =-light=. They use the same bold-keyword, normal-definition/type
+policy as the other light themes. Existing dark themes and font settings are
+unchanged. No packages, hooks, keybindings or language servers are added.
+
+Base and secondary backgrounds retain their official values. For readability,
+selected foregrounds are adjusted while preserving hue; these are local
+adaptations rather than exact upstream ports. [[file:PALETTE-NOTES.org][Palette notes]] record those
+changes and the contrast targets. Exact upstream pastel intensity is therefore
+not promised. Upstream MIT notices are retained in
+[[file:licenses/rose-pine.LICENSE.txt][Rosé Pine's license]] and [[file:licenses/Catppuccin.LICENSE.txt][Catppuccin's license]].
+
+* Diagnostic and Org consistency
+All reference families now use the [[file:README.org][shared diagnostic and Org hierarchy policy]].
+Source marks preserve syntax colors; error, warning and info labels agree across
+Flycheck, Flymake and the informational lsp-ui sideline. Org's leading levels
+carry theme colors, deeper levels are quieter, and existing Doom TODO-state
+faces distinguish active, waiting, project, done and cancelled tasks.

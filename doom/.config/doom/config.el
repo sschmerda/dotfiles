@@ -7,6 +7,8 @@
 
 (load! "lisp/appearance-config")
 
+(load! "lisp/themes-config")
+
 (load! "lisp/text-layout-config")
 
 (load! "lisp/spacing-config")

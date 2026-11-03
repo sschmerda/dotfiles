@@ -1,0 +1,89 @@
+#+title: Local Doom themes
+#+startup: overview
+
+All 29 custom-made themes and their shared Lisp helpers live directly in this
+directory. [[file:../lisp/themes-config.el][themes-config.el]] registers it for both library and theme lookup.
+Use =M-x consult-theme= to preview; all names begin with =custom-=.
+
+* Theme families
+- [[file:LANDSCAPE.org][Landscape]]: nine regional palettes, each light and dark, with =custom-landscape-= names.
+- [[file:REFERENCE-THEMES.org][Reference-inspired themes]]: Shades of Purple, Gruber, Rosé Pine and Catppuccin,
+  with =custom-= names. Attribution and distribution terms are in [[file:licenses/][licenses/]].
+
+* Layout
+- =*-theme.el=: selectable theme entry points.
+- =landscape-*.el=: common palette data, faces and package support.
+- =custom-editor-*.el=: reference palettes and their adapter to the common engine.
+- =tests/=: isolated validation and sample files.
+- =licenses/=: reference theme licenses and adaptation terms.
+
+* Validation
+Run =tests/run-tests.sh= for both families, or append =landscape= or =custom=
+to select one. This uses the installed Doom dependencies with =emacs -Q=,
+without loading personal configuration. Set =EMACS= or =LANDSCAPE_DOOM_BUILD=
+if their default discovery does not match your installation.
+
+=tests/run-display-tests.sh gui= checks both families in separate graphical
+Emacs processes; =tty= checks Landscape terminal colors in a real terminal.
+Screenshots and compiled artifacts are not version controlled.
+
+Family reports: [[file:LANDSCAPE-VALIDATION.org][Landscape validation]], [[file:CUSTOM-VALIDATION.org][custom validation]],
+[[file:PYTHON-HIGHLIGHTING.org][Python highlighting]], [[file:PALETTE-REVISION.org][Landscape palette revision]] and [[file:PALETTE-NOTES.org][reference palette notes]].
+
+The flat-layout refactor was checked with all 18 ERT tests passing. The running
+Emacs discovers all 29 themes through the single loader, with the active and
+default themes preserved. Documentation file links and shell syntax also pass.
+
+Light variants received stronger syntax emphasis after the layout refactor;
+see the family documentation. The current suite has 23 tests, including the
+shared light-syntax contrast and weight check.
+
+* Naming
+Landscape themes use =custom-landscape-REGION-light/dark=. Shades of Purple and Gruber retain =custom-shades-of-purple-light/dark= and =custom-gruber-light/dark=.
+Shared helper libraries keep their existing =landscape-= and =custom-editor-=
+symbols; they are not selectable themes.
+
+Rosé Pine uses =custom-rose-pine-main/moon/dawn=. Catppuccin uses
+=custom-catppuccin-latte/frappe/macchiato/mocha=. All are selectable through
+=M-x consult-theme=; no additional theme loader or package is required.
+
+* Landscape visual identity
+The eighteen Landscape themes now use region-specific backgrounds and syntax,
+including lavender Provence in both light and dark versions. See the
+[[file:LANDSCAPE-INSPIRATION.org][regional research and viewed image references]] for design rationale and sources.
+
+* Diagnostics and Org hierarchy
+All 29 themes share the same severity and document structure policy:
+
+| Diagnostic                  | Source mark        | Fringe, list, annotation and sideline color |
+|-----------------------------+--------------------+---------------------------------------------|
+| Error                       | Wave underline     | Theme error (red/pink)                      |
+| Warning                     | Straight underline | Theme warning (amber/yellow)                |
+| Info / backend-mapped hints | Straight underline | Theme info (blue/cyan)                      |
+
+Diagnostic overlays leave source foreground/background unspecified, preserving
+syntax colors. The current lsp-ui version normally paints information with
+=success=; [[file:../lisp/themes-config.el][themes-config.el]] recolors only its diagnostic label runs through a
+theme-owned face, while custom themes are active. Code actions, symbol popups,
+normal success messages and Org DONE keep their own colors. No timers or server
+requests are added. Some backends merge hints into info; this does not change
+their severity classification. Underline shapes depend on display support.
+
+Org levels 1–3 use the regional accent, type and function colors (Shades of
+Purple uses its constant color at level 3 to avoid repeating yellow). Level 4
+is bold body text; levels 5–8 use quiet normal-weight body text. Existing heading
+sizes, mixed-pitch rules and fixed-pitch tables/code are preserved. Links remain
+underlined; code/example blocks use the alternate surface, with subdued markers.
+
+| Org state     | Treatment                                        |
+|---------------+--------------------------------------------------|
+| TODO          | Error color, bold                                |
+| STRT / active | Info color, bold                                 |
+| WAIT / HOLD   | Warning color                                    |
+| PROJ          | Theme accent, bold                               |
+| DONE          | Success green; finished heading text stays muted |
+| KILL / NO     | Error color with strike-through                  |
+
+This themes the existing Doom keyword faces rather than adding/changing TODO
+workflows. Org Modern labels follow the same roles. Metadata and ordinary prose
+stay quiet. Doom's global bold preference is respected.

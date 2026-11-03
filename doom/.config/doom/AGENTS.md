@@ -14,6 +14,11 @@ These instructions apply to this directory and its descendants, including
   Keep implementation there and load it from the appropriate `config.org`
   section using `load!`. Preserve load order, especially macOS setup and the
   Org directory setting before code that depends on them.
+- `themes/` contains all local theme entries and shared palette/face helpers in
+  one directory, registered by `lisp/themes-config.el`. Theme library symbols
+  retain the `landscape-` and `custom-` prefixes; all selectable themes use
+  `custom-`, including `custom-landscape-` for Landscape. Isolated checks live in
+  `themes/tests/`; retain attribution and upstream terms in `themes/licenses/`.
 - `ROADMAP.org` records deferred work. A roadmap entry is not authorization to
   implement it; work on the user's current request.
 

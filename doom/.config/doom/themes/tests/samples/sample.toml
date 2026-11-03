@@ -1,0 +1,5 @@
+# Quiet properties, distinct strings and numbers.
+[landscape]
+region = "Provence"
+enabled = true
+limit = 42

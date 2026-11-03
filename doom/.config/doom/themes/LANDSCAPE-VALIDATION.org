@@ -1,0 +1,270 @@
+#+title: Landscape validation report
+#+date: 2026-11-03
+#+startup: overview
+
+* Current regional-identity validation — 2026-11-03
+The [[file:LANDSCAPE-INSPIRATION.org][regional-identity revision]] supersedes earlier palette measurements below.
+All 20 combined ERT tests pass, including a new identity regression check:
+eighteen distinct backgrounds, at least five keyword hue families among the
+light themes, and genuinely lavender backgrounds for both Provence variants.
+
+All 702 Landscape palette/highlight pairs pass the existing 4.8:1 threshold;
+minimum measured contrast is 4.8502. Minimum body-text contrast across each
+variant's three base surfaces is 8.4326. Core light syntax retains at least
+6.5:1 contrast. All 90 light-syntax color-distance pairs pass Delta E76 30;
+the smallest measured separation is 31.1567 (Bologna).
+
+Isolated graphical Emacs checks pass for all 29 custom themes, covering actual
+package face foreground/background contrast and semantic color assignments.
+All eighteen Landscape light/dark Python/Org specimens were actually viewed.
+The reference families pass unchanged. Python and JSON Tree-sitter grammars
+were exercised; Go, TOML and YAML grammars remain unavailable and were skipped.
+No claim is made of full color-vision accessibility or all-language semantic
+classification. No remote connections or language servers were started.
+
+All eighteen Landscape definitions were refreshed in the user's Emacs, with
+the selected theme and configured default preserved. Temporary reference
+photographs, scripts, backups and GUI captures were removed after use.
+
+* Environment and audit
+- macOS on Apple Silicon, Emacs Mac 29.4, graphical window system =mac=.
+- Doom =v2.2.4-13-g01d68aaf6=; private directory =~/.config/doom= is a
+  symlink to =doom/.config/doom= in this repository.
+- Installed =doom-themes= checkout is named =themes=, revision =a592029=.
+  =doom-tokyo-night-theme.el= was inspected, along with =def-doom-theme= and
+  =doom-themes-base.el=. No upstream checkout/cache was edited.
+- Corfu + Orderless, Vertico, lsp-mode + lsp-ui/Flycheck, Doom Modeline,
+  Solaire, Treemacs/Dirvish/Dired, Magit + diff-hl, Ghostel, Markdown,
+  Org + Org Modern + Org-roam and Citar are installed. Eglot, external
+  =tree-sitter-hl=, Company, vterm and git-gutter are not active modules.
+- Built-in Tree-sitter is available; existing Python and JSON grammars were
+  found under Doom's local tree-sitter directory. No grammar was installed.
+- The on-disk default remains =doom-gruvbox-light=. A read-only/live registration
+  check found the running session uses =doom-gruvbox=; it was left unchanged.
+  All 18 Landscape themes are now discoverable there without restarting.
+  Existing Hack Nerd Font Mono /
+  Helvetica settings, Org views, heading geometry, Olivetti and Spacious
+  Padding were preserved. =custom.el= has no custom face definitions.
+- The unrelated dirty Git/zsh/tmux/Neovim/etc. work was preserved. No commit,
+  push, package installation or Doom sync was performed.
+
+Installed revisions used for the audit:
+
+| Package       | Revision   | Package          | Revision  |
+|---------------+------------+------------------+-----------|
+| lsp-mode      | e15b8205cb | lsp-ui           | 176eca7   |
+| corfu         | 6477aac    | vertico          | 9adb818   |
+| consult       | e98ac9a    | marginalia       | 13220ab   |
+| orderless     | f4a8114    | which-key        | 78bf634   |
+| doom-modeline | 6f911e9    | solaire-mode     | ea97e01   |
+| treemacs      | 2ab5a3c    | magit            | 67f2038   |
+| diff-hl       | 3d9552c    | ghostel          | dd72e1f   |
+| markdown-mode | 76cb4ff    | org              | 7427df2d9 |
+| org-modern    | 1959cd4    | org-roam         | 903bd4e   |
+| citar         | d228966    | spacious-padding | b82e05a   |
+| olivetti      | d1bdd43    | doom-themes      | a592029   |
+
+* Palette revision
+[[file:PALETTE-REVISION.org][The 2026-11-03 revision]] documents all changed values: two successive warmer regional light
+surface revisions and minimal foreground corrections to preserve contrast, plus stronger
+Iceland colors and clearer light syntax color families. Unrelated dark palettes are unchanged.
+
+* Commands and results
+1. =tests/run-tests.sh landscape=: 12 ERT tests pass for the revised palettes (2026-11-03). Checks theme discovery, source
+   loading and light/dark/cross-region switching for all 18 variants, rollback
+   to Gruvbox, exact semantic face colors, all specified highlight/diff pairs,
+   neutral ramp contrast, 16 ANSI foreground slots, shared-helper compilation,
+   late package loading and stable hook/watcher registration.
+2. The three shared helpers compile with warnings treated as errors. Theme
+   entry points remain source, matching upstream Doom's =no-byte-compile: t=
+   convention. An attempted compilation of the expanded framework face list
+   hit Emacs 29's bytecode limit; this is not hidden as a successful compile.
+3. All eight synthetic source files are fontified under every theme: Python,
+   Go, Emacs Lisp, JSON, TOML, YAML, Markdown and Org. These use actual major
+   modes. This proves fontification works, not that every provider classifies
+   every token according to the ideal taxonomy.
+4. Python/JSON built-in Tree-sitter modes parse and fontify their fixtures.
+   Go/TOML/YAML grammars are unavailable and those parser tests are not run.
+   External tree-sitter is absent; its guarded face mapping is untested.
+5. lsp-mode's real semantic-token fontifier is exercised with synthetic
+   variable/function/type tokens plus read-only/deprecated modifiers.
+   Cache rebuilding/restoration uses the real workspace cache builder and a
+   synthetic server legend with no process/network connection. Existing
+   default modifier settings restore after switching away. No live language
+   server or personal project was started; server classification and end-to-end
+   semantic-token negotiation are not tested. A later read-only inspection
+   of the live Python workspace confirmed no semantic-token capability; see
+   [[file:PYTHON-HIGHLIGHTING.org][the Python-specific audit]].
+6. A real Org agenda is generated from the synthetic Org file. A real Magit
+   unstaged diff is generated from a temporary Git repository. Neither test
+   accesses personal notes or modifies the working repository's index.
+7. =tests/run-display-tests.sh gui= (rerun 2026-11-03): actual effective face colors pass for all
+   18 themes in a clean Mac graphical process. Loaded explicit package faces
+   with hex text colors are checked against their effective background (or
+   the default where unspecified). Hidden indentation, decorative borders
+   and ANSI color-slot faces are deliberately excluded from that text test.
+8. Historical terminal check from the initial 2026-11-02 implementation:
+   =TERM=xterm-256color COLORTERM=truecolor tests/run-display-tests.sh tty=:
+   all 18 themes load and render the 16 ANSI foreground specimens; Emacs reports
+   16,777,216 color cells. Emitted output contains 24-bit color sequences.
+   The system lacks an =xterm-direct= terminfo entry, so that invocation could
+   not start; the installed =xterm-256color= definition was used instead.
+9. =org-babel-tangle= regenerated =config.el= from =config.org= (21 loader
+   blocks). =git diff --check=, shell syntax checks and Lisp =check-parens= pass.
+
+* Measured palette contrast
+The standard sRGB relative-luminance formula is evaluated from the actual
+palette source. Each variant has 33 foreground/base-surface checks plus six
+explicit highlight/diff pairs: 702 checks total. Every one exceeds 4.8:1;
+main text on bg/bg-alt/line exceeds 7.06:1 before rounding. Tests additionally
+check the derived neutral ramp and all 16 ANSI foregrounds against the three
+base surfaces at a 4.5:1 threshold. Iceland's separate ANSI magenta is included.
+
+| Variant        | Pairs | Minimum | Main text minimum |
+|----------------+-------+---------+-------------------|
+| provence-light |    39 |  4.8036 |            7.3060 |
+| provence-dark  |    39 |  4.8483 |            9.9969 |
+| roma-light     |    39 |  4.8003 |            7.5597 |
+| roma-dark      |    39 |  4.9137 |           10.4869 |
+| sicilia-light  |    39 |  4.8006 |            7.6663 |
+| sicilia-dark   |    39 |  4.9927 |           10.4912 |
+| umbria-light   |    39 |  4.8021 |            7.0676 |
+| umbria-dark    |    39 |  4.8893 |           10.0581 |
+| venezia-light  |    39 |  4.8046 |            7.5346 |
+| venezia-dark   |    39 |  4.9474 |            9.7754 |
+| firenze-light  |    39 |  4.8002 |            8.1899 |
+| firenze-dark   |    39 |  5.0002 |           10.4459 |
+| bologna-light  |    39 |  4.8007 |            7.2409 |
+| bologna-dark   |    39 |  4.8246 |           10.4976 |
+| napoli-light   |    39 |  4.8021 |            8.0359 |
+| napoli-dark    |    39 |  5.1118 |           10.7186 |
+| iceland-light  |    39 |  4.8004 |            8.4922 |
+| iceland-dark   |    39 |  5.5388 |           12.2407 |
+
+These are unrounded-threshold tests; the displayed numbers are rounded for
+reporting. Palette contrast is not proof of all overlay compositions, all
+inherited upstream faces, all font rasterization or universal accessibility.
+Color-vision simulations were not performed; distinguishability beyond text
+contrast remains a visual review task. Signs, underlines, words and diff +/-
+markers preserve redundant cues.
+
+* Python-specific follow-up
+[[file:PYTHON-HIGHLIGHTING.org][The Python audit]] checks concrete token classifications under regex and
+Tree-sitter fontification, with a richer fixture and a dedicated regression
+test. It also records the actual running Pyright workspace capabilities.
+The light surfaces received a further small warming step (green -2, blue -4),
+with contrast-preserving foreground corrections; dark variants are unchanged.
+
+* Light syntax separation
+All 90 pairwise comparisons between keyword/function/string/type/constant in
+the nine light variants meet a minimum CIELAB Delta E76 distance of 30. This
+is a regression proxy for ordinary color separation, separate from the 702
+text/background contrast checks. It is not a perceptually uniform guarantee,
+a color-vision simulation or proof that providers classify all tokens correctly.
+The measured minimum across the revised light palettes is 32.5629 (Iceland).
+Warm surfaces and regional UI accent colors are unchanged by this syntax pass.
+
+* Integration coverage
+“Inherited” means the installed Doom framework supplies those faces; it does
+not claim every feature of that package was interactively exercised.
+
+| Area                                | Implementation                                    | Actual verification / limits                                                     |
+|-------------------------------------+---------------------------------------------------+----------------------------------------------------------------------------------|
+| Font Lock                           | Shared role overrides                             | Eight fixtures under all 18 themes                                               |
+| Built-in treesit                    | Same standard faces                               | Python/JSON parsed; other grammars absent                                        |
+| External tree-sitter                | Guarded existing-face mapping                     | Not installed, not run                                                           |
+| lsp-mode                            | Token roles, neutral modifiers, cache refresh     | Real renderer/cache builder with synthetic data; no live server                  |
+| lsp-ui / inlay hints                | Explicit readable secondary surfaces              | Late load and effective GUI face contrast; no live hint stream                   |
+| Flycheck / Flymake                  | Colored signs and wavy underlines                 | Face definitions/readback; no compiler or checker run                            |
+| Corfu / Vertico                     | Explicit selection pairs                          | Face readback and fragment composition specs; no automated typing session        |
+| Consult / Marginalia / Orderless    | Inherited coverage plus focused overrides         | Late loading and readable match/annotation specs                                 |
+| Which-key / Doom Modeline           | Inherited plus accent/label overrides             | Late load and effective faces; no exhaustive status combinations                 |
+| Solaire                             | Exact secondary/hiding surfaces                   | Effective face checks; personal popup flows not reproduced                       |
+| Dired / Treemacs                    | Existing inheritance plus quiet files/focus roles | Face definitions inspected; no filesystem UI walkthrough                         |
+| Magit / diff-hl                     | Exact diff pairs, refined emphasis                | Real Magit diff; gutter face readback; no visual staging workflow                |
+| Ediff / smerge                      | Exact current diff pairs and refined cues         | Effective faces; no merge session launched                                       |
+| Ghostel / ANSI                      | ANSI inheritance and existing synchronization     | ANSI foreground chart and inherited faces; no native Ghostel application session |
+| term / vterm / Company / git-gutter | Compatibility with actual upstream face names     | Unused modules; interactive behavior untested                                    |
+| Markdown                            | Focused heading/code/link/table colors            | Actual fixture fontification under every theme                                   |
+| Org / Org Modern                    | Levels 1-8, metadata, blocks, TODO labels         | Actual fixture, agenda and mixed-pitch GUI capture                               |
+| Org-roam / Citar                    | Readable title/preview/citation faces             | Definitions and late loading; no database/capture/bibliography access            |
+| Olivetti / Spacious Padding         | Existing layout preserved                         | Existing remapping/hooks inspected; personal layout not modified                 |
+
+* Screenshot policy
+Screenshots are temporary review artifacts and are not stored in this dotfiles
+repository. The previous three PNGs and their links were removed. Native
+=mac-export-frames= remains available through the optional capture environment
+variable; direct its output outside the repository. No image mockups are used.
+
+* Remaining limits
+No GPU/font comparison across operating systems, limited-color terminal audit,
+full-screen terminal application test, color-vision simulation or exhaustive
+interactive completion/merge workflow was run. The initial audit had no live
+server test; the later [[file:PYTHON-HIGHLIGHTING.org][Basedpyright follow-up]] verified actual symbol and
+semantic-token responses after repairing saved workspace state.
+No future package coverage is promised. Existing per-buffer/user face remaps,
+client-specific LSP overrides and applications with literal RGB colors can
+legitimately override the collection. The effective-face audit is bounded by
+installed definitions explicitly loaded by the test; inherited Doom faces
+outside that scope may still need focused adjustments when encountered.
+
+* Light syntax emphasis follow-up (2026-11-03)
+The combined suite now passes 19 tests, including stronger light-syntax
+contrast (at least 6.5:1 on all three base surfaces) and effective keyword,
+definition and type weights, with Doom's bold opt-out respected. Landscape
+syntax separation remains above Delta E76 30 (minimum 32.0692, Venezia).
+Isolated GUI checks pass for all 22 themes after this change. Python and Org
+specimens were visually reviewed in Provence Light and Gruber Light; temporary
+captures were deleted. Previous palette measurements above describe the earlier
+revision; dark palettes and warm background surfaces were not changed here.
+
+* Iceland moss restoration
+Both Iceland variants now emphasize lichen green on keywords, accents,
+secondary/current-line surfaces and selections, while retaining the glacial
+and basalt base colors. All 20 ERT tests pass; the identity check now guards
+the green dominance of these roles in both variants. Isolated GUI checks pass
+for all 29 themes. Both Iceland Python/Org specimens were visually reviewed
+and removed. Light syntax separation remains above Delta E76 42; palette
+contrast remains above 4.85:1. Both cached themes were refreshed in the running
+Emacs while preserving the user's active selection. Other regions were not
+changed in this follow-up.
+
+* Stronger signature-color pass
+The other sixteen Landscape variants now have stronger regional backgrounds,
+selection/current-line surfaces, borders and signature syntax. Both Iceland
+palettes were compared with the pre-change snapshot and are byte-for-byte
+unchanged. No other theme family was edited.
+
+All 20 ERT tests pass. All 702 Landscape palette/highlight pairs remain above
+4.8:1 (minimum 4.8509), body text stays above 7:1 (minimum 7.5285), and the
+90 light syntax-separation pairs remain above Delta E76 30 (minimum 30.2525).
+Core light syntax still passes 6.5:1 contrast on all three base surfaces.
+
+Graphical face checks pass for all 29 themes. All sixteen revised light/dark
+Python/Org specimens were viewed; after quieting comment tints, representative
+final specimens were viewed again. Temporary captures and snapshots were
+deleted. Sixteen cached definitions were refreshed in the user's Emacs while
+preserving the selected theme and configured default.
+
+* Diagnostic and Org hierarchy polish
+All 23 combined ERT tests pass. New checks cover the diagnostic severity roles
+and Org hierarchy across all 29 themes, a real Flycheck overlay preserving
+source Font Lock properties, and informational sideline label isolation. The
+last check verifies that code-action overlays and non-custom themes are left
+alone and existing help properties are preserved. After declaring missing
+Doom TODO fixture faces in standalone Emacs, all ten reference-family tests
+were rerun and pass.
+
+Isolated graphical face checks pass for all 29 themes. Synthetic Python
+diagnostics and real Org/Org Modern fontification were captured. Final
+representative specimens were viewed for Provence Light, Iceland Dark,
+Shades of Purple Dark and Rosé Pine Dawn. No checker, language server or
+remote process was started for those synthetic specimens. Terminal underline
+shapes and server severity classification are not exhaustively tested.
+
+Source files pass syntax/diff checks and documentation links resolve. The
+running Emacs has all 29 definitions refreshed; selected/default themes are
+preserved and the sideline compatibility advice is installed. Fonts, buffers'
+text, task workflows, palettes and Org display presets are unchanged. The
+compatibility layer introduces no timers or language-server requests.
+Temporary GUI captures were deleted after review.

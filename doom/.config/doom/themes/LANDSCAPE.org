@@ -1,0 +1,231 @@
+#+title: Landscape themes for Doom Emacs
+#+startup: overview
+
+Eighteen installable =doom-themes= themes: nine regional palettes, each with a related light and dark variant. The current [[file:LANDSCAPE-INSPIRATION.org][regional-identity revision]] uses researched scenery and viewed image references: lavender Provence, travertine Rome, ceramic-blue Sicily, green Umbria, lagoon Venice, glacial Iceland, marble/terracotta Florence, brick Bologna and yellow/blue Naples. Backgrounds, surfaces and syntax all contribute to those identities.
+
+The earlier [[file:PALETTE-REVISION.org][parchment revision]] is historical. Light themes now have distinct regional tints rather than a shared brown base; dark themes were revised as well. Exact colors remain original artistic choices rather than sampled or official regional palettes.
+
+* Selecting a theme
+The configuration registers this directory through
+[[file:../lisp/themes-config.el][themes-config.el]], loaded by [[file:../config.org][config.org]]. No package declarations,
+module changes, fonts or keybindings are required. The configured default is preserved.
+
+After restarting Emacs, use =M-x consult-theme= to preview/select a theme.
+Doom's Vertico module already remaps =load-theme= to this selector. It disables
+the previous color theme when switching. Follow Emacs's ordinary theme trust
+prompt for these locally maintained files; no blanket trust setting is added.
+
+The themes were also registered in the running Emacs during installation,
+so the selector works immediately. That session's active =doom-gruvbox= was
+left unchanged; the on-disk default remains =doom-gruvbox-light=.
+
+In another already-running session, use =M-x load-file= and load
+=~/.config/doom/lisp/themes-config.el= first. Then use the selector.
+
+Available names (each row has both variants):
+
+| Region   | Light                           | Dark                           |
+|----------+---------------------------------+--------------------------------|
+| Provence | custom-landscape-provence-light | custom-landscape-provence-dark |
+| Roma     | custom-landscape-roma-light     | custom-landscape-roma-dark     |
+| Sicilia  | custom-landscape-sicilia-light  | custom-landscape-sicilia-dark  |
+| Umbria   | custom-landscape-umbria-light   | custom-landscape-umbria-dark   |
+| Venezia  | custom-landscape-venezia-light  | custom-landscape-venezia-dark  |
+| Iceland  | custom-landscape-iceland-light  | custom-landscape-iceland-dark  |
+| Firenze  | custom-landscape-firenze-light  | custom-landscape-firenze-dark  |
+| Bologna  | custom-landscape-bologna-light  | custom-landscape-bologna-dark  |
+| Napoli   | custom-landscape-napoli-light   | custom-landscape-napoli-dark   |
+
+For a permanent choice, replace the existing =doom-theme= assignment in
+[[file:../lisp/appearance-config.el][appearance-config.el]], for example:
+
+#+begin_src emacs-lisp :tangle no
+(setq doom-theme 'custom-landscape-provence-light)
+#+end_src
+
+Restart Emacs to apply that default. There are no new packages, so =doom sync=
+is unnecessary for this change. The loader has already been generated from
+=config.org= through Org tangling; do not edit =config.el= directly.
+
+Outside Doom, with =doom-themes= installed, register both search paths:
+
+#+begin_src emacs-lisp :tangle no
+(let ((directory (expand-file-name "/path/to/themes/")))
+  (add-to-list 'load-path directory)              ; shared Lisp helpers
+  (add-to-list 'custom-theme-load-path directory)) ; theme entry points
+(mapc #'disable-theme (copy-sequence custom-enabled-themes))
+(load-theme 'custom-landscape-provence-light t) ; t trusts this chosen local source
+#+end_src
+
+* Structure and maintenance
+- =landscape-palettes.el=: exact semantic sRGB data, shared by all variants.
+- =landscape-faces.el=: required Doom categories, neutral ramp, common UI and
+  syntax semantics, and the small =landscape-define-theme= macro.
+- =landscape-packages.el=: focused package overrides and LSP modifier handling.
+- Eighteen seven-line =*-theme.el= files: ordinary discoverable entry points
+  using =def-doom-theme= directly through the shared macro.
+- =tests/=: synthetic files, reproducible ERT/contrast/display checks and optional external
+  Mac Emacs captures. See [[file:LANDSCAPE-VALIDATION.org][the validation report]] for results and limits.
+
+The helper directory must be on =load-path= even when the same directory is on
+=custom-theme-load-path=. No file lookup depends on the working directory.
+The theme entry files intentionally use =no-byte-compile: t=, matching the
+installed Tokyo Night theme: the framework's expanded face list exceeds
+Emacs 29's bytecode limit. The three shared implementation files are separately
+byte-compiled and checked with warnings treated as errors.
+
+Tokyo Night was inspected as a structural reference. Its theme is neither
+loaded underneath these themes nor required at runtime; no implementation or
+private variables were copied. Upstream Doom retains its own attribution and
+license. This collection adds original palette bindings and semantic mappings.
+
+** Color semantics and surfaces
+Ordinary identifiers, parameters, properties and punctuation stay at =fg=.
+Functions/calls/built-in functions share =function=; types share =type=;
+keywords share =keyword=; constants/numbers/decorators share =constant=;
+strings share =string=; comments and docstrings share =comment=. Light variants
+use distinct regional keyword hues, saturated supporting syntax and quiet
+comments. Provence uses purple keywords; other regions use carmine, cobalt,
+forest green, teal, cyan, terracotta, brick red or gold ochre. Iceland retains its moss/glacial
+syntax identity. A CIELAB distance check guards
+against the five syntax colors drifting too close together; it is not a
+color-blind accessibility guarantee. Providers can
+only color distinctions that they actually expose. The theme does not change
+mode grammars or add regex rules to manufacture missing categories.
+
+The exact =bg=, =bg-alt= and =line= surfaces are used for main text, secondary
+surfaces and the active line. Selections, search and diff pairs retain their
+specified values. Links are underlined; diagnostics retain signs and severity-colored
+underlines; refined diff text adds bold/underline without changing its pair.
+Org uses colored leading headings and quieter deeper levels; see the
+[[file:README.org][shared diagnostics and Org hierarchy policy]].
+Heading heights, fixed-pitch inheritance, mixed pitch and font families are
+left to Org, Doom and the user's configuration.
+
+The neutral ramp linearly interpolates sRGB channels from =bg= to =fg= with
+Doom's =doom-blend=: =truncate(alpha * fg + (1-alpha) * bg)= per channel.
+=base0..base8= use alpha =0, .05, .10, .16, .84, .88, .92, .96, 1= in light
+themes and =0, .05, .10, .16, .78, .82, .88, .94, 1= in dark themes.
+The first four are surfaces; the last five are readable neutral labels. Tests
+check main text on those surfaces and these label colors on all three base
+surfaces. Other inherited Doom integrations may derive additional colors;
+this does not constitute an exhaustive audit of every upstream face.
+
+Completion match fragments use underlining without replacing the selected
+foreground/background. Corfu and standard/Marginalia annotations use normal
+text color to remain readable when their face takes precedence over the
+selection face. Arbitrary third-party candidate decorations can still affect
+composition; no global completion rendering advice is installed.
+
+** LSP modifiers
+Semantic tokens are neither enabled nor disabled by a theme. If lsp-mode is
+available, its semantic face definitions are loaded, without starting a server,
+so theme-owned variable assignments can restore the package's real defaults.
+The modifier face mapping is copied and only color-replacing modifier entries
+are made neutral. Definitions/implementations preserve token hue; deprecated
+symbols add a strike-through. Actual constants and types retain their colors.
+Explicit buffer-local mappings and client-specific overrides remain user-owned.
+
+Lsp-mode caches modifier-to-face vectors in existing workspaces. One idempotent
+variable watcher rebuilds only those face caches and clears cached combinations
+when the default mapping is assigned or restored. It makes no server requests,
+does not restart LSP, and adds no timers, theme hooks or fontification advice.
+=unload-feature= on =landscape-packages= removes the watcher after the themes
+have been disabled. Already-issued provider classifications are not changed.
+
+** Terminal palette
+ANSI red/green/yellow/blue/magenta/cyan use error/success/warning/type/constant/info.
+Iceland instead uses slate-blue constants for ANSI blue and glacial functions
+for cyan. Its separate mineral-magenta slot is =#674860= (light) or =#BA9AAE=
+(dark); neither is used for ordinary syntax.
+
+Black and white are readable theme-relative neutrals: fg/comment in light
+variants and comment/fg in dark variants. Bright ANSI slots retain their normal
+counterpart's color deliberately, avoiding unreadable light-theme pastels.
+Consequently, applications cannot rely on a normal/bright color distinction
+alone. ANSI faces feed Ghostel's existing palette and theme synchronization;
+term/vterm compatibility faces are also specified. Applications that choose
+literal 24-bit colors or their own palettes can override these colors.
+
+Exact hex values target graphical and true-color terminal displays. Limited
+256/16-color terminals approximate the colors through Emacs's terminal color
+translation; their contrast and hue distinctions are not guaranteed.
+
+* Python highlighting
+See [[file:PYTHON-HIGHLIGHTING.org][the Python highlighting audit]] for tested constructs and provider limits.
+The initial audit used built-in Tree-sitter at level 4 with Pyright, which
+advertised no semantic-token provider. A later Basedpyright migration now
+supplies live semantic tokens after correcting a persisted project blocklist.
+Decorators and =self= share type/keyword faces in Emacs 29's parser, and
+constructor/enum classification is limited without semantic tokens; Basedpyright
+can refine those colors. Palette changes do not rewrite Python's parser rules
+or select a language server.
+
+* Existing appearance customizations
+=custom.el= currently contains theme trust hashes and no custom face settings.
+The selected =doom-gruvbox-light= and Hack/Helvetica fonts are unchanged.
+Spacious Padding deliberately controls divider faces through its own theme,
+using =shadow= for the visible line. Olivetti remaps fringe backgrounds and
+reads the divider face for its thin borders. Those user layout choices are
+preserved; their divider may therefore use the readable comment color instead
+of Landscape's subtler decorative =border= slot. Buffer overflow highlighting
+continues to derive its tint from the active theme's diagnostics.
+
+Solaire's secondary default surface remains =bg-alt=. Its Org hiding face
+matches that surface, and ordinary =org-hide= matches =bg=. Org table/code font
+inheritance and existing editing/reading/source views are not reconfigured.
+
+* Verification
+From any working directory:
+
+#+begin_src sh :tangle no
+/path/to/themes/tests/run-tests.sh
+#+end_src
+
+Set =EMACS= to an executable if needed. =LANDSCAPE_DOOM_BUILD= overrides the
+installed Straight build directory; otherwise the script detects the Emacs
+major/minor version under =${EMACSDIR:-$HOME/.emacs.d}/.local/straight/=.
+=LANDSCAPE_TREE_SITTER_DIR= selects existing grammars. Tests never download or
+install them. All verification starts with =-Q=, without personal init/notes.
+
+For isolated real display checks, run =tests/run-display-tests.sh gui= or
+=tests/run-display-tests.sh tty= from an environment with the respective display.
+Set =LANDSCAPE_CAPTURE_DIR= to a directory outside the repository (for example
+=/tmp/landscape-previews=) to export GUI PNGs on Emacs Mac. Generated screenshots
+are excluded from version control. Other GUI ports
+still run effective-face checks but currently have no capture adapter here.
+These scripts create and clean up their own result files. ERT similarly removes
+its temporary compilation tree and Git repository.
+
+* Rollback
+Select =doom-gruvbox-light= through =M-x consult-theme=. When using plain
+=load-theme= programmatically, disable the previous theme first, as above.
+Theme-owned faces and LSP modifier variables restore normally; existing LSP
+face caches are refreshed by the watcher on restoration.
+
+To remove the collection, first switch away, remove the Landscape section from
+=config.org=, tangle it again, then restart Emacs. The theme directory and
+=lisp/themes-config.el= can then be removed. No package-manager checkout,
+external cache or personal note requires modification.
+
+* Reference documentation
+Installed source was authoritative for version-specific behavior:
+- [[https://github.com/doomemacs/themes][Doom themes framework and shared faces]]
+- [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Faces-for-Font-Lock.html][GNU Emacs Font Lock faces]]
+- [[https://emacs-lsp.github.io/lsp-mode/page/settings/semantic-tokens/][lsp-mode semantic tokens]]
+- [[https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum][WCAG contrast method and interpretation]]
+
+* Stronger light syntax (2026-11-03)
+All light variants use deeper, more saturated syntax colors. Keywords are bold; function definitions and types use normal weight.
+Stronger syntax colors provide the remaining emphasis. This covers Font Lock, built-in
+Tree-sitter's inherited faces, external Tree-sitter faces when installed, and
+LSP semantic faces when the server supplies the corresponding categories.
+Doom's =doom-themes-enable-bold= preference still applies. The regional-identity
+revision also updates backgrounds, comments and dark palettes; it preserves
+font sizes, font families and the established light keyword-weight policy.
+The five core syntax roles have at least 6.5:1 contrast against the buffer,
+alternate and current-line surfaces. Color contrast alone does not guarantee
+perceptual distinction; Landscape's separate color-distance checks remain.
+
+The [[file:LANDSCAPE-INSPIRATION.org][stronger signature-color pass]] makes the regional tints and frequent syntax
+accents intentionally more expressive; Iceland retains its restored moss green.

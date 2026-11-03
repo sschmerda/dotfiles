@@ -1,0 +1,40 @@
+#+title: Synthetic landscape sample
+#+todo: TODO STRT WAIT PROJ | DONE KILL
+
+* TODO Landscape :sample:
+SCHEDULED: <2026-11-02 Mon>
+:PROPERTIES:
+:ID: landscape-synthetic-example
+:END:
+Prose with *bold*, /italic/, =code=, ~verbatim~, [[https://example.org][links]]
+and a synthetic citation [cite:@landscape2026].
+
+** STRT Active work
+** WAIT Waiting for review
+** PROJ Project milestone
+** DONE Finished work
+** KILL Cancelled work
+
+| Region | Limit |
+|--------+-------|
+| Roma   |    42 |
+
+#+begin_src python
+# A nested language has its real syntax colors.
+def describe(name: str) -> str:
+    return "Region: " + name
+#+end_src
+
+#+begin_example
+#+begin_src emacs-lisp
+(message "Nested literal block")
+#+end_src
+#+end_example
+
+** WAIT Further work
+*** DONE Third heading
+**** Fourth heading
+***** Fifth heading
+****** Sixth heading
+******* Seventh heading
+******** Eighth heading

@@ -1,0 +1,6 @@
+# Synthetic configuration
+region: Provence
+enabled: true
+limit: 42
+items:
+  - "escaped\ntext"

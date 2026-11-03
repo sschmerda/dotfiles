@@ -1,0 +1,154 @@
+#+title: Custom reference theme validation
+#+date: 2026-11-03
+
+* Environment and references
+Emacs Mac 29.4 on Apple Silicon, installed Doom and doom-themes =a592029=.
+The actual installed Shades of Purple VS Code extension is 7.3.6. The Gruber
+reference was rexim's upstream Emacs theme; his own dotfiles select it.
+Exact source colors and deliberate adjustments are documented in
+[[file:PALETTE-NOTES.org][palette notes]]; upstream licenses/attribution are retained under =licenses/=.
+
+Four entry points were checked:
+- =custom-shades-of-purple-dark=
+- =custom-shades-of-purple-light=
+- =custom-gruber-dark=
+- =custom-gruber-light=
+
+* Automated checks
+=tests/run-tests.sh custom=: six tests pass, no unexpected results.
+
+1. Discovery and exact reference colors: all four entry files load through
+   ordinary =load-theme=; inspected keyword/function/type/string/constant,
+   builtin/variable/property/parameter, modeline and LSP face specifications
+   match their palette roles. Purple uses =#2D2B55=/=#FFFFFF= and yellow
+   functions; Gruber uses =#181818= and =#FFDD33= keywords.
+2. Both helper files byte-compile with warnings treated as errors. Entry files
+   intentionally remain source, following Doom's =no-byte-compile: t=
+   convention and avoiding its expanded-face-list bytecode limit.
+3. Loader idempotence, unchanged active/default theme on registration, and
+   unchanged Landscape palette bindings after custom-theme loading.
+   Gruber's keyword emphasis respects =doom-themes-enable-bold=nil=.
+4. Actual major-mode fontification of the existing synthetic Python, Emacs
+   Lisp, Markdown and Org samples under each theme. All 16 ANSI foreground
+   slots are checked against the three base surfaces.
+5. Light/dark and cross-family switching, then rollback to Landscape and
+   Gruvbox. Late-loaded installed packages receive theme faces; heading
+   sizes/font families remain unspecified. LSP modifier mappings restore,
+   with no accumulation of shared variable watchers.
+6. Numeric sRGB text/highlight contrast: seventeen foreground roles against
+   three surfaces and six highlight/diff pairs per theme, plus active/inactive
+   modeline labels. Separate ANSI checks cover 16 slots on three surfaces.
+
+| Variant                | Minimum syntax/surface/highlight contrast |
+|------------------------+-------------------------------------------|
+| Shades of Purple dark  |                                  4.5285:1 |
+| Shades of Purple light |                                  4.6310:1 |
+| Gruber dark            |                                  4.5011:1 |
+| Gruber light           |                                  4.5291:1 |
+
+All checked normal-size text pairs meet 4.5:1 using unrounded comparisons;
+main text on the three base surfaces meets 7:1. This is not an exhaustive
+contrast or color-vision accessibility claim for every inherited upstream face.
+
+* Real graphical checks
+An isolated =emacs -Q= graphical process loaded actual installed package face
+definitions, switched all four themes, and read effective face attributes.
+Loaded explicit faces with hexadecimal text colors meet 4.5:1 on their actual
+background (or default when unspecified). Hidden Org indentation, decorative
+separators and ANSI color-slot faces are exempt from that text check.
+
+This caught an inherited LSP sideline selection background: yellow focus text
+on the purple selection was too low-contrast. The custom override uses the
+validated selection foreground/background and retains underline emphasis.
+
+Native =mac-export-frames= captures of the real Python/Org specimen windows
+were visually inspected for all four variants. Those temporary captures were
+created outside the repository and removed afterward. No image-generation
+mockups or committed screenshot files are used. The clean GUI used default
+fonts plus mixed pitch; the user's active editor and typography were untouched.
+
+Reproduce effective-face validation from a graphical login:
+
+#+begin_src sh :tangle no
+LANDSCAPE_DOOM_BUILD="$HOME/.emacs.d/.local/straight/build-29.4" \
+CUSTOM_EDITOR_GUI_RESULT=/tmp/custom-editor-gui-result \
+emacs -Q -l /path/to/themes/tests/custom-tests.el \
+  --eval '(custom-editor-test-gui)'
+cat /tmp/custom-editor-gui-result
+rm /tmp/custom-editor-gui-result
+#+end_src
+
+Adjust the build path for the installed Emacs version. Optionally set
+=LANDSCAPE_CAPTURE_DIR= to a temporary directory outside the repository to
+export native Mac screenshots. Clean them up after review.
+
+* Integration and limits
+The tested shared engine covers standard/built-in Tree-sitter faces, LSP
+semantic faces, Corfu/Vertico/Orderless, diagnostics, Org/Markdown, Magit/diff-hl,
+Solaire, modeline and ANSI/Ghostel inheritance. The custom layer adds only
+palette-specific overrides. It does not change parser rules, fonts, Org view
+modes, server configuration, environment activation or keybindings.
+
+The source VS Code theme uses TextMate per-language scopes, which Emacs cannot
+reproduce exactly through generic faces. The fixture captures use ordinary
+Python fontification; actual semantic-token classifications depend on the
+attached server. No new language-server sessions, remote connections, package
+upgrades or personal note/database access were required for this work.
+
+Full interactive completion/merge workflows, native terminal application
+rendering, cross-platform GUI/font rendering and 256/16-color terminal
+approximations were not re-tested for these palettes. Existing user face
+remaps, Spacious Padding and Olivetti can override decorative surfaces.
+
+* Configuration integration
+Only the custom loader and its literate =config.org= import were added;
+=config.el= was regenerated by Org tangling (22 blocks). Existing uncommitted
+Landscape and unrelated dotfiles work were preserved. The active theme is
+preserved, and no package/module changes or =doom sync= are required.
+
+* Light syntax emphasis follow-up (2026-11-03)
+The combined suite now passes 19 tests, including stronger light-syntax
+contrast (at least 6.5:1 on all three base surfaces) and effective keyword,
+definition and type weights, with Doom's bold opt-out respected. Landscape
+syntax separation remains above Delta E76 30 (minimum 32.0692, Venezia).
+Isolated GUI checks pass for all 22 themes after this change. Python and Org
+specimens were visually reviewed in Provence Light and Gruber Light; temporary
+captures were deleted. Previous palette measurements above describe the earlier
+revision; dark palettes and warm background surfaces were not changed here.
+
+* Rosé Pine / Catppuccin addition (2026-11-03)
+The collection now contains 29 selectable custom themes: 18 Landscape and 11
+reference-inspired variants. All 19 combined ERT tests pass. The updated
+reference discovery checks verify the seven official base colors, theme family
+metadata and explicit light/dark declarations. Light weight/contrast checks now
+cover 13 palettes, including Dawn and Latte.
+
+Isolated graphical checks pass for all 29 themes, including actual package face
+contrast. Python/Org captures were visually reviewed for Rosé Pine Dawn and
+Catppuccin Latte/Mocha, then removed. Other new variants received automated
+GUI checks rather than an exhaustive visual review. The user's selected theme
+and configured default remain unchanged; all seven new names are discoverable
+in the running Emacs. No package installation or sync was needed.
+
+* Diagnostic and Org hierarchy polish
+All 23 combined ERT tests pass. New checks cover the diagnostic severity roles
+and Org hierarchy across all 29 themes, a real Flycheck overlay preserving
+source Font Lock properties, and informational sideline label isolation. The
+last check verifies that code-action overlays and non-custom themes are left
+alone and existing help properties are preserved. After declaring missing
+Doom TODO fixture faces in standalone Emacs, all ten reference-family tests
+were rerun and pass.
+
+Isolated graphical face checks pass for all 29 themes. Synthetic Python
+diagnostics and real Org/Org Modern fontification were captured. Final
+representative specimens were viewed for Provence Light, Iceland Dark,
+Shades of Purple Dark and Rosé Pine Dawn. No checker, language server or
+remote process was started for those synthetic specimens. Terminal underline
+shapes and server severity classification are not exhaustively tested.
+
+Source files pass syntax/diff checks and documentation links resolve. The
+running Emacs has all 29 definitions refreshed; selected/default themes are
+preserved and the sideline compatibility advice is installed. Fonts, buffers'
+text, task workflows, palettes and Org display presets are unchanged. The
+compatibility layer introduces no timers or language-server requests.
+Temporary GUI captures were deleted after review.

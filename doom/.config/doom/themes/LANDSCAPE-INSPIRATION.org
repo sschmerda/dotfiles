@@ -1,0 +1,83 @@
+#+title: Landscape regional identity and visual references
+#+startup: overview
+
+* Regional-identity revision — 2026-11-03
+The earlier collection leaned too heavily on a shared parchment background and blue keywords. This revision gives each region a distinct background family, related light/dark surfaces, and region-specific keyword/accent hues. Provence takes the stronger purple emphasis of Catppuccin Latte as a readability/style reference, while using its own lavender colors.
+
+These are original artistic interpretations of recognizable regional scenery and materials, not official regional palettes. Reference photographs were actually viewed; colors were designed rather than sampled or claimed as exact photographic matches. Links record the research without redistributing the photographs. Temporary downloads and Emacs screenshots are removed after review.
+
+* Design directions
+| Region   | Visual vocabulary                                     | Light / dark backgrounds               | Keyword family |
+|----------+-------------------------------------------------------+----------------------------------------+----------------|
+| Provence | Lavender, limestone, olive foliage, ochre             | Lavender paper / aubergine dusk        | Purple         |
+| Roma     | Travertine, warm masonry, red, bronze                 | Travertine cream / wine-dark stone     | Carmine        |
+| Sicilia  | Majolica cobalt, turquoise, citrus gold, terracotta   | Glazed ivory / sea-and-basalt navy     | Cobalt         |
+| Umbria   | Olive, forest green, stone, harvest gold              | Sage paper / forest shade              | Forest green   |
+| Venezia  | Lagoon teal, weathered plaster, rose, gold            | Lagoon pearl / deep petrol             | Teal           |
+| Iceland  | Basalt, cold water, moss, ice, volcanic warmth        | Glacial blue paper / blue-black basalt | Lichen green   |
+| Firenze  | White/green/pink marble, terracotta, Renaissance blue | Rosy marble / green marble shadow      | Terracotta     |
+| Bologna  | Brick red, ochre arcades, warm plaster, ink           | Terracotta plaster / brick shadow      | Brick red      |
+| Napoli   | Naples yellow, tuff, bay blue, coral                  | Naples-yellow paper / bay at night     | Gold ochre     |
+
+The pairings are intentionally interpretive: a night palette is a designed counterpart, not proof that a region has one characteristic night color. Quiet body text retains a lightly tinted near-neutral color; syntax uses clearer accents with enough separation for code. Selection, current-line, secondary surfaces and borders follow each region's base and accent rather than borrowing the old common brown ramp.
+
+* Sources and viewed image references
+** Provence
+Visual reference: [[https://www.headout.com/day-trips-in-provence/from-avignon-luberon-lavender-morning-or-afternoon-tour-e-26397/][Sénanque Abbey and lavender rows]]. Color/material context: [[https://www.senanque.fr/parfum-dhistoire-parum-de-lavande/][regional source]].
+** Roma
+Visual reference: [[https://www.klook.com/en-PH/destination/p50200500-colosseum/][Colosseum in golden-hour light]]. Color/material context: [[https://colosseo.it/en/restauri/colosseum/restoration-of-the-floor-surfaces-in-piazza-del-colosseo/][regional source]].
+** Sicilia
+Visual reference: [[https://www.etna3340.com/blog/que-voir-sicile/etna-taormine-catane][Taormina terrace ceramics against the Ionian Sea]]. Color/material context: [[https://www.visitsicily.info/en/sicilian-majolica-tiles/][regional source]].
+** Umbria
+Visual reference: [[https://www.umbriaconme.com/it/tours/pacchetti-vacanze-in-umbria_28/trekking-in-umbria-ad-assisi-4-giorni_223.html][Olive groves below Monte Subasio, Assisi]]. Color/material context: [[https://www.umbriatourism.it/it/il-cuore-verde][regional source]].
+** Venezia
+Visual reference: [[https://www.toutpourlesfemmes.com/loisirs-culture/voyages/venise-la-serenissime][Grand Canal palaces and Santa Maria della Salute]]. Color/material context: [[https://www.toutpourlesfemmes.com/loisirs-culture/voyages/venise-la-serenissime][regional source]].
+** Iceland
+Visual reference: [[https://www.alexkotlov.ru/news/1646-iceland-den-vtoroi-vodopady-skogafoss-seljalandsfoss-skaly-dyrholaey-reynisfjara-chernyi-plyaj-mnogo-mha/][Reynisfjara basalt stacks and moss-covered boulders]]. Color/material context: [[https://www.visiticeland.com/article/black-beaches-iceland/][regional source]].
+** Firenze
+Visual reference: [[https://www.hotels.com/ho998054560/donati-luxury-tower-suites-florence-italy/][Santa Maria del Fiore above tiled rooftops]]. Color/material context: [[https://duomo.firenze.it/en/opera-magazine/post/11980/the-paths-of-stone-from-the-heart-of-the-quarries-to-piazza-duomo][regional source]].
+** Bologna
+Visual reference: [[https://www.bolognawelcome.com/en/press-news/porticoes-of-bologna-in-the-unesco-world-heritage-list][Red and ochre vaulted porticoes]]. Color/material context: [[https://www.bolognawelcome.com/en/blog/in-the-shade-of-the-porticoes-6th-section-san-luca][regional source]].
+** Napoli
+Visual reference: [[https://www.caldana.it/blog-it/Recensione-Viaggio-Nel-Paese-del-Sole---dal-4-all-8-gennaio-365.html][Bay of Naples and Vesuvius above colorful buildings]]. Color/material context: [[https://www.visitnaples.eu/en/neapolitanity/discover-naples/the-yellow-of-naples-the-right-colour-of-the-neapolitan-city-][regional source]].
+
+Provence's ochres are additionally documented by the [[https://www.parcduluberon.fr/geosite/sentier_des_ocres/][Luberon regional park]]. Umbria's olive-grove character is supported by [[https://www.italia.it/en/umbria/things-to-do/umbria-wine-and-olive-oil][Italy's national tourism guide]]. These sources support the materials and scenery; the particular RGB values and syntax assignments remain design choices.
+
+* Readability and consistency
+- Core light syntax keeps at least 6.5:1 contrast on base, alternate and current-line surfaces; dark syntax targets at least 5.5:1.
+- Body text remains at least 7:1, and comments, diagnostics and highlight pairs at least 4.8:1 in the existing tests.
+- The five primary light syntax roles retain a minimum CIELAB Delta E76 of 30. Some supporting hues were shifted slightly to separate blue/violet or red/ochre; this is a broad regression guard, not a color-vision accessibility guarantee.
+- Light keywords remain bold; functions and types retain normal weight. No font sizes, fonts, Org view settings, language servers or keybindings change.
+- Selectable names, flat directory structure and the installed Doom theme framework remain unchanged. Other custom families are unchanged.
+
+Implementation: [[file:landscape-palettes.el][palette data]]. Validation: [[file:LANDSCAPE-VALIDATION.org][test report]].
+
+* Iceland moss follow-up
+Iceland keeps its glacial light base and blue-black basalt dark base, but lichen
+green now owns keywords, cursor/link accents, selections, current-line and
+secondary surfaces, and added/success colors. Cyan remains on strings and
+blue on functions. This restores moss as a dominant identity rather than
+confining it to occasional strings. On the light variant, moss text is deeper
+for readability while pale moss-green surfaces provide the light-green color.
+
+* Stronger signature-color pass
+The other eight regions now receive the same deliberate exaggeration of their
+recognizable colors as Iceland. Background tints are stronger, and selections,
+current-line surfaces, borders and the frequent syntax roles carry the regional
+identity. Comments retain a quiet tint so they do not compete with keywords.
+
+| Region   | Stronger signature                                                                 |
+|----------+------------------------------------------------------------------------------------|
+| Provence | Richer lavender paper, deeper violet dusk, purple highlights and olive/gold syntax |
+| Roma     | Warmer travertine, wine-colored shadows, carmine keywords and bronze functions     |
+| Sicilia  | Lemon-ivory ceramic light base, cobalt night, turquoise and citrus accents         |
+| Umbria   | More olive-tinted paper, deep forest shade, harvest gold and berry/earth accents   |
+| Venezia  | More saturated lagoon paper and petrol night, mint-teal and rose plaster           |
+| Firenze  | Rosier marble paper, stronger green-marble night, terracotta and malachite syntax  |
+| Bologna  | Stronger terracotta plaster and brick shadow, brick-red keywords and ochre gold    |
+| Napoli   | More pronounced Naples-yellow paper, richer bay-blue night and gold accents        |
+
+Iceland is preserved exactly from the moss restoration. Other custom theme
+families, names and font weights remain unchanged. This is a more expressive
+interpretation of the same researched materials and imagery, not a new claim
+of exact geographic or photographic color matching.
