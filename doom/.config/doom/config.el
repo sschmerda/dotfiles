@@ -5,6 +5,8 @@
 
 (load! "lisp/completion-config")
 
+(load! "lisp/navigation-config")
+
 (load! "lisp/appearance-config")
 
 (load! "lisp/themes-config")

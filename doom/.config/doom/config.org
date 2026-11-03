@@ -32,6 +32,13 @@ Custom commands intended for =M-x= or keybindings use =my/=. Internal helpers, h
 (load! "lisp/completion-config")
 #+end_src
 
+* Navigation feedback
+[[file:lisp/navigation-config.el][navigation-config.el]] extends Doom's Nav Flash to counted Evil vertical motions of at least 10 lines, including visual-line motions in Org and the custom upward motion in Magit. Successful Avy jumps such as =g s s= also flash their destination. Ordinary single-line movement stays quiet; Doom's exclusions and the clock popup's flash suppression still apply.
+
+#+begin_src emacs-lisp
+(load! "lisp/navigation-config")
+#+end_src
+
 * Appearance
 [[file:lisp/appearance-config.el][appearance-config.el]] sets the theme, fonts, relative line numbers and frame appearance. Buffer zoom uses 5% steps; global font zoom uses one-point steps because this Emacs build rounds fractional font sizes. Package-specific window centring remains in the separate Olivetti configuration.
 
