@@ -1,5 +1,18 @@
 ;;; python-config.el -*- lexical-binding: t; -*-
 
+;; Choose before lsp-pyright registers executable paths and server settings.
+;; Inspect the local Emacs PATH even if this file is loaded from a TRAMP buffer.
+(let ((default-directory "/"))
+  (setq lsp-pyright-langserver-command
+        (if (executable-find "basedpyright-langserver") "basedpyright" "pyright")))
+
+(defun my--python-enable-semantic-tokens-h ()
+  "Enable Python semantic colors when the language server supports them."
+  (setq-local lsp-semantic-tokens-enable t))
+
+(dolist (hook '(python-mode-hook python-ts-mode-hook))
+  (add-hook hook #'my--python-enable-semantic-tokens-h))
+
 ;; Keep Conda reactivation valid and refresh Python LSP after switching environments.
 (after! conda
   (require 'conda)

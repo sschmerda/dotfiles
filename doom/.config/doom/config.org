@@ -95,7 +95,9 @@ Selecting a preset resets these options; individual toggles adjust the buffer. S
 #+end_src
 
 * Python environments and language server
-[[file:lisp/python-config.el][python-config.el]] repairs Conda environment switching and refreshes Python LSP after environment changes. It also enables Pyright to inspect library source when type information is unavailable. These settings remain deferred until their respective packages load.
+[[file:lisp/python-config.el][python-config.el]] prefers Basedpyright when =basedpyright-langserver= is on Emacs's local =PATH= at startup, falling back to Pyright otherwise. Selection happens before =lsp-pyright= loads; keep the existing =+pyright= module flag. Restart Emacs after installing or removing a server to refresh this selection; =doom sync= is unnecessary. TRAMP connections need the selected server available on the remote host as well.
+
+Python buffers enable semantic tokens when the selected server supports them; other languages retain their existing settings. Pyright without semantic-token support continues using ordinary syntax highlighting. The configuration also repairs Conda environment switching, refreshes Python LSP after environment changes, and enables inspection of library source when type information is unavailable. Package-specific adjustments remain deferred until their respective libraries load.
 
 #+begin_src emacs-lisp
 (load! "lisp/python-config")
