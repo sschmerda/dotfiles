@@ -192,6 +192,8 @@ The floating terminal is omitted from the =SPC b b= workspace buffer picker; it 
 #+end_src
 
 * Buffer centring
+Workspace creation and restoration suspend automatic centering and border updates until the complete window layout is available, preserving saved splits when switching or deleting workspaces.
+
 [[file:lisp/olivetti-config.el][olivetti-config.el]] centres visible file, Dired and shell buffers and manages their borders. Centring is disabled whenever windows are side by side, including terminal and sidebar windows, and returns when those splits are closed. Doom popup buffers, PDF viewers and the clock popup are excluded. Full terminal buffers (=SPC o t T=) can be centred; terminal popups (=SPC o t t=) keep their normal width. Use =SPC t o= to toggle this behaviour.
 
 #+begin_src emacs-lisp

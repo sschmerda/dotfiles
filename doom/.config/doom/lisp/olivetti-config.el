@@ -6,6 +6,8 @@
   :init
   (setq olivetti-body-width 120)
   (defvar my-olivetti-enabled nil)
+  (defvar my-olivetti-inhibit-layout nil
+    "Non-nil while workspace windows are being rebuilt.")
   (defun my--olivetti-buffer-eligible-p ()
     "Allow file, Dired and shell buffers, excluding internal and display buffers."
     (and (not (minibufferp))
@@ -44,6 +46,7 @@
       (> (length (delete-dups left-edges)) 1)))
   (defun my--olivetti-refresh-h (&rest _)
     (when (and my-olivetti-enabled
+               (not my-olivetti-inhibit-layout)
                (not (frame-parameter (selected-frame) 'my--time-popup))
                (not (frame-parameter (selected-frame) 'my--terminal-popup)))
       (if (my--olivetti-vertical-split-p)
@@ -235,14 +238,16 @@
                   (set-window-parameter window 'my--olivetti-fringe-state state)))))))))
   (defun my--olivetti-update-fringe-borders-h (&rest _)
     "Refresh patterned borders when centering or the theme changes."
-    (dolist (frame (frame-list))
-      (unless (or (frame-parameter frame 'my--time-popup)
-                  (frame-parameter frame 'my--terminal-popup))
-        (dolist (window (window-list frame 'no-minibuf))
-          (my--olivetti-pattern-fringes window)))))
+    (unless my-olivetti-inhibit-layout
+      (dolist (frame (frame-list))
+        (unless (or (frame-parameter frame 'my--time-popup)
+                    (frame-parameter frame 'my--terminal-popup))
+          (dolist (window (window-list frame 'no-minibuf))
+            (my--olivetti-pattern-fringes window))))))
   (defun my--olivetti-fringe-after-layout-h (window-or-frame)
     "Keep the normal Git fringe inside the centering margins."
-    (when (window-live-p window-or-frame)
+    (when (and (not my-olivetti-inhibit-layout)
+               (window-live-p window-or-frame))
       (with-current-buffer (window-buffer window-or-frame)
         (when (bound-and-true-p olivetti-mode)
           (set-window-fringes window-or-frame nil nil nil)))
@@ -264,11 +269,38 @@
   (advice-add '+org-present-prettify-slide-h :around #'my--olivetti-slide-layout-a)
   (defun my--olivetti-refresh-buffer-display-h ()
     "Restore visible buffer centering and markers after a major-mode change."
-    (when (get-buffer-window (current-buffer) t)
+    (when (and (not my-olivetti-inhibit-layout)
+               (get-buffer-window (current-buffer) t))
       (my--olivetti-refresh-h)
       (dolist (window (get-buffer-window-list (current-buffer) nil t))
         (my--olivetti-pattern-fringes window))))
   (add-hook 'after-change-major-mode-hook #'my--olivetti-refresh-buffer-display-h t)
   (add-hook 'olivetti-mode-hook #'my--olivetti-update-fringe-borders-h)
   (add-hook 'doom-load-theme-hook #'my--olivetti-update-fringe-borders-h)
+  (defun my--olivetti-workspace-layout-a (original &rest args)
+    "Refresh centering after ORIGINAL finishes rebuilding workspace windows."
+    (if my-olivetti-inhibit-layout
+        (apply original args)
+      (let ((frame (if (framep (car args)) (car args) (selected-frame))))
+        (unwind-protect
+            (let ((my-olivetti-inhibit-layout t))
+              ;; A centered single window can have margins wider than each
+              ;; saved split. Clear them before Emacs tries to recreate it.
+              (when (and my-olivetti-enabled (frame-live-p frame))
+                (dolist (window (window-list frame 'no-minibuf))
+                  (when (buffer-local-value 'olivetti-mode (window-buffer window))
+                    (my--olivetti-disable-buffer (window-buffer window))
+                    (set-window-margins window nil nil))))
+              (apply original args))
+          (when (frame-live-p frame)
+            (with-selected-frame frame
+              (my--olivetti-refresh-h)
+              (my--olivetti-update-fringe-borders-h)))))))
+  (after! persp-mode
+    ;; Buffer-list hooks run in the middle of `window-state-put', when
+    ;; windows may not be live yet. New workspace creation also temporarily
+    ;; collapses the old layout inside `save-window-excursion'.
+    (advice-add 'persp-restore-window-conf :around
+                #'my--olivetti-workspace-layout-a)
+    (advice-add '+workspace-new :around #'my--olivetti-workspace-layout-a))
   (setq olivetti-body-width 120))
