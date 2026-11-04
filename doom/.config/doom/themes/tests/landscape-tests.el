@@ -48,7 +48,7 @@
   '((font-lock-variable-name-face . :fg) (font-lock-property-use-face . :fg)
     (font-lock-keyword-face . :keyword) (font-lock-function-call-face . :function)
     (font-lock-builtin-face . :function) (font-lock-type-face . :type)
-    (font-lock-string-face . :string) (font-lock-doc-face . :comment)
+    (font-lock-string-face . :string) (font-lock-doc-face . :code-comment)
     (font-lock-number-face . :constant) (lsp-face-semhl-class . :type)
     (lsp-face-semhl-function . :function) (lsp-face-semhl-property . :fg)
     (lsp-face-semhl-parameter . :fg) (lsp-face-semhl-macro . :constant)
@@ -118,6 +118,33 @@ color-vision accessibility or of a major mode's token classifications."
         (let ((rgb (landscape-test-rgb (plist-get palette role))))
           (should (> (nth 1 rgb) (nth 0 rgb)))
           (should (> (nth 1 rgb) (nth 2 rgb))))))))
+
+(ert-deftest landscape-code-comments-distinct-from-identifiers ()
+  (let ((doom-themes-enable-italic t))
+    (dolist (entry landscape-palettes)
+      (let* ((palette (cdr entry))
+             (comment (plist-get palette :code-comment))
+             (theme (intern (format "custom-landscape-%s" (car entry)))))
+        (landscape-test-select theme)
+        ;; Approach Tokyo Night's separation, keeping comments above 3:1
+        ;; even on each palette's more pronounced current-line surface.
+        (should (<= 2.6 (landscape-test-contrast comment (plist-get palette :fg)) 3.4))
+        (dolist (surface '(:bg :bg-alt :line))
+          (should (>= (landscape-test-contrast comment (plist-get palette surface)) 3.0)))
+        (dolist (face '(font-lock-comment-face font-lock-comment-delimiter-face
+                        font-lock-doc-face lsp-face-semhl-comment))
+          (let ((spec (landscape-test-spec theme face)))
+            (should (equal (plist-get spec :foreground) comment))
+            (should (eq (plist-get spec :slant) 'italic))))
+        ;; A separate code-comment role keeps the existing UI dim colors intact.
+        (dolist (face '(line-number shadow org-block-begin-line))
+          (should (equal (plist-get (landscape-test-spec theme face) :foreground)
+                         (plist-get palette :comment)))))))
+  (let ((doom-themes-enable-italic nil))
+    (landscape-test-select 'custom-landscape-provence-dark)
+    (should (eq (plist-get (landscape-test-spec 'custom-landscape-provence-dark
+                                               'font-lock-comment-face) :slant)
+                'normal))))
 
 (ert-deftest landscape-palette-contrast ()
   (let ((count 0))
@@ -525,7 +552,13 @@ Requires the Mac port's native frame exporter. No image generation is used."
                   (when (and (stringp fg) (string-prefix-p "#" fg))
                     (unless (and (stringp bg) (string-prefix-p "#" bg))
                       (setq bg (plist-get palette :bg)))
-                    (unless (>= (landscape-test-contrast fg bg) 4.5)
+                    (unless (>= (landscape-test-contrast fg bg)
+                                (if (memq face '(font-lock-comment-face
+                                                 font-lock-comment-delimiter-face
+                                                 font-lock-doc-face lsp-face-semhl-comment
+                                                 tree-sitter-hl-face:comment
+                                                 tree-sitter-hl-face:doc))
+                                    3.0 4.5))
                       (error "Effective package contrast: %s %s %s/%s" theme face fg bg))))))))
         (when (getenv "LANDSCAPE_CAPTURE_DIR")
           (dolist (entry landscape-palettes)

@@ -83,7 +83,12 @@ license. This collection adds original palette bindings and semantic mappings.
 Ordinary identifiers, parameters, properties and punctuation stay at =fg=.
 Functions/calls/built-in functions share =function=; types share =type=;
 keywords share =keyword=; constants/numbers/decorators share =constant=;
-strings share =string=; comments and docstrings share =comment=. Light variants
+strings share =string=; code comments and docstrings share =code-comment=.
+Comments use muted regional hues and italics, respecting Doom's italic preference,
+to distinguish them from ordinary identifiers. Stronger ordinary foreground text
+and subdued comments approach Tokyo Night's code/comment separation, while
+comments retain at least 3:1 contrast on all three text surfaces. The separate =comment= role still colors
+dim UI labels, line numbers and Org metadata. Light variants
 use distinct regional keyword hues, saturated supporting syntax and quiet
 comments. Provence uses purple keywords; other regions use carmine, cobalt,
 forest green, teal, cyan, terracotta, brick red or gold ochre. Iceland retains its moss/glacial

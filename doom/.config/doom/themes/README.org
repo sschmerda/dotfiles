@@ -35,7 +35,7 @@ Emacs discovers all 29 themes through the single loader, with the active and
 default themes preserved. Documentation file links and shell syntax also pass.
 
 Light variants received stronger syntax emphasis after the layout refactor;
-see the family documentation. The current suite has 23 tests, including the
+see the family documentation. The current suite has 25 tests, including the
 shared light-syntax contrast and weight check.
 
 * Naming
@@ -51,6 +51,21 @@ Rosé Pine uses =custom-rose-pine-main/moon/dawn=. Catppuccin uses
 The eighteen Landscape themes now use region-specific backgrounds and syntax,
 including lavender Provence in both light and dark versions. See the
 [[file:LANDSCAPE-INSPIRATION.org][regional research and viewed image references]] for design rationale and sources.
+
+Landscape code comments and docstrings use a separate muted regional color and
+italics when =doom-themes-enable-italic= permits them. This separates them from
+ordinary identifiers. Their subdued contrast approaches Tokyo Night's separation,
+balanced with stronger ordinary foreground text and a 3:1 minimum comment contrast
+on all three text backgrounds. Existing dim UI labels and the eleven
+reference-inspired themes retain their colors.
+
+* Current line number
+The active line number uses a dedicated color derived from the palette's accent,
+with up to 20 percent stronger saturation and bold weight when Doom's bold
+preference allows it. It shares the ordinary line-number background, so there
+is no colored bar. The digits have at least 4.5:1 contrast against that background
+in all 29 themes. Links, cursors, headings and other accent-colored elements
+retain their existing colors.
 
 * Diagnostics and Org hierarchy
 All 29 themes share the same severity and document structure policy:

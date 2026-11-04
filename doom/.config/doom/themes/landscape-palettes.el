@@ -3,18 +3,21 @@
 ;; Original artistic interpretations, not official regional palettes or sampled
 ;; photo colors. Regional-identity revision 2026-11-03; visual research and
 ;; reference links are documented in LANDSCAPE-INSPIRATION.org.
+;; Code comments have a separate regional color as of 2026-11-04; the original
+;; :comment colors remain assigned to dim UI labels and metadata.
 
 (defconst landscape-palettes
   '(
     (provence-light
      :bg "#E9DDF3"
-     :fg "#342943"
+     :fg "#2A2136"
      :keyword "#5600B8"
      :function "#294A00"
      :string "#5C3B00"
      :type "#00466B"
      :constant "#84120F"
      :comment "#614879"
+     :code-comment "#975FA9"
      :bg-alt "#E0D0EF"
      :line "#DBC9ED"
      :accent "#5600B8"
@@ -37,13 +40,14 @@
      :changed-fg "#245380")
     (provence-dark
      :bg "#2A1D40"
-     :fg "#E8E0F3"
+     :fg "#EDE6F5"
      :keyword "#C8A0FF"
      :function "#BCD875"
      :string "#F0C76A"
      :type "#86CEED"
      :constant "#F29E86"
      :comment "#B0A0C7"
+     :code-comment "#9E70AF"
      :bg-alt "#37274F"
      :line "#402F5B"
      :accent "#C8A0FF"
@@ -66,13 +70,14 @@
      :changed-fg "#9DCCEE")
     (roma-light
      :bg "#F0D9C6"
-     :fg "#402C2A"
+     :fg "#332322"
      :keyword "#840018"
      :function "#5B3700"
      :string "#31450D"
      :type "#582A74"
      :constant "#084553"
      :comment "#6B4643"
+     :code-comment "#8C6B4B"
      :bg-alt "#EBCCBC"
      :line "#E8C4B6"
      :accent "#840018"
@@ -95,13 +100,14 @@
      :changed-fg "#22507C")
     (roma-dark
      :bg "#351F25"
-     :fg "#EFE0D1"
+     :fg "#F2E6DA"
      :keyword "#F6989D"
      :function "#E6BE72"
      :string "#BBCD8C"
      :type "#CCACED"
      :constant "#8DCAD3"
      :comment "#C59F92"
+     :code-comment "#9C7B57"
      :bg-alt "#44282E"
      :line "#4F2F35"
      :accent "#F6989D"
@@ -124,13 +130,14 @@
      :changed-fg "#9DCCEE")
     (sicilia-light
      :bg "#F8ECC5"
-     :fg "#303447"
+     :fg "#262A39"
      :keyword "#003ABA"
      :function "#00524E"
      :string "#5F4400"
      :type "#781E84"
      :constant "#8A2200"
      :comment "#525661"
+     :code-comment "#4E8192"
      :bg-alt "#E8E1C6"
      :line "#DFDBC6"
      :accent "#003ABA"
@@ -153,13 +160,14 @@
      :changed-fg "#275A89")
     (sicilia-dark
      :bg "#142A40"
-     :fg "#E8E6D8"
+     :fg "#EDEBE0"
      :keyword "#95B8FF"
      :function "#6DD8C5"
      :string "#F2D46F"
      :type "#DDA4EC"
      :constant "#FAA476"
      :comment "#A2B1BD"
+     :code-comment "#588E9E"
      :bg-alt "#1E354F"
      :line "#263E5B"
      :accent "#95B8FF"
@@ -182,13 +190,14 @@
      :changed-fg "#9DCCEE")
     (umbria-light
      :bg "#DCE9CE"
-     :fg "#2D392D"
+     :fg "#242E24"
      :keyword "#0D5020"
      :function "#004879"
      :string "#5E3F00"
      :type "#65306E"
      :constant "#851C29"
      :comment "#485C45"
+     :code-comment "#698045"
      :bg-alt "#CFE0C3"
      :line "#C8DBBD"
      :accent "#0D5020"
@@ -211,13 +220,14 @@
      :changed-fg "#255582")
     (umbria-dark
      :bg "#1D2D20"
-     :fg "#E1E9D4"
+     :fg "#E7EDDD"
      :keyword "#AAD985"
      :function "#9CC3E8"
      :string "#E9C777"
      :type "#D8AEE8"
      :constant "#F5AD84"
      :comment "#A6B996"
+     :code-comment "#779352"
      :bg-alt "#283B28"
      :line "#31452E"
      :accent "#AAD985"
@@ -240,13 +250,14 @@
      :changed-fg "#9DCCEE")
     (venezia-light
      :bg "#CFE6DF"
-     :fg "#253C3A"
+     :fg "#1E302E"
      :keyword "#004C49"
      :function "#87112A"
      :string "#5D3E00"
      :type "#013A86"
      :constant "#6E2176"
      :comment "#405B59"
+     :code-comment "#A9607F"
      :bg-alt "#C1DED7"
      :line "#B8DAD3"
      :accent "#004C49"
@@ -269,13 +280,14 @@
      :changed-fg "#245380")
     (venezia-dark
      :bg "#103339"
-     :fg "#E0EBE5"
+     :fg "#E6EFEA"
      :keyword "#72E4CB"
      :function "#FFAFBD"
      :string "#EED087"
      :type "#A9C5FF"
      :constant "#DFB4FD"
      :comment "#98C1BB"
+     :code-comment "#B88197"
      :bg-alt "#184145"
      :line "#1E4C4D"
      :accent "#72E4CB"
@@ -298,13 +310,14 @@
      :changed-fg "#9DCCEE")
     (iceland-light
      :bg "#E0EDF0"
-     :fg "#29343E"
+     :fg "#212A32"
      :keyword "#404B00"
      :function "#00458D"
      :string "#004E5A"
      :type "#860701"
      :constant "#59098E"
      :comment "#4C5B64"
+     :code-comment "#5E8245"
      :bg-alt "#D4E1DD"
      :line "#CDDAD1"
      :accent "#404B00"
@@ -327,13 +340,14 @@
      :changed-fg "#275C8C")
     (iceland-dark
      :bg "#151D26"
-     :fg "#E3EDF0"
+     :fg "#E9F1F3"
      :keyword "#C9D878"
      :function "#9FB5FF"
      :string "#81DAE9"
      :type "#F79E85"
      :constant "#D5A0F2"
      :comment "#A0B3BC"
+     :code-comment "#688E50"
      :bg-alt "#232C2D"
      :line "#2C3531"
      :accent "#C9D878"
@@ -356,13 +370,14 @@
      :changed-fg "#9DCCEE")
     (firenze-light
      :bg "#F1DCD5"
-     :fg "#3A3430"
+     :fg "#2E2A26"
      :keyword "#831A06"
      :function "#004D32"
      :string "#573F00"
      :type "#073E92"
      :constant "#732555"
      :comment "#6C4D47"
+     :code-comment "#AA5E78"
      :bg-alt "#EDD1C9"
      :line "#EBCBC2"
      :accent "#831A06"
@@ -385,13 +400,14 @@
      :changed-fg "#24537F")
     (firenze-dark
      :bg "#1E332E"
-     :fg "#ECE5DC"
+     :fg "#F0EAE3"
      :keyword "#FDA987"
      :function "#86D4AC"
      :string "#E8C778"
      :type "#A4C3EE"
      :constant "#EDABC6"
      :comment "#BBB09F"
+     :code-comment "#B5798D"
      :bg-alt "#2F3C35"
      :line "#3B4239"
      :accent "#FDA987"
@@ -414,13 +430,14 @@
      :changed-fg "#9DCCEE")
     (bologna-light
      :bg "#F2D4BC"
-     :fg "#412D29"
+     :fg "#342421"
      :keyword "#800412"
      :function "#003776"
      :string "#15462A"
      :type "#54076F"
      :constant "#4D3B00"
      :comment "#6C453F"
+     :code-comment "#806D46"
      :bg-alt "#ECC8B2"
      :line "#E9C1AD"
      :accent "#800412"
@@ -443,13 +460,14 @@
      :changed-fg "#224E78")
     (bologna-dark
      :bg "#3D2320"
-     :fg "#F0DFCE"
+     :fg "#F3E5D8"
      :keyword "#F5A68F"
      :function "#9CBBEC"
      :string "#A9CF9C"
      :type "#CAADED"
      :constant "#E9BF75"
      :comment "#CAA791"
+     :code-comment "#9B8557"
      :bg-alt "#4B2D29"
      :line "#56352F"
      :accent "#F5A68F"
@@ -472,13 +490,14 @@
      :changed-fg "#9DCCEE")
     (napoli-light
      :bg "#F5E5AB"
-     :fg "#303849"
+     :fg "#262D3A"
      :keyword "#604100"
      :function "#00468A"
      :string "#0B5131"
      :type "#8B1A10"
      :constant "#682B80"
      :comment "#62563A"
+     :code-comment "#597DA2"
      :bg-alt "#EEDC9F"
      :line "#EAD798"
      :accent "#604100"
@@ -501,13 +520,14 @@
      :changed-fg "#255583")
     (napoli-dark
      :bg "#153449"
-     :fg "#F1E7CB"
+     :fg "#F4ECD5"
      :keyword "#F4D96B"
      :function "#8DCFFC"
      :string "#8CD7B5"
      :type "#FFB6A2"
      :constant "#DEB9FF"
      :comment "#B8BEAB"
+     :code-comment "#7896B2"
      :bg-alt "#27414C"
      :line "#344B4E"
      :accent "#F4D96B"

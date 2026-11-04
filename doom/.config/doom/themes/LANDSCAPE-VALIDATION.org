@@ -2,6 +2,23 @@
 #+date: 2026-11-03
 #+startup: overview
 
+* Code-comment distinction — 2026-11-04
+All eighteen Landscape palettes now separate =code-comment= from the existing
+dim UI =comment= role. Code comments and docstrings are deliberately subdued,
+approaching the installed Tokyo Night Moon's approximately 3.3:1 luminance
+contrast between code and comments. Ordinary foreground text is strengthened
+toward white in dark themes and black in light themes. All eighteen palettes
+keep code/comment separation within 2.6–3.4:1, with at least 3:1 comment contrast
+on =bg=, =bg-alt= and =line=.
+Italics respect Doom's global preference.
+These numeric checks support the visual distinction; they do not establish
+universal color-vision accessibility.
+
+All 25 combined ERT tests pass, including comment color/style, UI isolation and
+italic opt-out checks. Actual graphical face checks pass for all 29 custom
+themes. Python/Org captures were viewed for Provence light and dark. The eleven reference-inspired themes retain their existing
+comment mappings. The running theme and configured default were preserved.
+
 * Current regional-identity validation — 2026-11-03
 The [[file:LANDSCAPE-INSPIRATION.org][regional-identity revision]] supersedes earlier palette measurements below.
 All 20 combined ERT tests pass, including a new identity regression check:

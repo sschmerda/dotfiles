@@ -10,6 +10,29 @@
 (add-to-list 'custom-theme-load-path custom-editor-test-root)
 (require 'custom-editor-themes)
 
+(ert-deftest custom-editor-current-line-number-visibility ()
+  ;; Check evaluated faces across both families, including when switching
+  ;; between palettes with opposite background modes.
+  (let ((doom-themes-enable-bold t))
+    (dolist (family (list (cons "custom-landscape-" landscape-palettes)
+                         (cons "custom-" custom-editor-palettes)))
+      (dolist (entry (cdr family))
+        (let ((theme (intern (concat (car family) (symbol-name (car entry))))))
+          (landscape-test-select theme)
+          (let* ((active (landscape-test-spec theme 'line-number-current-line))
+                 (ordinary (landscape-test-spec theme 'line-number)))
+            (should (>= (landscape-test-contrast (plist-get active :foreground)
+                                                 (plist-get ordinary :background)) 4.5))
+            (should (eq (plist-get active :inherit) 'line-number))
+            (should (eq (plist-get active :background) 'unspecified))
+            (should (eq (plist-get active :weight) 'bold))
+            ;; A stronger number must not recolor the shared accent roles.
+            (dolist (mapping '((cursor . :background) (link . :foreground)
+                               (org-level-1 . :foreground)))
+              (should (equal (plist-get (landscape-test-spec theme (car mapping))
+                                        (cdr mapping))
+                             (plist-get (cdr entry) :accent))))))))))
+
 (ert-deftest custom-editor-discovery-and-reference-colors ()
   (should (= 11 (length custom-editor-palettes)))
   (dolist (entry custom-editor-palettes)

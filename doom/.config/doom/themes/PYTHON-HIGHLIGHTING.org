@@ -61,8 +61,8 @@ Landscape for regex, Tree-sitter and LSP semantic tokens when available.
 | True / None                | constant face      | constant face        | constant                          |
 | String                     | string face        | string face          | string                            |
 | Escape sequence            | escape face        | constant face        | constant                          |
-| Module/method docstring    | doc face           | doc face             | comment                           |
-| Comment                    | comment face       | comment face         | comment                           |
+| Module/method docstring    | doc face           | doc face             | code-comment                      |
+| Comment                    | comment face       | comment face         | code-comment                      |
 | Parameter                  | variable-use face  | no separate face     | ordinary text                     |
 | Property access            | property-use face  | no separate face     | ordinary text                     |
 

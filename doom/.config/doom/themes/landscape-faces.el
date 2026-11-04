@@ -7,6 +7,21 @@
 (require 'landscape-palettes)
 (require 'landscape-packages)
 
+(defun landscape--line-number-color (accent)
+  "Make hexadecimal ACCENT up to 20 percent more saturated for line numbers.
+Preserve its hue and brightest channel; already saturated colors stay intact."
+  (let* ((channels (cl-loop for start in '(1 3 5)
+                            collect (string-to-number (substring accent start (+ start 2)) 16)))
+         (brightest (apply #'max channels))
+         (range (- brightest (apply #'min channels))))
+    (if (zerop range)
+        accent
+      (let ((factor (min 1.2 (/ (float brightest) range))))
+        (apply #'format "#%02X%02X%02X"
+               (mapcar (lambda (channel)
+                         (round (- brightest (* factor (- brightest channel)))))
+                       channels))))))
+
 (defun landscape--bindings (variant &optional background-mode)
   "Return literal palette bindings for VARIANT and optional BACKGROUND-MODE."
   (let* ((palette (cdr (assq variant landscape-palettes)))
@@ -29,9 +44,13 @@
                                              (plist-get palette :bg) amount)
                      collect (list (intern (format "base%d" n))
                                    (list 'quote (list color color))))
-            `((ansi-black ,(if light 'fg 'comment))
+            `((line-number-active
+               ',(let ((color (landscape--line-number-color (plist-get palette :accent))))
+                   (list color color)))
+              (ansi-black ,(if light 'fg 'comment))
               (ansi-white ,(if light 'comment 'fg))
               (fg-alt comment) (grey comment)
+              (syntax-comment ,(if (plist-member palette :code-comment) 'code-comment 'comment))
               (red error) (orange string) (green success) (yellow warning)
               (blue ,(if iceland 'constant 'type)) (dark-blue blue)
               (magenta ,(if iceland
@@ -43,7 +62,7 @@
               (heading-1 accent) (heading-2 type) (heading-3 function)
               (modeline-bg bg-alt)
               (highlight accent) (vertical-bar border) (selection selection-bg)
-              (builtin function) (comments comment) (doc-comments comment)
+              (builtin function) (comments syntax-comment) (doc-comments syntax-comment)
               (constants constant) (functions function) (keywords keyword)
               (methods function) (operators fg) (strings string) (variables fg)
               (numbers constant) (region selection-bg)
@@ -61,7 +80,8 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
            (shadow :foreground comment)
            (hl-line :background line :extend t)
            (line-number :foreground comment :background bg-alt)
-           (line-number-current-line :foreground accent :background line)
+           (line-number-current-line :inherit 'line-number :foreground line-number-active
+                                     :background 'unspecified :weight 'bold)
            (cursor :background accent)
            (minibuffer-prompt :foreground accent)
            (link :foreground accent :underline t)
@@ -126,7 +146,7 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
                          lsp-face-semhl-constant lsp-face-semhl-number
                          lsp-face-semhl-enum-member lsp-face-semhl-macro
                          lsp-face-semhl-decorator)
-               (comment font-lock-comment-face font-lock-comment-delimiter-face
+               (syntax-comment font-lock-comment-face font-lock-comment-delimiter-face
                         font-lock-doc-face lsp-face-semhl-comment)))
       (dolist (face (cdr mapping))
         (push `(,face :foreground ,(car mapping)) faces)))
@@ -152,7 +172,7 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
                          (function function function.call method method.call function.builtin)
                          (type type type.builtin type.argument constructor)
                          (constant constant number boolean attribute macro)
-                         (string string string.special) (comment comment doc)
+                         (string string string.special) (syntax-comment comment doc)
                          (fg variable variable.parameter variable.builtin property
                              operator punctuation punctuation.bracket punctuation.delimiter)))
         (dolist (suffix (cdr mapping))
@@ -165,6 +185,15 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
                                         (memq (car mapping) '(keyword type)))
                                (list :weight (if (eq (car mapping) 'keyword)
                                                  ''bold ''normal)))) faces))))))
+    ;; Landscape comments have their own hue and typography, independent of
+    ;; dim UI labels. Reference-inspired families retain their original styles.
+    (when (and variant (assq variant landscape-palettes))
+      (dolist (spec faces)
+        (when (memq (car spec) '(font-lock-comment-face font-lock-comment-delimiter-face
+                                font-lock-doc-face lsp-face-semhl-comment
+                                tree-sitter-hl-face:comment tree-sitter-hl-face:doc))
+          (setcdr spec (plist-put (cdr spec) :slant
+                                 '(if doom-themes-enable-italic 'italic 'normal))))))
     ;; &override retains framework styles (e.g. Org heading weights) while
     ;; replacing only the attributes above. No global face setters or hooks.
     (let ((merged (make-hash-table :test #'eq)) order)
