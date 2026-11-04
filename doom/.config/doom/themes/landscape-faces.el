@@ -44,7 +44,16 @@ Preserve its hue and brightest channel; already saturated colors stay intact."
                                              (plist-get palette :bg) amount)
                      collect (list (intern (format "base%d" n))
                                    (list 'quote (list color color))))
-            `((line-number-active
+            `((argument
+               ',(let ((color (or (plist-get palette :parameter-color)
+                                  (doom-blend (plist-get palette :constant)
+                                              (plist-get palette :fg) 0.65))))
+                   (list color color)))
+              (punctuation-tone
+               ',(let ((color (doom-blend (plist-get palette :fg)
+                                         (plist-get palette :punctuation) 0.15)))
+                   (list color color)))
+              (line-number-active
                ',(let ((color (landscape--line-number-color (plist-get palette :accent))))
                    (list color color)))
               (ansi-black ,(if light 'fg 'comment))
@@ -124,13 +133,14 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
     ;; Quiet identifiers have separate faces, but intentionally the same color.
     (dolist (mapping
              '((fg font-lock-variable-name-face font-lock-variable-use-face
-                   font-lock-property-name-face font-lock-property-use-face
-                   font-lock-punctuation-face font-lock-bracket-face
-                   font-lock-delimiter-face font-lock-misc-punctuation-face
+                   font-lock-property-use-face
                    font-lock-operator-face lsp-face-semhl-variable
-                   lsp-face-semhl-parameter lsp-face-semhl-property
+                   lsp-face-semhl-property
                    lsp-face-semhl-member lsp-face-semhl-event
                    lsp-face-semhl-operator lsp-face-semhl-namespace)
+               (argument font-lock-property-name-face lsp-face-semhl-parameter)
+               (punctuation-tone font-lock-punctuation-face font-lock-bracket-face
+                                 font-lock-delimiter-face font-lock-misc-punctuation-face)
                (function font-lock-function-name-face font-lock-function-call-face
                          font-lock-builtin-face lsp-face-semhl-function
                          lsp-face-semhl-method)
@@ -150,6 +160,9 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
                         font-lock-doc-face lsp-face-semhl-comment)))
       (dolist (face (cdr mapping))
         (push `(,face :foreground ,(car mapping)) faces)))
+    ;; Newer Emacs versions expose a dedicated built-in parameter face.
+    (when (facep 'font-lock-parameter-face)
+      (push '(font-lock-parameter-face :foreground argument) faces))
     ;; Light themes emphasize keywords only; definitions and types stay normal.
     ;; Dark variants and Doom's global bold preference remain unchanged.
     (when (and variant (if background-mode (eq background-mode 'light)
@@ -173,8 +186,9 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
                          (type type type.builtin type.argument constructor)
                          (constant constant number boolean attribute macro)
                          (string string string.special) (syntax-comment comment doc)
-                         (fg variable variable.parameter variable.builtin property
-                             operator punctuation punctuation.bracket punctuation.delimiter)))
+                         (argument variable.parameter property.definition)
+                         (punctuation-tone punctuation punctuation.bracket punctuation.delimiter)
+                         (fg variable variable.builtin property operator)))
         (dolist (suffix (cdr mapping))
           (let ((face (intern (format "tree-sitter-hl-face:%s" suffix))))
             (when (facep face)

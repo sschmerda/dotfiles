@@ -6,6 +6,8 @@ script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 emacs_build_version=$("$EMACS" --batch -Q --eval '(princ (format "%d.%d" emacs-major-version emacs-minor-version))')
 : "${LANDSCAPE_DOOM_BUILD:=${EMACSDIR:-$HOME/.emacs.d}/.local/straight/build-$emacs_build_version}"
 export LANDSCAPE_DOOM_BUILD
+: "${LANDSCAPE_TREE_SITTER_DIR:=${EMACSDIR:-$HOME/.emacs.d}/.local/etc/tree-sitter}"
+export LANDSCAPE_TREE_SITTER_DIR
 result=$(mktemp "${TMPDIR:-/tmp}/landscape-display.XXXXXXXX")
 trap 'rm -f "$result"' EXIT HUP INT TERM
 status=0

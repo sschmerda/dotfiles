@@ -37,7 +37,7 @@
            (variable-color font-lock-variable-name-face font-lock-variable-use-face
                            lsp-face-semhl-variable)
            (parameter-color lsp-face-semhl-parameter)
-           (property-color font-lock-property-name-face font-lock-property-use-face
+           (property-color font-lock-property-use-face
                            lsp-face-semhl-property lsp-face-semhl-member
                            lsp-face-semhl-event)
            (operator-color font-lock-operator-face font-lock-negation-char-face

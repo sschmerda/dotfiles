@@ -35,7 +35,7 @@ Emacs discovers all 29 themes through the single loader, with the active and
 default themes preserved. Documentation file links and shell syntax also pass.
 
 Light variants received stronger syntax emphasis after the layout refactor;
-see the family documentation. The current suite has 25 tests, including the
+see the family documentation. The current suite has 26 tests, including the
 shared light-syntax contrast and weight check.
 
 * Naming
@@ -66,6 +66,26 @@ preference allows it. It shares the ordinary line-number background, so there
 is no colored bar. The digits have at least 4.5:1 contrast against that background
 in all 29 themes. Links, cursors, headings and other accent-colored elements
 retain their existing colors.
+
+* Arguments, punctuation and constants
+Recognized parameter names use a secondary color separated from type annotations:
+Landscape generally blends the constant color with ordinary text, with rose/berry
+overrides for Provence and a warm override for Venezia dark. Reference-inspired themes use their own parameter
+colors. Name/property-definition faces follow this distinction;
+ordinary variable values and member accesses keep their existing colors.
+
+Parentheses, brackets and delimiters use a dedicated muted foreground with
+at least 4.5:1 contrast on all text backgrounds and at least 1.3:1 separation
+from ordinary text. Operators retain their normal
+or reference-specific color. Brackets and delimiters share one tone, blended
+15 percent from the muted palette color toward ordinary text.
+Strings, numbers and recognized constants retain
+their existing semantic colors.
+
+These mappings follow Font Lock, Tree-sitter and LSP classifications. Emacs 29's
+Python grammar treats keyword argument names as ordinary variable uses, so
+those names need parameter tokens from the server for separate coloring.
+No global variable recoloring or regex guesses are added as a fallback.
 
 * Diagnostics and Org hierarchy
 All 29 themes share the same severity and document structure policy:

@@ -11,11 +11,13 @@
     (provence-light
      :bg "#E9DDF3"
      :fg "#29232E"
+     :punctuation "#5D5563"
      :keyword "#5600B8"
      :function "#2C450E"
      :string "#5C3B00"
      :type "#00466B"
      :constant "#84120F"
+     :parameter-color "#76185B"
      :comment "#614879"
      :code-comment "#806E8C"
      :bg-alt "#E0D0EF"
@@ -41,11 +43,13 @@
     (provence-dark
      :bg "#2A1D40"
      :fg "#EEEAE2"
+     :punctuation "#A7A0A7"
      :keyword "#C8A0FF"
      :function "#C1D68A"
      :string "#F0C76A"
      :type "#86CEED"
      :constant "#F29E86"
+     :parameter-color "#E5A4D2"
      :comment "#B0A0C7"
      :code-comment "#8E7A9C"
      :bg-alt "#37274F"
@@ -71,6 +75,7 @@
     (roma-light
      :bg "#F0D9C6"
      :fg "#332322"
+     :punctuation "#63514C"
      :keyword "#840018"
      :function "#5B3700"
      :string "#31450D"
@@ -101,6 +106,7 @@
     (roma-dark
      :bg "#351F25"
      :fg "#F2E6DA"
+     :punctuation "#AF9F99"
      :keyword "#F6989D"
      :function "#E6BE72"
      :string "#BBCD8C"
@@ -131,6 +137,7 @@
     (sicilia-light
      :bg "#F8ECC5"
      :fg "#262A39"
+     :punctuation "#5F5E5F"
      :keyword "#003ABA"
      :function "#00524E"
      :string "#5F4400"
@@ -161,6 +168,7 @@
     (sicilia-dark
      :bg "#142A40"
      :fg "#EDEBE0"
+     :punctuation "#A3AAAA"
      :keyword "#95B8FF"
      :function "#6DD8C5"
      :string "#F2D46F"
@@ -191,6 +199,7 @@
     (umbria-light
      :bg "#DCE9CE"
      :fg "#242E24"
+     :punctuation "#545E50"
      :keyword "#0D5020"
      :function "#004879"
      :string "#5E3F00"
@@ -221,6 +230,7 @@
     (umbria-dark
      :bg "#1D2D20"
      :fg "#E7EDDD"
+     :punctuation "#A6B0A1"
      :keyword "#AAD985"
      :function "#9CC3E8"
      :string "#E9C777"
@@ -251,6 +261,7 @@
     (venezia-light
      :bg "#CFE6DF"
      :fg "#1E302E"
+     :punctuation "#4A5E5A"
      :keyword "#004C49"
      :function "#87112A"
      :string "#5D3E00"
@@ -281,11 +292,13 @@
     (venezia-dark
      :bg "#103339"
      :fg "#E6EFEA"
+     :punctuation "#A7B8B6"
      :keyword "#72E4CB"
      :function "#FFAFBD"
      :string "#EED087"
      :type "#A9C5FF"
      :constant "#DFB4FD"
+     :parameter-color "#EBDAA9"
      :comment "#98C1BB"
      :code-comment "#B88197"
      :bg-alt "#184145"
@@ -311,6 +324,7 @@
     (iceland-light
      :bg "#E0EDF0"
      :fg "#212A32"
+     :punctuation "#535D64"
      :keyword "#404B00"
      :function "#00458D"
      :string "#004E5A"
@@ -341,6 +355,7 @@
     (iceland-dark
      :bg "#151D26"
      :fg "#E9F1F3"
+     :punctuation "#969EA2"
      :keyword "#C9D878"
      :function "#9FB5FF"
      :string "#81DAE9"
@@ -371,6 +386,7 @@
     (firenze-light
      :bg "#F1DCD5"
      :fg "#2E2A26"
+     :punctuation "#605753"
      :keyword "#831A06"
      :function "#004D32"
      :string "#573F00"
@@ -401,6 +417,7 @@
     (firenze-dark
      :bg "#1E332E"
      :fg "#F0EAE3"
+     :punctuation "#ABAEA7"
      :keyword "#FDA987"
      :function "#86D4AC"
      :string "#E8C778"
@@ -431,6 +448,7 @@
     (bologna-light
      :bg "#F2D4BC"
      :fg "#342421"
+     :punctuation "#634F47"
      :keyword "#800412"
      :function "#003776"
      :string "#15462A"
@@ -461,6 +479,7 @@
     (bologna-dark
      :bg "#3D2320"
      :fg "#F3E5D8"
+     :punctuation "#B8A69C"
      :keyword "#F5A68F"
      :function "#9CBBEC"
      :string "#A9CF9C"
@@ -491,6 +510,7 @@
     (napoli-light
      :bg "#F5E5AB"
      :fg "#262D3A"
+     :punctuation "#5C5D58"
      :keyword "#604100"
      :function "#00468A"
      :string "#0B5131"
@@ -521,6 +541,7 @@
     (napoli-dark
      :bg "#153449"
      :fg "#F4ECD5"
+     :punctuation "#B5B8AD"
      :keyword "#F4D96B"
      :function "#8DCFFC"
      :string "#8CD7B5"

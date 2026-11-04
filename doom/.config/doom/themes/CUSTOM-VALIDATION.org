@@ -1,6 +1,20 @@
 #+title: Custom reference theme validation
 #+date: 2026-11-03
 
+* Argument and punctuation hierarchy — 2026-11-04
+All 26 combined ERT tests pass, including secondary argument/name-definition
+colors, quieter punctuation, unchanged value/member colors and contrast across
+all 29 palettes. The installed Python Tree-sitter grammar exercises bracket,
+operator and keyword-argument classifications; lsp-mode's actual token renderer
+also exercises the parameter face using a synthetic server response.
+
+Graphical face checks pass for all 29 themes. Captures use Python Tree-sitter
+when the installed grammar is available; Provence dark and Catppuccin Latte
+were viewed. This does not establish a live server's classification of every
+keyword argument. Emacs 29's grammar alone still uses ordinary variable faces
+for keyword argument names. No grammar, server settings or user files were
+changed. Temporary captures were removed.
+
 * Environment and references
 Emacs Mac 29.4 on Apple Silicon, installed Doom and doom-themes =a592029=.
 The actual installed Shades of Purple VS Code extension is 7.3.6. The Gruber

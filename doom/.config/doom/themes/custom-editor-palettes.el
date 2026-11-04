@@ -10,6 +10,7 @@
     (shades-of-purple-dark
      :bg "#2D2B55"
      :fg "#FFFFFF"
+     :punctuation "#9897AB"
      :keyword "#FF9D00"
      :function "#FAD000"
      :string "#A5FF90"
@@ -29,7 +30,7 @@
      :success "#A5FF90"
      :info "#9EFFFF"
      :builtin-color "#FAD000"
-     :parameter-color "#9EFFFF"
+     :parameter-color "#FF98B4"
      :property-color "#FFEE80"
      :variable-color "#E1EFFF"
      :operator-color "#FF9D00"
@@ -47,6 +48,7 @@
     (shades-of-purple-light
      :bg "#EEE4E8"
      :fg "#332A46"
+     :punctuation "#665C72"
      :keyword "#743A00"
      :function "#624500"
      :string "#155610"
@@ -66,7 +68,7 @@
      :success "#276222"
      :info "#006575"
      :builtin-color "#624500"
-     :parameter-color "#00525F"
+     :parameter-color "#721140"
      :property-color "#624500"
      :variable-color "#332A46"
      :operator-color "#743A00"
@@ -84,6 +86,7 @@
     (gruber-dark
      :bg "#181818"
      :fg "#E4E4EF"
+     :punctuation "#909096"
      :keyword "#FFDD33"
      :function "#96A6C8"
      :string "#73C936"
@@ -103,7 +106,7 @@
      :success "#73C936"
      :info "#96A6C8"
      :builtin-color "#FFDD33"
-     :parameter-color "#E4E4EF"
+     :parameter-color "#F5DF74"
      :property-color "#E4E4EF"
      :variable-color "#F4F4FF"
      :operator-color "#E4E4EF"
@@ -121,6 +124,7 @@
     (gruber-light
      :bg "#EBDFC4"
      :fg "#302B25"
+     :punctuation "#625C50"
      :keyword "#5D4200"
      :function "#22486F"
      :string "#2B4F06"
@@ -140,7 +144,7 @@
      :success "#3D6019"
      :info "#365779"
      :builtin-color "#5D4200"
-     :parameter-color "#302B25"
+     :parameter-color "#4D390C"
      :property-color "#302B25"
      :variable-color "#302B25"
      :operator-color "#302B25"
@@ -158,6 +162,7 @@
     (rose-pine-main
      :bg "#191724"
      :fg "#E0DEF4"
+     :punctuation "#8E8C9E"
      :keyword "#3F96B8"
      :function "#EBBCBA"
      :string "#F6C177"
@@ -195,6 +200,7 @@
     (rose-pine-moon
      :bg "#232136"
      :fg "#E0DEF4"
+     :punctuation "#A3A1B6"
      :keyword "#4AACD3"
      :function "#EA9A97"
      :string "#F6C177"
@@ -232,6 +238,7 @@
     (rose-pine-dawn
      :bg "#FAF4ED"
      :fg "#464261"
+     :punctuation "#6A657D"
      :keyword "#22586E"
      :function "#734644"
      :string "#6F4A19"
@@ -269,6 +276,7 @@
     (catppuccin-latte
      :bg "#EFF1F5"
      :fg "#44475F"
+     :punctuation "#606277"
      :keyword "#632AAF"
      :function "#1546A9"
      :string "#235818"
@@ -306,6 +314,7 @@
     (catppuccin-frappe
      :bg "#303446"
      :fg "#C6D0F5"
+     :punctuation "#9FA8C8"
      :keyword "#CA9EE6"
      :function "#8CAAEE"
      :string "#A6D189"
@@ -343,6 +352,7 @@
     (catppuccin-macchiato
      :bg "#24273A"
      :fg "#CAD3F5"
+     :punctuation "#9299B5"
      :keyword "#C6A0F6"
      :function "#8AADF4"
      :string "#A6DA95"
@@ -380,6 +390,7 @@
     (catppuccin-mocha
      :bg "#1E1E2E"
      :fg "#CDD6F4"
+     :punctuation "#8A90A8"
      :keyword "#CBA6F7"
      :function "#89B4FA"
      :string "#A6E3A1"

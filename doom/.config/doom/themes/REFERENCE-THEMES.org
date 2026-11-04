@@ -83,6 +83,16 @@ becomes a readable deep ochre; it is not claimed to be Tsoding's own light
 configuration. Upstream attribution and MIT terms are in
 [[file:licenses/Gruber-Darker.LICENSE.txt][Gruber Darker's license]].
 
+* Argument and punctuation hierarchy
+All reference variants share quieter bracket/delimiter colors while retaining
+their existing operator and value colors. Semantic parameters retain each
+palette's secondary parameter color; Gruber uses a restrained gold/ochre tint,
+and Shades of Purple uses rose/berry to distinguish parameters from cyan types.
+Property/name-definition faces use the parameter
+color, while ordinary member accesses retain the existing property color.
+Actual argument-name recognition depends on the language's fontifier or server;
+see [[file:PYTHON-HIGHLIGHTING.org][the Emacs 29 Python limitations]].
+
 * Implementation
 =custom-editor-palettes.el= holds the eleven color tables.
 =custom-editor-themes.el= defines the shared custom adapter and the small

@@ -21,7 +21,7 @@ class Landscape:
         return prefix + self.name
 
 region = Landscape("Provence")
-result = region.describe()
+result = region.describe(prefix="Hello")
 print(result)
 converted = str(42)
 status = State.READY

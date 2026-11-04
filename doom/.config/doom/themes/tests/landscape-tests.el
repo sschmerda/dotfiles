@@ -51,7 +51,7 @@
     (font-lock-string-face . :string) (font-lock-doc-face . :code-comment)
     (font-lock-number-face . :constant) (lsp-face-semhl-class . :type)
     (lsp-face-semhl-function . :function) (lsp-face-semhl-property . :fg)
-    (lsp-face-semhl-parameter . :fg) (lsp-face-semhl-macro . :constant)
+    (lsp-face-semhl-macro . :constant)
     (lsp-face-semhl-enum-member . :constant)))
 
 (defun landscape-test-lab (hex)
@@ -327,6 +327,11 @@ color-vision accessibility or of a major mode's token classifications."
                     ("count = 12.5" 8 font-lock-number-face)
                     ("self.name" 5 font-lock-property-use-face)
                     ("region.describe" 7 font-lock-function-call-face)
+                    ("describe(prefix" 8 font-lock-bracket-face)
+                    ;; Emacs 29 does not classify keyword argument names
+                    ;; separately. A server can supply a parameter token.
+                    ("prefix=\"Hello\"" 0 font-lock-variable-use-face)
+                    ("prefix=\"Hello\"" 6 font-lock-operator-face)
                     ("tab\\tend" 3 font-lock-escape-face)))))
         (goto-char (point-min))
         (search-forward (car probe))
@@ -340,7 +345,8 @@ color-vision accessibility or of a major mode's token classifications."
   (landscape-test-select 'custom-landscape-iceland-dark)
   ;; Exercise the actual lsp-mode token fontifier with a synthetic response;
   ;; this tests composition, not a live language server's classifications.
-  (dolist (base '(lsp-face-semhl-variable lsp-face-semhl-function lsp-face-semhl-type))
+  (dolist (base '(lsp-face-semhl-variable lsp-face-semhl-function lsp-face-semhl-type
+                 lsp-face-semhl-parameter))
     (with-temp-buffer
       (insert "value")
       (setq-local lsp--cur-version 1)
@@ -469,7 +475,11 @@ Requires the Mac port's native frame exporter. No image generation is used."
           (remove-overlays)
           (erase-buffer)
           (insert-file-contents (expand-file-name "samples/sample.py" landscape-test-directory))
-          (delay-mode-hooks (python-mode))
+          (when-let ((grammar-directory (getenv "LANDSCAPE_TREE_SITTER_DIR")))
+            (add-to-list 'treesit-extra-load-path grammar-directory))
+          (let ((treesit-font-lock-level 4))
+            (delay-mode-hooks
+              (if (treesit-ready-p 'python t) (python-ts-mode) (python-mode))))
           (goto-char (point-max))
           (insert "\n# Synthetic diagnostic display (no checker/server started)\n")
           (dolist (kind '(error warning info))

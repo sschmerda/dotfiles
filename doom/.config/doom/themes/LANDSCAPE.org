@@ -80,7 +80,11 @@ private variables were copied. Upstream Doom retains its own attribution and
 license. This collection adds original palette bindings and semantic mappings.
 
 ** Color semantics and surfaces
-Ordinary identifiers, parameters, properties and punctuation stay at =fg=.
+Ordinary identifiers and member accesses stay at =fg=. Recognized parameter
+names generally use an =argument= color blended from =constant= and =fg=, with
+rose/berry Provence overrides to separate parameters from numbers and strings,
+and a warm Venezia-dark override to distinguish it from blue type annotations. Punctuation
+is slightly quieter than ordinary text; operators stay at =fg=.
 Functions/calls/built-in functions share =function=; types share =type=;
 keywords share =keyword=; constants/numbers/decorators share =constant=;
 strings share =string=; code comments and docstrings share =code-comment=.
@@ -102,6 +106,8 @@ Provence's hierarchy uses warm ivory ordinary text in dark mode and a more
 neutral plum-black in light mode. Code comments use grayer lavender at the
 same brightness, and olive function names are softer. Violet keywords and
 honey/ochre strings retain their existing colors, as do the lavender surfaces.
+Parameters use rose in dark mode and berry in light mode, distinct from the
+cyan/blue type annotations and warm number/string colors.
 
 The exact =bg=, =bg-alt= and =line= surfaces are used for main text, secondary
 surfaces and the active line. Selections, search and diff pairs retain their

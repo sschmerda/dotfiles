@@ -66,6 +66,13 @@ Landscape for regex, Tree-sitter and LSP semantic tokens when available.
 | Parameter                  | variable-use face  | no separate face     | ordinary text                     |
 | Property access            | property-use face  | no separate face     | ordinary text                     |
 
+Recognized LSP parameter tokens now use the theme's secondary argument color.
+Emacs 29's Python Tree-sitter grammar itself still assigns keyword argument
+names (for example =prefix= in =describe(prefix="Hello")=) the ordinary
+variable-use face. The themes preserve that fallback rather than tinting all
+variables. Bracket and delimiter faces receive the quieter punctuation color;
+operators, values and constants retain their existing semantic roles.
+
 These supported classifications are exercised by the regression test
 =landscape-python-role-classification=. Existing theme tests verify the
 corresponding face colors for every palette; the GUI checks read effective
