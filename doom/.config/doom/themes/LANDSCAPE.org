@@ -98,6 +98,11 @@ color-blind accessibility guarantee. Providers can
 only color distinctions that they actually expose. The theme does not change
 mode grammars or add regex rules to manufacture missing categories.
 
+Provence's hierarchy uses warm ivory ordinary text in dark mode and a more
+neutral plum-black in light mode. Code comments use grayer lavender at the
+same brightness, and olive function names are softer. Violet keywords and
+honey/ochre strings retain their existing colors, as do the lavender surfaces.
+
 The exact =bg=, =bg-alt= and =line= surfaces are used for main text, secondary
 surfaces and the active line. Selections, search and diff pairs retain their
 specified values. Links are underlined; diagnostics retain signs and severity-colored
