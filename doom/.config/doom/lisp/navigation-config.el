@@ -1,5 +1,40 @@
 ;;; navigation-config.el -*- lexical-binding: t; -*-
 
+(after! evil-snipe
+  ;; Match literal whitespace so t<Space> stops before it, as in Vim.
+  (setq evil-snipe-skip-leading-whitespace nil))
+
+(defvar my-evil-word-syntax-table
+  (let ((table (copy-syntax-table (standard-syntax-table))))
+    (modify-syntax-entry ?_ "w" table)
+    table)
+  "Vim-style word syntax for Evil: letters, digits and underscores.
+Major-mode syntax tables remain unchanged outside Evil word operations.")
+
+(defun my--evil-vim-word-syntax-a (original &rest args)
+  "Call ORIGINAL with ARGS using Vim-style word boundaries."
+  (with-syntax-table my-evil-word-syntax-table
+    (apply original args)))
+
+(defun my--evil-vim-word-object-a (original &rest args)
+  "Use Vim word syntax when ORIGINAL selects an `evil-word' from ARGS."
+  (if (eq (car args) 'evil-word)
+      (apply #'my--evil-vim-word-syntax-a original args)
+    (apply original args)))
+
+(after! evil
+  ;; Cover motions, their shared word primitive, and operator/visual objects.
+  ;; Keep uppercase WORD motions and Emacs's own word commands unchanged.
+  (dolist (function '(forward-evil-word
+                      evil-forward-word-begin evil-backward-word-begin
+                      evil-forward-word-end evil-backward-word-end))
+    (advice-add function :around #'my--evil-vim-word-syntax-a))
+  ;; Keep text-object commands directly interactive: their Evil wrappers use
+  ;; that distinction to adjust inclusive Visual selections correctly.
+  (dolist (function '(evil-select-inner-restricted-object
+                      evil-select-a-restricted-object))
+    (advice-add function :around #'my--evil-vim-word-object-a)))
+
 (defvar my-nav-flash-motion-threshold 10
   "Minimum Evil vertical motion count that flashes the destination line.")
 

@@ -32,8 +32,12 @@ Custom commands intended for =M-x= or keybindings use =my/=. Internal helpers, h
 (load! "lisp/completion-config")
 #+end_src
 
-* Navigation feedback
+* Navigation
 [[file:lisp/navigation-config.el][navigation-config.el]] extends Doom's Nav Flash to counted Evil vertical motions of at least 10 lines, including visual-line motions in Org and the custom upward motion in Magit. Successful Avy jumps such as =g s s= also flash their destination. Ordinary single-line movement stays quiet; Doom's exclusions and the clock popup's flash suppression still apply.
+
+Evil Snipe searches for literal whitespace, preserving Vim's =t<Space>= behavior: stop before the space and exclude it from a visual selection.
+
+Evil's lowercase word motions (=w=, =b=, =e=, =ge=) and =iw=/=aw= text objects use Vim-style word boundaries: letters, digits and underscores belong together; punctuation such as hyphens and dots separates words. Uppercase =WORD= motions still follow whitespace boundaries. The syntax table is changed only during these Evil operations, leaving Emacs word commands and language-mode syntax unchanged.
 
 #+begin_src emacs-lisp
 (load! "lisp/navigation-config")
