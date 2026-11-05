@@ -143,14 +143,15 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
       (push `(,face :foreground border :background border) faces))
     ;; Quiet identifiers have separate faces, but intentionally the same color.
     (dolist (mapping
-             '((fg font-lock-variable-name-face font-lock-variable-use-face
+             '((fg ess-operator-face ess-%op%-face ess-assignment-face
+                   font-lock-variable-name-face font-lock-variable-use-face
                    font-lock-property-use-face
                    font-lock-operator-face lsp-face-semhl-variable
                    lsp-face-semhl-property
                    lsp-face-semhl-member lsp-face-semhl-event
                    lsp-face-semhl-operator)
                (argument font-lock-property-name-face lsp-face-semhl-parameter)
-               (punctuation-tone font-lock-punctuation-face font-lock-bracket-face
+               (punctuation-tone ess-paren-face font-lock-punctuation-face font-lock-bracket-face
                                  font-lock-delimiter-face font-lock-misc-punctuation-face)
                (function font-lock-function-name-face font-lock-function-call-face
                          font-lock-builtin-face lsp-face-semhl-function
@@ -162,7 +163,8 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
                      lsp-face-semhl-enum lsp-face-semhl-type-parameter)
                (module-color lsp-face-semhl-namespace)
                (string font-lock-string-face lsp-face-semhl-string lsp-face-semhl-regexp)
-               (constant font-lock-constant-face font-lock-number-face
+               (constant ess-numbers-face ess-constant-face
+                         font-lock-constant-face font-lock-number-face
                          font-lock-escape-face font-lock-regexp-grouping-backslash
                          font-lock-regexp-grouping-construct font-lock-preprocessor-face
                          lsp-face-semhl-constant lsp-face-semhl-number

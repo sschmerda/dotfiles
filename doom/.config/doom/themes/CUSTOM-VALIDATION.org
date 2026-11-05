@@ -1,6 +1,29 @@
 #+title: Custom reference theme validation
 #+date: 2026-11-03
 
+* Seven-language audit — 2026-11-05
+The audit found two additional concrete mismatches, now covered by regression
+tests. ESS inherits numbers/constants from the type face and operators,
+assignments and parentheses from the constant face. Both custom theme families
+now map those faces to the existing number/constant, operator and punctuation
+roles; reference-specific operator colors remain intact. ESS's optional
+highlighting groups were exercised locally without enabling them by default.
+
+The installed rust-analyzer client supplies its own neutral declaration face,
+bypassing the theme's declaration-marker mapping. The parameter renderer now
+recognizes that marker too. A regression uses the real installed client mapping
+and lsp-mode renderer with synthetic tokens to check declaration/reference
+colors and non-custom theme isolation. This does not establish live Rust server
+behavior.
+
+All 32 combined ERT tests pass. Real syntax-fontification probes in ESS R,
+legacy Rust, Go, C, C++ and Emacs Lisp exercised their installed modes without
+running language servers or interpreters. No additional mismatch was confirmed
+in the basic Go/C/C++/Lisp probes. Their unfontified numbers, calls or punctuation
+are mode-classification limits, not evidence that theme colors are missing.
+Only the Python Tree-sitter grammar is installed among the seven languages;
+no claim is made that every construct or server for all seven was tested.
+
 * Receiver lifecycle correction and shared role — 2026-11-05
 All 30 combined ERT tests pass. Earlier direct resolver and temporary-document
 checks did not cover stale workspace vectors: =sequence_clustering.py= still

@@ -35,7 +35,7 @@ Emacs discovers all 29 themes through the single loader, with the active and
 default themes preserved. Documentation file links and shell syntax also pass.
 
 Light variants received stronger syntax emphasis after the layout refactor;
-see the family documentation. The current suite has 30 tests, including the
+see the family documentation. The current suite has 32 tests, including the
 shared light-syntax contrast and weight check.
 
 * Naming
@@ -132,6 +132,10 @@ ordinary variable styling when the provider exposes the distinction.
 | Go         | Use standard parser/gopls roles. A method receiver receives special styling only if tooling identifies it reliably, not because it happens to be named r or s.                                               |
 | C++        | Use parser/clangd roles. Add an adapter for constructs such as this only if their classification prevents the agreed receiver styling.                                                                       |
 | C          | Start with standard roles for types, functions, macros and preprocessor directives. There is no receiver role to manufacture.                                                                                |
+
+The targeted adapters also align ESS's constant/number, operator/assignment
+and parenthesis faces with the shared roles. Rust's client-specific declaration
+marker is recognized when retaining parameter declaration colors.
 
 This policy does not claim runtime verification of all seven languages. Record
 new exceptions with their regression tests and actual verification scope.

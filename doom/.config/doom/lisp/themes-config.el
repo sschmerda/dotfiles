@@ -82,7 +82,8 @@ all other semantic faces, including types, modifiers and deprecation styles."
                      (face (get-text-property position 'face))
                      (faces (if (listp face) face (list face))))
                 (when (and (memq 'lsp-face-semhl-parameter faces)
-                           (not (memq 'landscape-semhl-declaration faces))
+                           (not (or (memq 'landscape-semhl-declaration faces)
+                                    (memq 'lsp-rust-analyzer-declaration-modifier-face faces)))
                            (not (my--theme-python-argument-label-p position)))
                   (put-text-property position next 'face
                                      (my--theme-parameter-reference-face face)))

@@ -40,7 +40,8 @@
            (property-color font-lock-property-use-face
                            lsp-face-semhl-property lsp-face-semhl-member
                            lsp-face-semhl-event)
-           (operator-color font-lock-operator-face font-lock-negation-char-face
+           (operator-color ess-operator-face ess-%op%-face ess-assignment-face
+                           font-lock-operator-face font-lock-negation-char-face
                            lsp-face-semhl-operator)
            (doc-color font-lock-doc-face)
            (mode-line-fg mode-line mode-line-active header-line solaire-mode-line-face)
