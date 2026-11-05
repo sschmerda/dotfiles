@@ -85,11 +85,12 @@ configuration. Upstream attribution and MIT terms are in
 
 * Argument and punctuation hierarchy
 All reference variants share quieter bracket/delimiter colors while retaining
-their existing operator and value colors. Semantic parameters retain each
+their existing operator and value colors. Semantic parameter declarations use each
 palette's secondary parameter color; Gruber uses a restrained gold/ochre tint,
 and Shades of Purple uses rose/berry to distinguish parameters from cyan types.
 Property/name-definition faces use the parameter
 color, while ordinary member accesses retain the existing property color.
+Parameter references in function bodies use the ordinary variable color.
 Actual argument-name recognition depends on the language's fontifier or server;
 see [[file:PYTHON-HIGHLIGHTING.org][the Emacs 29 Python limitations]].
 

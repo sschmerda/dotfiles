@@ -80,8 +80,8 @@ private variables were copied. Upstream Doom retains its own attribution and
 license. This collection adds original palette bindings and semantic mappings.
 
 ** Color semantics and surfaces
-Ordinary identifiers and member accesses stay at =fg=. Recognized parameter
-names generally use an =argument= color blended from =constant= and =fg=, with
+Ordinary identifiers, parameter references and member accesses stay at =fg=.
+Recognized parameter declarations generally use an =argument= color blended from =constant= and =fg=, with
 rose/berry Provence overrides to separate parameters from numbers and strings,
 and a warm Venezia-dark override to distinguish it from blue type annotations. Punctuation
 is slightly quieter than ordinary text; operators stay at =fg=.

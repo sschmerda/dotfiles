@@ -35,7 +35,7 @@ Emacs discovers all 29 themes through the single loader, with the active and
 default themes preserved. Documentation file links and shell syntax also pass.
 
 Light variants received stronger syntax emphasis after the layout refactor;
-see the family documentation. The current suite has 26 tests, including the
+see the family documentation. The current suite has 27 tests, including the
 shared light-syntax contrast and weight check.
 
 * Naming
@@ -73,10 +73,12 @@ all text backgrounds; the active number keeps its stronger accent and bold
 weight. Other dim UI labels and code comments keep their existing colors.
 
 * Arguments, punctuation and constants
-Recognized parameter names use a secondary color separated from type annotations:
+Recognized parameter declarations use a secondary color separated from type annotations:
 Landscape generally blends the constant color with ordinary text, with rose/berry
 overrides for Provence and a warm override for Venezia dark. Reference-inspired themes use their own parameter
-colors. Name/property-definition faces follow this distinction;
+colors. References to those parameters in a function body use the ordinary
+variable color. Function names and type annotations retain their own colors.
+Name/property-definition faces follow the secondary-color distinction;
 ordinary variable values and member accesses keep their existing colors.
 
 Parentheses, brackets and delimiters use a dedicated muted foreground with
@@ -90,6 +92,10 @@ their existing semantic colors.
 These mappings follow Font Lock, Tree-sitter and LSP classifications. Emacs 29's
 Python grammar treats keyword argument names as ordinary variable uses, so
 those names need parameter tokens from the server for separate coloring.
+The compatibility layer in =lisp/themes-config.el= uses the server's declaration
+modifier to distinguish parameter declarations from references, only while a
+custom theme is active. Python Tree-sitter keyword argument labels at call sites
+retain their secondary color; parameter values passed to calls stay ordinary.
 No global variable recoloring or regex guesses are added as a fallback.
 
 * Diagnostics and Org hierarchy

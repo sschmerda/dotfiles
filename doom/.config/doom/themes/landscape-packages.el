@@ -219,6 +219,11 @@
                   :foreground ,role :background ,role) faces))))
     faces))
 
+(defface landscape-semhl-declaration
+  '((t (:inherit unspecified :foreground unspecified)))
+  "Color-neutral marker for declarations in semantic token face lists."
+  :group 'faces)
+
 (defun landscape--semantic-modifiers ()
   "Return color-neutral LSP modifier mappings when lsp-mode is installed.
 Load definitions only, never start a language server. This must precede theme
@@ -226,11 +231,13 @@ variable assignment so Emacs can restore the package's original default."
   (when (locate-library "lsp-semantic-tokens")
     (require 'lsp-semantic-tokens)
     (mapcar (lambda (entry)
-              (if (member (car entry)
-                          '("declaration" "readonly" "static" "abstract" "async"
+              (cond ((equal (car entry) "declaration")
+                     (cons (car entry) 'landscape-semhl-declaration))
+                    ((member (car entry)
+                          '("readonly" "static" "abstract" "async"
                             "modification" "documentation" "defaultLibrary"))
-                  (cons (car entry) 'lsp-face-semhl-static)
-                entry))
+                     (cons (car entry) 'lsp-face-semhl-static))
+                    (t entry)))
             (default-value 'lsp-semantic-token-modifier-faces))))
 
 (defvar lsp-semantic-token-modifier-faces)

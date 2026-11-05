@@ -1,6 +1,19 @@
 #+title: Custom reference theme validation
 #+date: 2026-11-03
 
+* Declaration-only parameter highlighting — 2026-11-05
+All 27 combined ERT tests pass. A real lsp-mode token-fontification test checks
+parameter declarations, ordinary body references, keyword labels versus values,
+unchanged type/function faces, retained deprecation styling and isolation from
+non-custom themes. Python Tree-sitter supplies call-label context; the server's
+declaration modifier supplies declaration context without grammar changes.
+
+The running Python =x_t= example was refontified and inspected: header =x=/=y=
+retain the secondary parameter face with a neutral declaration marker, and
+their references after =return= use the ordinary variable face. Parameter,
+variable and type colors remain distinct. Buffer text, modified state, active
+theme and configured default were preserved; no server restart was needed.
+
 * Argument and punctuation hierarchy — 2026-11-04
 All 26 combined ERT tests pass, including secondary argument/name-definition
 colors, quieter punctuation, unchanged value/member colors and contrast across

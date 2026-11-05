@@ -1,4 +1,4 @@
-;;; themes-config.el --- Local themes and diagnostic compatibility -*- lexical-binding: t; -*-
+;;; themes-config.el --- Local theme highlighting compatibility -*- lexical-binding: t; -*-
 
 (require 'seq)
 
@@ -48,3 +48,45 @@
 
 (with-eval-after-load 'lsp-ui-sideline
   (advice-add 'lsp-ui-sideline--diagnostics :after #'my--theme-sideline-diagnostics-h))
+
+(defun my--theme-parameter-reference-face (face)
+  "Replace the semantic parameter FACE with ordinary variable styling."
+  (cond ((eq face 'lsp-face-semhl-parameter) 'lsp-face-semhl-variable)
+        ((and (listp face) (not (keywordp (car face))))
+         (mapcar #'my--theme-parameter-reference-face face))
+        (t face)))
+
+(defun my--theme-python-argument-label-p (position)
+  "Return non-nil if POSITION is a Python Tree-sitter keyword argument name."
+  (when (and (derived-mode-p 'python-ts-mode)
+             (fboundp 'treesit-node-at) (treesit-parser-list))
+    (let* ((node (treesit-node-at position))
+           (parent (treesit-node-parent node)))
+      (when (and parent (equal (treesit-node-type parent) "keyword_argument"))
+        (let ((name (treesit-node-child-by-field-name parent "name")))
+          (and name (<= (treesit-node-start name) position)
+               (< position (treesit-node-end name))))))))
+
+(defun my--theme-parameter-fontify-a (original end)
+  "Keep parameter declarations accented after ORIGINAL fontifies through END.
+Parameter references use ordinary variable colors in custom themes. Preserve
+all other semantic faces, including types, modifiers and deprecation styles."
+  (let ((start (point)))
+    (prog1 (funcall original end)
+      (when (seq-some (lambda (theme) (string-prefix-p "custom-" (symbol-name theme)))
+                      custom-enabled-themes)
+        (with-silent-modifications
+          (let ((position start) (limit (min end (point-max))))
+            (while (< position limit)
+              (let* ((next (next-single-property-change position 'face nil limit))
+                     (face (get-text-property position 'face))
+                     (faces (if (listp face) face (list face))))
+                (when (and (memq 'lsp-face-semhl-parameter faces)
+                           (not (memq 'landscape-semhl-declaration faces))
+                           (not (my--theme-python-argument-label-p position)))
+                  (put-text-property position next 'face
+                                     (my--theme-parameter-reference-face face)))
+                (setq position next)))))))))
+
+(with-eval-after-load 'lsp-semantic-tokens
+  (advice-add 'lsp--semantic-tokens-fontify :around #'my--theme-parameter-fontify-a))

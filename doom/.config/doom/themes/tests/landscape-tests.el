@@ -345,8 +345,7 @@ color-vision accessibility or of a major mode's token classifications."
   (landscape-test-select 'custom-landscape-iceland-dark)
   ;; Exercise the actual lsp-mode token fontifier with a synthetic response;
   ;; this tests composition, not a live language server's classifications.
-  (dolist (base '(lsp-face-semhl-variable lsp-face-semhl-function lsp-face-semhl-type
-                 lsp-face-semhl-parameter))
+  (dolist (base '(lsp-face-semhl-variable lsp-face-semhl-function lsp-face-semhl-type))
     (with-temp-buffer
       (insert "value")
       (setq-local lsp--cur-version 1)

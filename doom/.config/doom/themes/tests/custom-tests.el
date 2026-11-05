@@ -322,6 +322,62 @@
                 (should (eq (get-text-property 1 'face) 'font-lock-variable-name-face)))
             (delete-overlay overlay)))))))
 
+(ert-deftest custom-editor-parameter-declarations-and-references ()
+  (require 'python)
+  (require 'lsp-semantic-tokens)
+  (when-let ((directory (getenv "LANDSCAPE_TREE_SITTER_DIR")))
+    (add-to-list 'treesit-extra-load-path directory))
+  (unless (treesit-ready-p 'python t) (ert-skip "Python grammar unavailable"))
+  (let ((doom-user-dir (expand-file-name "../" custom-editor-test-root)))
+    (load (expand-file-name "lisp/themes-config.el" doom-user-dir) nil t))
+  (dolist (theme '(custom-landscape-provence-dark custom-catppuccin-latte doom-one))
+    (landscape-test-select theme)
+    (with-temp-buffer
+      (insert "def calc(x: int, y: float):\n    total = x + y\n    return call(x=x, y=y)\n")
+      (delay-mode-hooks (python-ts-mode))
+      (setq-local lsp--cur-version 1
+                  semantic-token-modifier-cache (make-hash-table)
+                  lsp--buffer-workspaces
+                  (list (make-lsp--workspace
+                         :semantic-tokens-faces
+                         [lsp-face-semhl-parameter lsp-face-semhl-type
+                          lsp-face-semhl-function lsp-face-semhl-variable]
+                         :semantic-tokens-modifier-faces
+                         [landscape-semhl-declaration lsp-face-semhl-static
+                          lsp-face-semhl-deprecated])))
+      (let* ((data [0 4 4 2 1  0 5 1 0 1  0 3 3 1 0
+                   0 5 1 0 1  0 3 5 1 0  1 4 5 3 0
+                   0 8 1 0 0  0 4 1 0 4  1 11 4 2 0
+                   0 5 1 0 0  0 2 1 0 0  0 3 1 0 0  0 2 1 0 0])
+             (response (if lsp-use-plists (list :data data)
+                         (let ((table (make-hash-table :test #'equal)))
+                           (puthash "data" data table) table))))
+        (setq-local lsp--semantic-tokens-cache
+                    (list :response response :_documentVersion 1)))
+      (set-buffer-modified-p nil)
+      (goto-char (point-min))
+      (lsp--semantic-tokens-fontify (point-max))
+      (cl-labels ((faces (line column)
+                    (save-excursion
+                      (goto-char (point-min)) (forward-line line) (forward-char column)
+                      (let ((face (get-text-property (point) 'face)))
+                        (if (listp face) face (list face))))))
+        (should (memq 'lsp-face-semhl-parameter (faces 0 9)))
+        (should (memq 'lsp-face-semhl-parameter (faces 0 17)))
+        (should (memq 'lsp-face-semhl-function (faces 0 4)))
+        (should (memq 'lsp-face-semhl-type (faces 0 12)))
+        (should (memq 'lsp-face-semhl-type (faces 0 20)))
+        (should (memq 'lsp-face-semhl-deprecated (faces 1 16)))
+        (should (memq 'lsp-face-semhl-variable (faces 1 4)))
+        ;; Keyword labels retain their accent; values refer to parameters.
+        (should (memq 'lsp-face-semhl-parameter (faces 2 16)))
+        (should (memq 'lsp-face-semhl-parameter (faces 2 21)))
+        (dolist (position '((1 12) (1 16) (2 18) (2 23)))
+          (should (memq (if (eq theme 'doom-one)
+                            'lsp-face-semhl-parameter 'lsp-face-semhl-variable)
+                        (apply #'faces position)))))
+      (should-not (buffer-modified-p)))))
+
 (ert-deftest custom-editor-sideline-info-isolation ()
   (require 'lsp-ui-sideline)
   (let ((doom-user-dir (expand-file-name "../" custom-editor-test-root)))
