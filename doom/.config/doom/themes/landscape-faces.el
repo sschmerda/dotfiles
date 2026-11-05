@@ -76,7 +76,11 @@ Preserve its hue and brightest channel; already saturated colors stay intact."
                           'constant))
               (violet constant) (cyan ,(if iceland 'function 'info))
               (dark-cyan cyan) (teal function)
-              (heading-1 accent) (heading-2 type) (heading-3 function)
+              ;; Keep navigation and document structure on distinct palette roles.
+              (heading-1 ,(if (equal (plist-get palette :accent)
+                                      (plist-get palette :function)) 'constant 'accent))
+              (heading-2 type) (heading-3 string)
+              (org-navigation function)
               (modeline-bg bg-alt)
               (highlight accent) (vertical-bar border) (selection selection-bg)
               (builtin function) (comments syntax-comment) (doc-comments syntax-comment)
@@ -228,6 +232,8 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
                                 tree-sitter-hl-face:comment tree-sitter-hl-face:doc))
           (setcdr spec (plist-put (cdr spec) :slant
                                  '(if doom-themes-enable-italic 'italic 'normal))))))
+    ;; The document title is distinct from the Org heading hierarchy.
+    (push '(org-document-title :foreground module-color) faces)
     ;; &override retains framework styles (e.g. Org heading weights) while
     ;; replacing only the attributes above. No global face setters or hooks.
     (let ((merged (make-hash-table :test #'eq)) order)

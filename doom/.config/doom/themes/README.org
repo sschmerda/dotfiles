@@ -35,7 +35,7 @@ Emacs discovers all 29 themes through the single loader, with the active and
 default themes preserved. Documentation file links and shell syntax also pass.
 
 Light variants received stronger syntax emphasis after the layout refactor;
-see the family documentation. The current suite has 32 tests, including the
+see the family documentation. The current suite has 33 tests, including the
 shared light-syntax contrast and weight check.
 
 * Naming
@@ -157,8 +157,9 @@ normal success messages and Org DONE keep their own colors. No timers or server
 requests are added. Some backends merge hints into info; this does not change
 their severity classification. Underline shapes depend on display support.
 
-Org levels 1–3 use the regional accent, type and function colors (Shades of
-Purple uses its constant color at level 3 to avoid repeating yellow). Level 4
+Org levels 1–3 use accent, type and string colors. When the accent duplicates
+the link color (Shades of Purple), level 1 uses the constant color instead.
+Level 4
 is bold body text; levels 5–8 use quiet normal-weight body text. Existing heading
 sizes, mixed-pitch rules and fixed-pitch tables/code are preserved. Links remain
 underlined; code/example blocks use the alternate surface, with subdued markers.
@@ -175,3 +176,20 @@ underlined; code/example blocks use the alternate surface, with subdued markers.
 This themes the existing Doom keyword faces rather than adding/changing TODO
 workflows. Org Modern labels follow the same roles. Metadata and ordinary prose
 stay quiet. Doom's global bold preference is respected.
+
+* Org navigation and document titles
+All 29 custom themes use the same structural roles with their own palette:
+
+| Element                      | Palette role                  |
+|------------------------------+-------------------------------|
+| Document title (#+title:)     | Module color                  |
+| Links, citations, backlinks   | Function color                |
+| Heading level 1              | Accent; constant if necessary |
+| Heading level 2              | Type color                    |
+| Heading level 3              | String color                  |
+| Heading levels 4–8           | Ordinary text color           |
+
+No heading level reuses the title or navigation color. Link underlines, title
+weights, sizes and font families are preserved. Code colors remain unchanged.
+In Provence this means sage titles, olive navigation and lavender/blue/gold
+headings. Each other palette retains its own hues, rather than adopting green.

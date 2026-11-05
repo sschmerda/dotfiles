@@ -104,3 +104,24 @@ This increases the color distinction within module/function chains while
 retaining the olive/sage relationship. Type, parameter and string colors are
 unchanged. The light function color retains the 6.5:1 syntax contrast target
 and the existing minimum separation from other primary syntax roles.
+
+** Org navigation and hierarchy follow-up
+In Provence light and dark, Org links, citation links and Org-roam backlink
+titles currently use the palette's olive function color as a visual trial
+replacing sage. Code modules retain sage. Heading levels 1–3 use lavender,
+blue and ochre/gold; deeper levels use the ordinary text color. No heading
+level uses navigation olive. This gives notes the same lavender/green/gold
+balance as code while distinguishing clickable navigation from structure.
+Other regional palettes retain their existing link and heading colors.
+
+The document title (=#+title:=) uses sage in both Provence variants, separately
+from olive navigation and the non-green heading hierarchy. Its existing size,
+font family and weight are preserved.
+
+* Shared Org role follow-up — 2026-11-05
+The Provence document/navigation distinction now applies to all Landscape and
+reference themes: document titles use module color, links/citations/backlink
+titles use function color, and heading levels 1–3 use accent, type and string
+colors, with ordinary text colors below. A duplicated accent/link color uses
+constant color for the first heading level instead. This supersedes the earlier
+Provence-only policy without changing any regional palette or code role.

@@ -21,10 +21,6 @@
                        (operators . operator-color) (doc-comments . doc-color)
                        (modeline-bg . mode-line-bg)))
       (setf (cadr (assq (car mapping) bindings)) (cdr mapping)))
-    ;; Purple's function and accent colors are both yellow/gold; use pink for
-    ;; the third heading level rather than repeating the same visual tier.
-    (when (string-prefix-p "shades-of-purple-" (symbol-name variant))
-      (setf (cadr (assq 'heading-3 bindings)) 'constant))
     bindings))
 
 (defun custom-editor--faces (variant)

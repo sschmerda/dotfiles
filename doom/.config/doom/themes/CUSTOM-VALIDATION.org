@@ -1,6 +1,43 @@
 #+title: Custom reference theme validation
 #+date: 2026-11-03
 
+* Org role separation across all custom themes — 2026-11-05
+All 33 combined ERT tests pass. The Org-role regression now covers all 29
+palettes: document titles use module color; links, citations and Org-roam
+backlink titles use function color; heading levels use accent, type and string,
+then body text. No heading duplicates the navigation or document-title color.
+Shades of Purple uses its constant color for heading level 1 because its accent
+and function colors coincide. Link underlines and document typography remain
+inherited. This extends and supersedes the Provence-only mapping below.
+
+Graphical face/package checks pass for all 18 Landscape and 11 reference themes
+in isolated Emacs processes. Theme definitions were refreshed in the running
+editor while preserving the active/default Provence Dark selection. Code
+palettes, fonts, Org content and language-server settings were not changed.
+No screenshots were created for this extension.
+
+* Provence Org navigation — 2026-11-05
+All 33 combined ERT tests pass. The new check covers sage links, citations and
+Org-roam backlink titles, retained link underlines, contrast on all three text
+surfaces, and exclusion of navigation sage from all eight Org/outline heading
+levels. It also checks unchanged navigation colors for the other 27 palettes.
+Before the olive trial, live Provence Dark links/backlink titles used =#9DC8AD=; heading colors
+are lavender =#C8A0FF=, blue =#86CEED=, gold =#F0C76A= and ivory =#EEEAE2=.
+The active and configured theme were preserved. No note or Org-roam database
+was modified. These are face and fontification checks, not a new screenshot
+review or a click-through test of every backlink action.
+
+** Olive navigation trial
+The navigation role now uses function olive instead of module sage in both
+Provence variants. The focused Org navigation regression passes across all 29
+palettes, checking link/heading separation and contrast. Live Provence Dark
+links and backlink titles use =#CDD47E=; code modules remain sage =#9DC8AD=.
+The document title (=#+title:=) separately uses sage in both variants, with its
+existing typography preserved; the focused test also covers this distinction.
+Live Provence Dark title =#9DC8AD= and link =#CDD47E= were verified.
+Headings and other palettes retain their prior colors. The full 33-test suite
+above was run before this trial; the focused check was rerun for the trial.
+
 * Provence warmth and sage refinement — 2026-11-05
 All 32 combined ERT tests pass after the palette adjustment, including light
 syntax contrast, color separation, module readability and regional identity.
