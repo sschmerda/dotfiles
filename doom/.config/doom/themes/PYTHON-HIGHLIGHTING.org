@@ -88,6 +88,19 @@ corresponding face colors for every palette; the GUI checks read effective
 face attributes. Earlier synthetic LSP tests exercise the renderer and modifier
 composition, but do not imply the current Pyright server supplies tokens.
 
+* BasedPyright receiver and decorator verification — 2026-11-05
+A temporary in-memory document was sent to the active server and closed after
+testing, without editing the user's Python file. BasedPyright emits =decorator=
+for both =@= and names such as =staticmethod= and =classmethod=, and distinct
+=selfParameter=/=clsParameter= tokens for receiver declarations and references.
+The decorator mapping was already correct. The initial ordinary-variable
+receiver mapping was subsequently replaced by the shared =landscape-receiver=
+role and lifecycle-safe client overrides. Declarations and references now use
+the same secondary color and normal weight, independently of keyword styling.
+A live token-rendering check confirms decorators, class names and receivers
+retain their intended separate faces. No syntax-only fallback rules were added.
+The following parser-only limits still apply without semantic tokens.
+
 * Known classification limits — not missing theme faces
 | Construct              | Installed Emacs 29 behavior       | Consequence                                                                     |
 |------------------------+-----------------------------------+---------------------------------------------------------------------------------|

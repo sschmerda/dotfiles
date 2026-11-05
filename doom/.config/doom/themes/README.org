@@ -35,7 +35,7 @@ Emacs discovers all 29 themes through the single loader, with the active and
 default themes preserved. Documentation file links and shell syntax also pass.
 
 Light variants received stronger syntax emphasis after the layout refactor;
-see the family documentation. The current suite has 28 tests, including the
+see the family documentation. The current suite has 30 tests, including the
 shared light-syntax contrast and weight check.
 
 * Naming
@@ -96,7 +96,14 @@ The compatibility layer in =lisp/themes-config.el= uses the server's declaration
 modifier to distinguish parameter declarations from references, only while a
 custom theme is active. Python Tree-sitter keyword argument labels at call sites
 retain their secondary color; parameter values passed to calls stay ordinary.
-No global variable recoloring or regex guesses are added as a fallback.
+No global variable recoloring or regex guesses are added as a fallback. Receivers use the shared =landscape-receiver= face: a secondary palette color
+with normal weight. BasedPyright's =selfParameter=/=clsParameter= and
+rust-analyzer's =selfKeyword= tokens use this role; Rust's =selfTypeKeyword=
+remains a class/type. Client token overrides are installed independently of the
+selected theme and refreshed when files join a workspace. Non-custom themes
+inherit keyword styling for the receiver face. Decorators retain their existing
+constant/decorator color. Servers must expose a receiver category; no spelling
+rules recolor arbitrary identifiers or generic keyword tokens such as =this=.
 
 Recognized modules and namespaces use a separate palette-specific color and bold weight; types keep their own color. For example,
 when the server identifies =np= and =random= as namespaces in
@@ -107,6 +114,27 @@ sage in Provence, copper in Roma, citrus green in Sicilia, earth brown in Umbria
 plum in Firenze and dusty rose in Bologna; Venezia, Iceland and Napoli retain
 lagoon, glacial or sea teal. This applies to recognized modules throughout code,
 not only names in import statements.
+
+* Language-specific highlighting policy
+Use shared semantic styling by default. Add a language-specific adapter only
+when a reproducible example demonstrates a missing or incorrect classification
+or face mapping. Adapters translate identified constructs into shared roles;
+they do not define separate palettes or guess identifier roles by spelling.
+Parameter declarations use the secondary parameter color; body references use
+ordinary variable styling when the provider exposes the distinction.
+
+| Language   | What warrants a specific rule?                                                                                                                                                                               |
+|------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Python     | Keep the verified receiver-token adapter and keyword-argument context handling. Classes, decorators, imports and functions otherwise use shared roles.                                                       |
+| R          | Use ESS/LSP classifications. Add mappings only if an ESS-specific face or server token fails to inherit the appropriate shared styling.                                                                      |
+| Rust       | Keep the receiver/type adapters. Map additional Rust-specific tokens, such as lifetimes, only when an actual missing or incorrect mapping is demonstrated.                                                   |
+| Emacs Lisp | Use existing Font Lock classifications. Macros, special forms and quoted symbols need not look exactly like Python constructs. Extra function-call recognition is a highlighting feature, not a palette fix. |
+| Go         | Use standard parser/gopls roles. A method receiver receives special styling only if tooling identifies it reliably, not because it happens to be named r or s.                                               |
+| C++        | Use parser/clangd roles. Add an adapter for constructs such as this only if their classification prevents the agreed receiver styling.                                                                       |
+| C          | Start with standard roles for types, functions, macros and preprocessor directives. There is no receiver role to manufacture.                                                                                |
+
+This policy does not claim runtime verification of all seven languages. Record
+new exceptions with their regression tests and actual verification scope.
 
 * Diagnostics and Org hierarchy
 All 29 themes share the same severity and document structure policy:

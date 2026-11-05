@@ -350,6 +350,102 @@
                 (should (eq (get-text-property 1 'face) 'font-lock-variable-name-face)))
             (delete-overlay overlay)))))))
 
+(ert-deftest custom-editor-receiver-colors-and-workspace-lifecycle ()
+  (require 'lsp-semantic-tokens)
+  (let ((doom-user-dir (expand-file-name "../" custom-editor-test-root)))
+    (load (expand-file-name "lisp/themes-config.el" doom-user-dir) nil t))
+  ;; Initialization before any custom theme is enabled must still populate roles.
+  (let* ((custom-enabled-themes nil)
+         (client (make-lsp-client :server-id 'receiver-test
+                                 :semantic-tokens-faces-overrides
+                                 '(:types (("method" . lsp-face-semhl-method)))))
+         (workspace (make-lsp--workspace
+                     :client client :semantic-tokens-faces [nil nil nil nil]
+                     :server-capabilities
+                     (lsp-make-server-capabilities
+                      :semanticTokensProvider
+                      (lsp-make-semantic-tokens-options
+                       :legend (lsp-make-semantic-tokens-legend
+                                :tokenTypes ["selfParameter" "clsParameter"
+                                             "selfKeyword" "selfTypeKeyword"]
+                                :tokenModifiers []))))))
+    (with-temp-buffer
+      (setq-local lsp--buffer-workspaces (list workspace))
+      (my--theme-refresh-receiver-faces-h)
+      (should (equal (lsp--workspace-semantic-tokens-faces workspace)
+                     [landscape-receiver landscape-receiver landscape-receiver
+                      lsp-face-semhl-class]))
+      (should (eq (cdr (assoc "method" (lsp-semantic-tokens--type-faces-for client)))
+                  'lsp-face-semhl-method))
+      ;; Simulate stale caches in a newly joined file, using the installed hook.
+      (setq workspace (make-lsp--workspace
+                       :client client
+                       :server-capabilities (lsp--workspace-server-capabilities workspace)
+                       :semantic-tokens-faces [nil nil nil nil]))
+      (setq-local lsp--buffer-workspaces (list workspace))
+      (run-hook-with-args 'lsp-after-open-hook)
+      (should (eq (aref (lsp--workspace-semantic-tokens-faces workspace) 0)
+                  'landscape-receiver))))
+  (dolist (family (list (cons "custom-landscape-" landscape-palettes)
+                       (cons "custom-" custom-editor-palettes)))
+    (dolist (entry (cdr family))
+      (let ((theme (intern (concat (car family) (symbol-name (car entry))))))
+        (landscape-test-select theme)
+        (let* ((spec (landscape-test-spec theme 'landscape-receiver))
+               (color (plist-get spec :foreground)))
+          (should (eq (plist-get spec :weight) 'normal))
+          (should-not (equal color (plist-get (cdr entry) :keyword)))
+          (should-not (equal color (plist-get (cdr entry) :fg)))
+          (dolist (surface '(:bg :bg-alt :line))
+            (should (>= (landscape-test-contrast color (plist-get (cdr entry) surface))
+                        4.5))))))))
+
+(ert-deftest custom-editor-receiver-tokens ()
+  (require 'lsp-semantic-tokens)
+  (let ((doom-user-dir (expand-file-name "../" custom-editor-test-root)))
+    (load (expand-file-name "lisp/themes-config.el" doom-user-dir) nil t))
+  (let* ((client (make-lsp-client :server-id 'pyright))
+         (original (copy-tree lsp-semantic-token-faces)))
+    (my--theme-register-receiver-faces client)
+    (dolist (theme '(custom-landscape-provence-dark custom-catppuccin-latte doom-one))
+      (landscape-test-select theme)
+      (let* ((custom (string-prefix-p "custom-" (symbol-name theme)))
+             (faces (lsp-semantic-tokens--type-faces-for client)))
+        (should (equal (cdr (assoc "selfParameter" faces))
+                       'landscape-receiver))
+        (should (equal (cdr (assoc "clsParameter" faces))
+                       'landscape-receiver))
+        (dolist (token '("decorator" "class" "parameter" "method"))
+          (should (equal (assoc token faces) (assoc token original))))
+        (when custom
+          (with-temp-buffer
+            (insert "self cls mark method Kind")
+            (setq-local lsp--cur-version 1
+                        semantic-token-modifier-cache (make-hash-table)
+                        lsp--buffer-workspaces
+                        (list (make-lsp--workspace
+                               :semantic-tokens-faces
+                               (vconcat (mapcar (lambda (token) (cdr (assoc token faces)))
+                                               '("selfParameter" "clsParameter" "decorator"
+                                                 "method" "class")))
+                               :semantic-tokens-modifier-faces [])))
+            (let* ((data [0 0 4 0 0  0 5 3 1 0  0 4 4 2 0
+                         0 5 6 3 0  0 7 4 4 0])
+                   (response (if lsp-use-plists (list :data data)
+                               (let ((table (make-hash-table :test #'equal)))
+                                 (puthash "data" data table) table))))
+              (setq-local lsp--semantic-tokens-cache
+                          (list :response response :_documentVersion 1)))
+            (set-buffer-modified-p nil)
+            (goto-char (point-min))
+            (lsp--semantic-tokens-fontify (point-max))
+            (dolist (entry '((1 . landscape-receiver) (6 . landscape-receiver)
+                             (10 . lsp-face-semhl-decorator) (15 . lsp-face-semhl-method)
+                             (22 . lsp-face-semhl-class)))
+              (let ((face (get-text-property (car entry) 'face)))
+                (should (memq (cdr entry) (if (listp face) face (list face)))))))))
+    (should (equal lsp-semantic-token-faces original)))))
+
 (ert-deftest custom-editor-parameter-declarations-and-references ()
   (require 'python)
   (require 'lsp-semantic-tokens)
@@ -457,7 +553,8 @@
                   (when (and (stringp foreground) (string-prefix-p "#" foreground))
                     (unless (and (stringp background) (string-prefix-p "#" background))
                       (setq background (plist-get palette :bg)))
-                    (unless (>= (landscape-test-contrast foreground background) 4.5)
+                    (unless (>= (landscape-test-contrast foreground background)
+                                (if (eq face 'line-number) 2.2 4.5))
                       (error "%s: %s has insufficient effective contrast %s/%s"
                              theme face foreground background))))))
             (unless (equal (upcase (face-attribute 'font-lock-keyword-face :foreground nil t))

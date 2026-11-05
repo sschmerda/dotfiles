@@ -1,6 +1,38 @@
 #+title: Custom reference theme validation
 #+date: 2026-11-03
 
+* Receiver lifecycle correction and shared role — 2026-11-05
+All 30 combined ERT tests pass. Earlier direct resolver and temporary-document
+checks did not cover stale workspace vectors: =sequence_clustering.py= still
+had nil entries for the receiver types. The theme-dependent resolver advice
+has been removed. Supported client token overrides now register explicit
+receiver roles independently of theme activation, with cache repair on
+=lsp-after-open-hook= and =lsp-after-initialize-hook=.
+
+The regression test initializes a workspace before a custom theme is active,
+repairs a stale vector through the real file-open hook, preserves unrelated
+client mappings, and checks secondary-color contrast and normal weight across
+all 29 palettes. BasedPyright self/cls and rust-analyzer selfKeyword share the
+receiver role; selfTypeKeyword remains a type. Rust token names were checked
+against [[https://rust-analyzer.github.io/book/features.html][upstream documentation]]; no live Rust session was tested.
+
+The actual open =sequence_clustering.py= now displays =self= declarations and
+references with =landscape-receiver=. All advertised token types have non-nil
+faces in both open Python workspaces. The selected/default theme and buffer
+contents were preserved. No server restart was required. Providers exposing
+only generic keyword tokens remain a classification limitation; no spelling
+heuristics have been added.
+
+* Initial Python receivers and decorators check — superseded above
+All 29 combined ERT tests pass. The new receiver test checks lsp-mode's real
+type-face resolver and renderer, preserved decorator/class/parameter/method
+mappings, unchanged default alists and non-custom theme isolation.
+Live BasedPyright tokens from a temporary in-memory Python document were also
+rendered: =self=/=cls= declarations and references use ordinary variable faces,
+decorators use their existing decorator face, and the class keeps its class
+face. The document was closed; no project file, server configuration, selected
+theme or default theme was changed.
+
 * Bold modules and regional colors — 2026-11-05
 All 29 custom themes explicitly emphasize recognized namespaces with bold weight,
 including module names in imports and namespace references. The global Doom bold

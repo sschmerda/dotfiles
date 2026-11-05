@@ -44,7 +44,11 @@ Preserve its hue and brightest channel; already saturated colors stay intact."
                                              (plist-get palette :bg) amount)
                      collect (list (intern (format "base%d" n))
                                    (list 'quote (list color color))))
-            `((argument
+            `((receiver-tone
+               ',(let ((color (doom-blend (plist-get palette :keyword)
+                                         (plist-get palette :fg) 0.55)))
+                   (list color color)))
+              (argument
                ',(let ((color (or (plist-get palette :parameter-color)
                                   (doom-blend (plist-get palette :constant)
                                               (plist-get palette :fg) 0.65))))
@@ -90,6 +94,8 @@ definition/type faces.
 BACKGROUND-MODE can explicitly select light or dark for named flavors."
   (let ((faces
          '((default :foreground fg :background bg)
+           (landscape-receiver :inherit 'unspecified :foreground receiver-tone
+                               :weight 'normal)
            (fringe :foreground comment :background bg)
            (shadow :foreground comment)
            (hl-line :background line :extend t)

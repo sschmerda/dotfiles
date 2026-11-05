@@ -88,5 +88,38 @@ all other semantic faces, including types, modifiers and deprecation styles."
                                      (my--theme-parameter-reference-face face)))
                 (setq position next)))))))))
 
+(defun my--theme-register-receiver-faces (client)
+  "Register explicit receiver token roles on LSP CLIENT.
+Use the client's supported override API rather than theme-dependent resolver
+advice: workspace initialization may run before a theme becomes enabled."
+  (let* ((overrides (copy-tree (lsp--client-semantic-tokens-faces-overrides client)))
+         (types (plist-get overrides :types)))
+    (dolist (entry '(("selfParameter" . landscape-receiver)
+                     ("clsParameter" . landscape-receiver)
+                     ("selfKeyword" . landscape-receiver)
+                     ("selfTypeKeyword" . lsp-face-semhl-class)))
+      (setf (alist-get (car entry) types nil nil #'equal) (cdr entry)))
+    (setf (lsp--client-semantic-tokens-faces-overrides client)
+          (plist-put overrides :types types))))
+
+(defun my--theme-refresh-receiver-faces-h ()
+  "Initialize receiver roles for workspaces attached to the current buffer.
+This also repairs stale vectors when a new file joins an existing workspace."
+  (dolist (workspace (lsp-workspaces))
+    (my--theme-register-receiver-faces (lsp--workspace-client workspace))
+    (let ((lsp--cur-workspace workspace))
+      (lsp--semantic-tokens-initialize-workspace workspace)))
+  (when (and (boundp 'semantic-token-modifier-cache)
+             (hash-table-p semantic-token-modifier-cache))
+    (clrhash semantic-token-modifier-cache))
+  (when (bound-and-true-p font-lock-mode) (font-lock-flush)))
+
 (with-eval-after-load 'lsp-semantic-tokens
-  (advice-add 'lsp--semantic-tokens-fontify :around #'my--theme-parameter-fontify-a))
+  (require 'landscape-packages)
+  ;; Remove the previous theme-dependent implementation when reloading live.
+  (advice-remove 'lsp-semantic-tokens--type-faces-for 'my--theme-python-receiver-faces)
+  (advice-add 'lsp--semantic-tokens-fontify :around #'my--theme-parameter-fontify-a)
+  (advice-add 'lsp-register-client :after #'my--theme-register-receiver-faces)
+  (maphash (lambda (_ client) (my--theme-register-receiver-faces client)) lsp-clients)
+  (add-hook 'lsp-after-open-hook #'my--theme-refresh-receiver-faces-h)
+  (add-hook 'lsp-after-initialize-hook #'my--theme-refresh-receiver-faces-h))

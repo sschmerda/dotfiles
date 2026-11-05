@@ -2,6 +2,13 @@
 
 (require 'cl-lib)
 
+(defface landscape-receiver
+  '((t (:inherit font-lock-keyword-face)))
+  "Language-independent receiver identifiers, such as self, cls and this.
+Custom themes give this role a secondary color and normal weight. Other themes
+inherit keyword styling. Only explicit server or parser roles should use it."
+  :group 'faces)
+
 (defface landscape-diagnostic-info
   '((t (:inherit success)))
   "Informational sideline messages, colored by the active custom theme."
