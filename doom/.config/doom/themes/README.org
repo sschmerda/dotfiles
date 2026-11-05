@@ -35,7 +35,7 @@ Emacs discovers all 29 themes through the single loader, with the active and
 default themes preserved. Documentation file links and shell syntax also pass.
 
 Light variants received stronger syntax emphasis after the layout refactor;
-see the family documentation. The current suite has 27 tests, including the
+see the family documentation. The current suite has 28 tests, including the
 shared light-syntax contrast and weight check.
 
 * Naming
@@ -97,6 +97,16 @@ modifier to distinguish parameter declarations from references, only while a
 custom theme is active. Python Tree-sitter keyword argument labels at call sites
 retain their secondary color; parameter values passed to calls stay ordinary.
 No global variable recoloring or regex guesses are added as a fallback.
+
+Recognized modules and namespaces use a separate palette-specific color and bold weight; types keep their own color. For example,
+when the server identifies =np= and =random= as namespaces in
+=np.random.randint(...)=, both use that color while =randint= uses the function
+color. Ordinary attributes retain their existing property coloring. Module weight follows
+=doom-themes-enable-bold=. Landscape module hues follow the regional palette:
+sage in Provence, copper in Roma, citrus green in Sicilia, earth brown in Umbria,
+plum in Firenze and dusty rose in Bologna; Venezia, Iceland and Napoli retain
+lagoon, glacial or sea teal. This applies to recognized modules throughout code,
+not only names in import statements.
 
 * Diagnostics and Org hierarchy
 All 29 themes share the same severity and document structure policy:

@@ -85,7 +85,8 @@ Recognized parameter declarations generally use an =argument= color blended from
 rose/berry Provence overrides to separate parameters from numbers and strings,
 and a warm Venezia-dark override to distinguish it from blue type annotations. Punctuation
 is slightly quieter than ordinary text; operators stay at =fg=.
-Functions/calls/built-in functions share =function=; types share =type=;
+Functions/calls/built-in functions share =function=; types use =type= and recognized
+modules/namespaces use a separate palette-specific =module-color= and bold weight;
 keywords share =keyword=; constants/numbers/decorators share =constant=;
 strings share =string=; code comments and docstrings share =code-comment=.
 Comments use muted regional hues and italics, respecting Doom's italic preference,

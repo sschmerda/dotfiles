@@ -51,7 +51,7 @@
     (font-lock-string-face . :string) (font-lock-doc-face . :code-comment)
     (font-lock-number-face . :constant) (lsp-face-semhl-class . :type)
     (lsp-face-semhl-function . :function) (lsp-face-semhl-property . :fg)
-    (lsp-face-semhl-macro . :constant)
+    (lsp-face-semhl-macro . :constant) (lsp-face-semhl-namespace . :module-color)
     (lsp-face-semhl-enum-member . :constant)))
 
 (defun landscape-test-lab (hex)
@@ -345,7 +345,8 @@ color-vision accessibility or of a major mode's token classifications."
   (landscape-test-select 'custom-landscape-iceland-dark)
   ;; Exercise the actual lsp-mode token fontifier with a synthetic response;
   ;; this tests composition, not a live language server's classifications.
-  (dolist (base '(lsp-face-semhl-variable lsp-face-semhl-function lsp-face-semhl-type))
+  (dolist (base '(lsp-face-semhl-variable lsp-face-semhl-function lsp-face-semhl-type
+                 lsp-face-semhl-namespace))
     (with-temp-buffer
       (insert "value")
       (setq-local lsp--cur-version 1)

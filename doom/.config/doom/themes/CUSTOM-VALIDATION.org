@@ -1,6 +1,26 @@
 #+title: Custom reference theme validation
 #+date: 2026-11-03
 
+* Bold modules and regional colors — 2026-11-05
+All 29 custom themes explicitly emphasize recognized namespaces with bold weight,
+including module names in imports and namespace references. The global Doom bold
+opt-out is preserved. Landscape module colors now follow their regional palette
+rather than assigning teal universally. The namespace checks cover bold enabled
+and disabled, contrast on all three surfaces, and separation from types,
+functions and ordinary text.
+
+* Separate module colors — 2026-11-05
+All 28 combined ERT tests pass. All 29 palettes assign namespaces a separate
+palette-specific color, with at least 4.5:1 contrast on the normal, alternate and current-line
+backgrounds. Module colors remain perceptually distinct from types, functions
+and ordinary text. LSP namespaces and optional external Tree-sitter namespace
+faces share this role. Existing type and function colors are unchanged.
+
+The shared mapping audit preserves intentional groupings: functions/methods,
+numbers/constants and uniform brackets/delimiters. Python syntax-only module
+and decorator classification remains dependent on the parser; semantic tokens
+supply the extra categories when available.
+
 * Declaration-only parameter highlighting — 2026-11-05
 All 27 combined ERT tests pass. A real lsp-mode token-fontification test checks
 parameter declarations, ordinary body references, keyword labels versus values,

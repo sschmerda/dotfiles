@@ -76,6 +76,12 @@ variable-use face. The themes preserve that fallback rather than tinting all
 variables. Bracket and delimiter faces receive the quieter punctuation color;
 operators, values and constants retain their existing semantic roles.
 
+With a semantic-token provider, module aliases and submodules use
+=lsp-face-semhl-namespace=, mapped to the palette's separate module color and bold weight. In the live
+=np.random.randint(...)= example, both =np= and =random= were confirmed as
+namespace tokens, and =randint= as a function token. Tree-sitter alone can
+classify attributes as properties; those are not indiscriminately recolored.
+
 These supported classifications are exercised by the regression test
 =landscape-python-role-classification=. Existing theme tests verify the
 corresponding face colors for every palette; the GUI checks read effective

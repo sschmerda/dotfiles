@@ -85,7 +85,8 @@ Preserve its hue and brightest channel; already saturated colors stay intact."
   "Return shared face forms for `def-doom-theme'.
 Only colors and necessary semantic styles are overridden. Existing heading
 sizes, font families and Doom's bold/italic preferences are preserved.
-Light VARIANTs use bold keywords and normal-weight definition/type faces.
+Modules are bold. Light VARIANTs use bold keywords and normal-weight
+definition/type faces.
 BACKGROUND-MODE can explicitly select light or dark for named flavors."
   (let ((faces
          '((default :foreground fg :background bg)
@@ -141,7 +142,7 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
                    font-lock-operator-face lsp-face-semhl-variable
                    lsp-face-semhl-property
                    lsp-face-semhl-member lsp-face-semhl-event
-                   lsp-face-semhl-operator lsp-face-semhl-namespace)
+                   lsp-face-semhl-operator)
                (argument font-lock-property-name-face lsp-face-semhl-parameter)
                (punctuation-tone font-lock-punctuation-face font-lock-bracket-face
                                  font-lock-delimiter-face font-lock-misc-punctuation-face)
@@ -153,6 +154,7 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
                (type font-lock-type-face lsp-face-semhl-type lsp-face-semhl-class
                      lsp-face-semhl-struct lsp-face-semhl-interface
                      lsp-face-semhl-enum lsp-face-semhl-type-parameter)
+               (module-color lsp-face-semhl-namespace)
                (string font-lock-string-face lsp-face-semhl-string lsp-face-semhl-regexp)
                (constant font-lock-constant-face font-lock-number-face
                          font-lock-escape-face font-lock-regexp-grouping-backslash
@@ -163,11 +165,14 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
                (syntax-comment font-lock-comment-face font-lock-comment-delimiter-face
                         font-lock-doc-face lsp-face-semhl-comment)))
       (dolist (face (cdr mapping))
-        (push `(,face :foreground ,(car mapping)) faces)))
+        (push `(,face :foreground ,(car mapping)
+                       ,@(when (eq (car mapping) 'module-color)
+                           (list :weight ''bold))) faces)))
     ;; Newer Emacs versions expose a dedicated built-in parameter face.
     (when (facep 'font-lock-parameter-face)
       (push '(font-lock-parameter-face :foreground argument) faces))
-    ;; Light themes emphasize keywords only; definitions and types stay normal.
+    ;; Light themes emphasize keywords as well as modules. Definitions/types
+    ;; stay normal.
     ;; Dark variants and Doom's global bold preference remain unchanged.
     (when (and variant (if background-mode (eq background-mode 'light)
                         (string-suffix-p "-light" (symbol-name variant))))
@@ -188,6 +193,7 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
       (dolist (mapping '((keyword keyword conditional repeat)
                          (function function function.call method method.call function.builtin)
                          (type type type.builtin type.argument constructor)
+                         (module-color namespace)
                          (constant constant number boolean attribute macro)
                          (string string string.special) (syntax-comment comment doc)
                          (argument variable.parameter property.definition)
@@ -197,6 +203,8 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
           (let ((face (intern (format "tree-sitter-hl-face:%s" suffix))))
             (when (facep face)
               (push `(,face :foreground ,(car mapping)
+                           ,@(when (eq (car mapping) 'module-color)
+                               (list :weight ''bold))
                            ,@(when (and variant
                                         (if background-mode (eq background-mode 'light)
                                           (string-suffix-p "-light" (symbol-name variant)))
