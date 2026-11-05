@@ -1,6 +1,22 @@
 #+title: Custom reference theme validation
 #+date: 2026-11-03
 
+* Provence warmth and sage refinement — 2026-11-05
+All 32 combined ERT tests pass after the palette adjustment, including light
+syntax contrast, color separation, module readability and regional identity.
+Focused graphical face checks passed for Provence light and dark only (the
+helper's fixed report still says 18 themes). Python and mixed-pitch Org captures
+for both variants were visually inspected. These captures use syntax
+highlighting and synthetic diagnostics, not a live semantic-token server.
+The public reference photograph and all temporary Emacs captures were removed;
+no screenshot is stored in the repository.
+The subsequent function-olive refinement also passes all 32 ERT tests. Compared
+with the prior olive, CIELAB Delta E76 separation from unchanged module sage
+increases from 22.54 to 28.48 in light and 26.94 to 33.59 in dark. These metrics
+are regression checks, not a guarantee for every color-vision condition. Live
+Provence Dark faces were verified as function =#CDD47E= and module =#9DC8AD=,
+with modules retaining bold weight.
+
 * Seven-language audit — 2026-11-05
 The audit found two additional concrete mismatches, now covered by regression
 tests. ESS inherits numbers/constants from the type face and operators,

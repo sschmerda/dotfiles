@@ -81,3 +81,26 @@ Iceland is preserved exactly from the moss restoration. Other custom theme
 families, names and font weights remain unchanged. This is a more expressive
 interpretation of the same researched materials and imagery, not a new claim
 of exact geographic or photographic color matching.
+
+* Provence warmth and sage refinement — 2026-11-05
+The Provence light surfaces retain a visible lavender cast with a little more
+warmth: base =#ECE1F0=, secondary =#E4D5E8=, current line =#DFCEE5= and selection
+=#D0B7E0=. The keyword/accent violet =#58298D= is less saturated than the earlier
+=#5600B8= while preserving the established light-syntax contrast target. Search
+focus follows the same accent. Dark modules use a dustier sage =#9DC8AD= instead
+of mint =#82D1A3=. The dark aubergine base, olive functions and ochre/gold strings
+remain unchanged.
+
+This is a restrained interpretation of the lavender, olive foliage, warm stone
+and ochre vocabulary visible in the references, not a sampled photographic
+palette. The public [[https://magazin.aktualne.cz/cestovani/levandulova-pole-v-provence-fotogalerie/r~9c5a9dec20a011ee8980ac1f6b220ee8/][landscape photograph]] was viewed alongside the palette;
+[[https://provence-alpes-cotedazur.com/en/things-to-do/agritourism/the-crops-which-shape-the-landscapes-of-the-south-of-france/][regional tourism material]] documents lavender and silvery olive foliage.
+No other regional palette was changed.
+
+** Function/module separation follow-up
+Function olive shifts slightly toward yellow: =#334B00= in Provence light and
+=#CDD47E= in Provence dark. Module sage remains =#226145=/=#9DC8AD= and bold.
+This increases the color distinction within module/function chains while
+retaining the olive/sage relationship. Type, parameter and string colors are
+unchanged. The light function color retains the 6.5:1 syntax contrast target
+and the existing minimum separation from other primary syntax roles.
