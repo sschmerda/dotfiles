@@ -26,6 +26,13 @@
             (should (eq (plist-get active :inherit) 'line-number))
             (should (eq (plist-get active :background) 'unspecified))
             (should (eq (plist-get active :weight) 'bold))
+            (dolist (surface '(:bg :bg-alt :line))
+              (let ((background (plist-get (cdr entry) surface))
+                    (muted (plist-get ordinary :foreground)))
+                (should (>= (landscape-test-contrast muted background) 2.2))
+                (should (< (landscape-test-contrast muted background)
+                           (landscape-test-contrast (plist-get (cdr entry) :comment)
+                                                    background)))))
             ;; A stronger number must not recolor the shared accent roles.
             (dolist (mapping '((cursor . :background) (link . :foreground)
                                (org-level-1 . :foreground)))

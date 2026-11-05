@@ -67,6 +67,11 @@ is no colored bar. The digits have at least 4.5:1 contrast against that backgrou
 in all 29 themes. Links, cursors, headings and other accent-colored elements
 retain their existing colors.
 
+Ordinary line numbers use a separate muted color, blended 35 percent toward
+the background from the UI dim color. They retain at least 2.2:1 contrast on
+all text backgrounds; the active number keeps its stronger accent and bold
+weight. Other dim UI labels and code comments keep their existing colors.
+
 * Arguments, punctuation and constants
 Recognized parameter names use a secondary color separated from type annotations:
 Landscape generally blends the constant color with ordinary text, with rose/berry

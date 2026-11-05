@@ -56,6 +56,10 @@ Preserve its hue and brightest channel; already saturated colors stay intact."
               (line-number-active
                ',(let ((color (landscape--line-number-color (plist-get palette :accent))))
                    (list color color)))
+              (line-number-muted
+               ',(let ((color (doom-blend (plist-get palette :comment)
+                                         (plist-get palette :bg) 0.65)))
+                   (list color color)))
               (ansi-black ,(if light 'fg 'comment))
               (ansi-white ,(if light 'comment 'fg))
               (fg-alt comment) (grey comment)
@@ -88,7 +92,7 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
            (fringe :foreground comment :background bg)
            (shadow :foreground comment)
            (hl-line :background line :extend t)
-           (line-number :foreground comment :background bg-alt)
+           (line-number :foreground line-number-muted :background bg-alt)
            (line-number-current-line :inherit 'line-number :foreground line-number-active
                                      :background 'unspecified :weight 'bold)
            (cursor :background accent)

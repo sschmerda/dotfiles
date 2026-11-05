@@ -137,7 +137,7 @@ color-vision accessibility or of a major mode's token classifications."
             (should (equal (plist-get spec :foreground) comment))
             (should (eq (plist-get spec :slant) 'italic))))
         ;; A separate code-comment role keeps the existing UI dim colors intact.
-        (dolist (face '(line-number shadow org-block-begin-line))
+        (dolist (face '(shadow org-block-begin-line))
           (should (equal (plist-get (landscape-test-spec theme face) :foreground)
                          (plist-get palette :comment)))))))
   (let ((doom-themes-enable-italic nil))
@@ -538,7 +538,7 @@ Requires the Mac port's native frame exporter. No image generation is used."
               (unless (equal (upcase (face-attribute (car mapping) :foreground nil t))
                              (plist-get palette (cdr mapping)))
                 (error "Effective face mismatch %s %s" theme (car mapping))))
-            (dolist (face '(default shadow line-number mode-line-inactive org-tag org-block-begin-line))
+            (dolist (face '(default shadow mode-line-inactive org-tag org-block-begin-line))
               (let ((color (face-attribute face :foreground nil t)))
                 (when (string-match-p "^#" color)
                   (dolist (surface '(:bg :bg-alt :line))
@@ -563,12 +563,13 @@ Requires the Mac port's native frame exporter. No image generation is used."
                     (unless (and (stringp bg) (string-prefix-p "#" bg))
                       (setq bg (plist-get palette :bg)))
                     (unless (>= (landscape-test-contrast fg bg)
-                                (if (memq face '(font-lock-comment-face
+                                (cond ((eq face 'line-number) 2.2)
+                                      ((memq face '(font-lock-comment-face
                                                  font-lock-comment-delimiter-face
                                                  font-lock-doc-face lsp-face-semhl-comment
                                                  tree-sitter-hl-face:comment
-                                                 tree-sitter-hl-face:doc))
-                                    3.0 4.5))
+                                                 tree-sitter-hl-face:doc)) 3.0)
+                                      (t 4.5)))
                       (error "Effective package contrast: %s %s %s/%s" theme face fg bg))))))))
         (when (getenv "LANDSCAPE_CAPTURE_DIR")
           (dolist (entry landscape-palettes)
