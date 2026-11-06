@@ -2,6 +2,10 @@
 
 (require 'seq)
 
+;; The client slot setter is a generalized-variable macro from lsp-mode's
+;; struct definition. Doom must know it when compiling this configuration.
+(eval-when-compile (require 'lsp-mode nil t))
+
 ;; Remove obsolete family paths when reloading an existing Emacs session.
 (dolist (relative '("themes/landscape/" "themes/custom/"))
   (let ((directory (expand-file-name relative doom-user-dir)))
@@ -108,8 +112,13 @@ advice: workspace initialization may run before a theme becomes enabled."
 This also repairs stale vectors when a new file joins an existing workspace."
   (dolist (workspace (lsp-workspaces))
     (my--theme-register-receiver-faces (lsp--workspace-client workspace))
-    (let ((lsp--cur-workspace workspace))
-      (lsp--semantic-tokens-initialize-workspace workspace)))
+    (if (lsp--semantic-tokens-as-defined-by-workspace workspace)
+        (let ((lsp--cur-workspace workspace))
+          (lsp--semantic-tokens-initialize-workspace workspace))
+      ;; Ruff has no semantic tokens. Empty vectors are truthy and would mask
+      ;; ty's real face maps when lsp-mode chooses the first workspace map.
+      (setf (lsp--workspace-semantic-tokens-faces workspace) nil
+            (lsp--workspace-semantic-tokens-modifier-faces workspace) nil)))
   (when (and (boundp 'semantic-token-modifier-cache)
              (hash-table-p semantic-token-modifier-cache))
     (clrhash semantic-token-modifier-cache))
