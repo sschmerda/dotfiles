@@ -180,6 +180,10 @@ The floating terminal is omitted from the =SPC b b= workspace buffer picker; it 
 #+end_src
 
 * Git
+Use =SPC g n= (=my/magit-status-fullscreen=) to open Magit status across the current frame with normal Olivetti centering. =SPC g e= (=my/magit-status-fullwidth=) uses the full width without centering. In either view, =q= restores the previous window layout and clears the temporary display override. =SPC g g= and =SPC g G= retain Doom's normal display behavior.
+
+Logs, revisions, diffs and other Magit views opened from the full-width view inherit its centering exclusion. Opening a reused view from a normal Magit entry point clears that exclusion, so it does not affect later centered sessions.
+
 [[file:lisp/magit-config.el][magit-config.el]] enables visible-line relative numbers in Magit buffers for counted Evil motions such as =5j= and =3k=. Folded section contents do not contribute hidden lines to the count; =TAB= toggles the current section. Counted upward motions repeat single visible-line steps to avoid an Emacs 29 off-by-one movement at folded section boundaries. Use =D /= in Magit to filter changes by directory. Selecting the repository root removes the filter. Use =D C= to clear active and remembered file filters. Commit-age annotations respect Magit's margin visibility setting, so Olivetti's outer padding cannot expose disabled annotations.
 
 #+begin_src emacs-lisp

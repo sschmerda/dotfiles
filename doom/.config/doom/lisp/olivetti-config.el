@@ -6,11 +6,15 @@
   :init
   (setq olivetti-body-width 120)
   (defvar my-olivetti-enabled nil)
+  (defvar-local my-olivetti-inhibit-centering nil
+    "Non-nil to exclude this buffer from automatic centering.")
+  (put 'my-olivetti-inhibit-centering 'permanent-local t)
   (defvar my-olivetti-inhibit-layout nil
     "Non-nil while workspace windows are being rebuilt.")
   (defun my--olivetti-buffer-eligible-p ()
     "Allow file, Dired and shell buffers, excluding internal and display buffers."
     (and (not (minibufferp))
+         (not my-olivetti-inhibit-centering)
          (not (bound-and-true-p my-terminal-popup-buffer))
          (not (bound-and-true-p org-tree-slide-mode))
          (not (bound-and-true-p +popup-buffer-mode))
