@@ -35,6 +35,8 @@
 
 (load! "lisp/browsing-config")
 
+(load! "lisp/documentation-config")
+
 (load! "lisp/lookup-config")
 
 (load! "lisp/magit-config")

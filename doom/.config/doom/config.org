@@ -172,6 +172,26 @@ The floating terminal is omitted from the =SPC b b= workspace buffer picker; it 
 (load! "lisp/browsing-config")
 #+end_src
 
+* Documentation reading view
+[[file:lisp/documentation-config.el][documentation-config.el]] preserves Doom's normal =K= documentation lookup.
+Press =K= again within one second after the lookup completes to expand its
+result into a single Olivetti-centered window. Code blocks keep syntax colors
+in both views: explicit language labels are respected, and unlabeled LSP code
+blocks use the source buffer's language. Prose keeps its normal formatting.
+Press =q= to restore the layout
+from before the first lookup. A delayed =K= performs a fresh lookup; a prefix
+argument preserves Doom's backend selection. Unrelated popups, external browsers
+and asynchronous results not displayed during the lookup are not promoted.
+The commands are =my/documentation= and =my/documentation-quit=; use =C-h f= for
+their documentation. Isolated behavior tests are in
+[[file:lisp/tests/documentation-tests.el][documentation-tests.el]] and run with
+=emacs -Q --batch -l lisp/tests/documentation-tests.el -f ert-run-tests-batch-and-exit=
+from the Doom configuration directory.
+
+#+begin_src emacs-lisp
+(load! "lisp/documentation-config")
+#+end_src
+
 * Dictionary lookup
 [[file:lisp/lookup-config.el][lookup-config.el]] displays dictionary results in a bottom popup, consistently across repeated lookups. This covers macOS Dictionary, all =define-word= services and offline WordNet through WordNut. Online definitions use a dedicated dictionary buffer rather than the shared evaluation output buffer.
 
