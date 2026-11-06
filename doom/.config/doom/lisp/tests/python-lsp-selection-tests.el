@@ -3,6 +3,7 @@
 ;; Run with emacs -Q --batch -l this-file -f ert-run-tests-batch-and-exit.
 (require 'ert)
 (require 'cl-lib)
+(defvar my--python-lsp-routing-configuration nil)
 
 ;; Load only the selection functions, without running Doom package configuration
 ;; or changing this process's environment/hooks.
@@ -14,6 +15,8 @@
   (condition-case nil
       (while t
         (let ((form (read (current-buffer))))
+          (when (and (eq (car-safe form) 'after!) (eq (cadr form) 'lsp-mode))
+            (setq my--python-lsp-routing-configuration (cons 'progn (cddr form))))
           (when (and (eq (car-safe form) 'defun)
                      (memq (cadr form)
                            '(my--python-detect-lsp-setup
@@ -24,6 +27,42 @@
 (defvar my-python-lsp-clients)
 (defvar lsp-enabled-clients)
 (defvar lsp-semantic-tokens-enable)
+
+(ert-deftest my-python-lsp-semantic-requests-skip-ruff ()
+  (let ((build (or (getenv "DOOM_LSP_BUILD")
+                   (expand-file-name
+                    (format "~/.emacs.d/.local/straight/build-%d.%d/"
+                            emacs-major-version emacs-minor-version)))))
+    (dolist (directory (directory-files build t "^[^.]" t))
+      (add-to-list 'load-path directory)))
+  (require 'lsp-mode)
+  (let ((lsp-method-requirements (copy-tree lsp-method-requirements)))
+    (eval my--python-lsp-routing-configuration t)
+    (with-temp-buffer
+      (let* ((ty (make-lsp--workspace
+                  :client (make-lsp-client :server-id 'ty-ls) :status 'initialized
+                  :server-capabilities
+                  (json-parse-string
+                   "{\"semanticTokensProvider\":{\"range\":true,\"full\":{\"delta\":true}}}"
+                   :object-type (if lsp-use-plists 'plist 'hash-table)))))
+        (dolist (status '(starting initialized))
+          (setq-local lsp--buffer-workspaces
+                      (list (make-lsp--workspace
+                             :client (make-lsp-client :server-id 'ruff)
+                             :status status)
+                            ty))
+          (dolist (method '("textDocument/semanticTokens/range"
+                            "textDocument/semanticTokens/full"
+                            "textDocument/semanticTokens/full/delta"))
+            (should (equal (lsp--find-workspaces-for method) (list ty)))))
+        ;; Newer lsp-mode registrations must not be overwritten on reload.
+        (setf (alist-get "textDocument/semanticTokens/range"
+                         lsp-method-requirements nil nil #'equal)
+              '(:capability :futureProvider))
+        (eval my--python-lsp-routing-configuration t)
+        (should (equal (cdr (assoc "textDocument/semanticTokens/range"
+                                   lsp-method-requirements))
+                       '(:capability :futureProvider)))))))
 
 (ert-deftest my-python-lsp-selection-fallbacks ()
   ;; All combinations cover absent tools, Ruff alone and both Pyright variants.

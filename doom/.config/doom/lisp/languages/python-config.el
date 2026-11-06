@@ -4,6 +4,21 @@
 (after! apheleia
   (set-formatter! 'black :modes '(python-mode python-ts-mode)))
 
+;; This lsp-mode version checks semantic capabilities under synthetic feature
+;; names, but sends real protocol methods without filtering their recipients.
+;; Register the actual methods too, so ty's token requests cannot reach Ruff
+;; (including while Ruff is still waiting for its initialized notification).
+(after! lsp-mode
+  (dolist (entry '(("textDocument/semanticTokens/range"
+                   . "textDocument/semanticTokensRangeProvider")
+                  ("textDocument/semanticTokens/full"
+                   . "textDocument/semanticTokensFull")
+                  ("textDocument/semanticTokens/full/delta"
+                   . "textDocument/semanticTokensFull/Delta")))
+    (unless (assoc (car entry) lsp-method-requirements)
+      (when-let ((requirement (assoc (cdr entry) lsp-method-requirements)))
+        (push (cons (car entry) (cdr requirement)) lsp-method-requirements)))))
+
 (defun my--python-detect-lsp-setup ()
   "Return local Python client selection from the current executable search path.
 Prefer ty, then BasedPyright, then Pyright, with Ruff as an optional companion.
