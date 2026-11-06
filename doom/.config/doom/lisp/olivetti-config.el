@@ -128,25 +128,57 @@
   (add-hook 'olivetti-mode-hook #'my--olivetti-sync-gutter-bitmap-h)
   (add-hook 'diff-hl-mode-on-hook #'my--olivetti-sync-gutter-bitmap-h)
   (defvar-local my-olivetti-original-fringe-indicators nil)
-  (defun my--olivetti-empty-line-bitmap (width height)
-    "Return a WIDTH by HEIGHT bitmap with a border and an inset tilde."
+  (defun my--olivetti-empty-line-bitmap (width height &optional border-p final-line-p)
+    "Return a WIDTH by HEIGHT EOF bitmap, with a border when BORDER-P.
+When FINAL-LINE-P, omit the tilde on the actual final, editable buffer line."
     (setq width (max 3 (min 16 width))
           height (max 2 height))
-    (let ((bitmap (intern (format "my--olivetti-empty-line-%dx%d" width height))))
+    (let ((bitmap (intern (format "my--olivetti-%s-%s-%dx%d"
+                                  (if final-line-p "final-line" "empty-line")
+                                  (if border-p "border" "plain") width height))))
       (unless (fringe-bitmap-p bitmap)
-        (let* ((border (ash 1 (1- width)))
+        (let* ((border (if border-p (ash 1 (1- width)) 0))
                (rows (make-vector height border))
                (mask (1- (ash 1 (- width 2))))
                (middle (1- (/ height 2))))
           ;; Reserve the outer pixel for the border and the next for a gap.
-          (aset rows middle (logior border (logand #b011001 mask)))
-          (aset rows (1+ middle) (logior border (logand #b100110 mask)))
+          (unless final-line-p
+            (aset rows middle (logior border (logand #b011001 mask)))
+            (aset rows (1+ middle) (logior border (logand #b100110 mask))))
           (define-fringe-bitmap bitmap rows height width '(center t))
           (set-fringe-bitmap-face bitmap 'fringe)))
       bitmap))
+  (defvar-local my-olivetti-final-line-overlay nil)
+  (defvar-local my-olivetti-final-line-display nil)
+  (defun my--olivetti-update-final-line-marker-h (&rest _)
+    "Keep the actual final empty line free of EOF tildes after edits.
+Only an overlay moves; buffer text, undo history and point remain untouched."
+    (if (and indicate-empty-lines my-olivetti-final-line-display
+             (or (= (point-min) (point-max)) (eq (char-before (point-max)) ?\n)))
+        (progn
+          (unless (overlayp my-olivetti-final-line-overlay)
+            (setq my-olivetti-final-line-overlay (make-overlay (point-max) (point-max)))
+            ;; Give unrelated Git/debugger overlays precedence.
+            (overlay-put my-olivetti-final-line-overlay 'priority -50))
+          (move-overlay my-olivetti-final-line-overlay (point-max) (point-max))
+          (overlay-put my-olivetti-final-line-overlay 'before-string
+                       (propertize " " 'display my-olivetti-final-line-display)))
+      (when (overlayp my-olivetti-final-line-overlay)
+        (delete-overlay my-olivetti-final-line-overlay)
+        (setq my-olivetti-final-line-overlay nil))))
+  (defun my--olivetti-clear-final-line-marker-h ()
+    "Remove the final-line overlay before local state is reset."
+    (when (overlayp my-olivetti-final-line-overlay)
+      (delete-overlay my-olivetti-final-line-overlay))
+    (setq my-olivetti-final-line-overlay nil
+          my-olivetti-final-line-display nil)
+    (remove-hook 'after-change-functions #'my--olivetti-update-final-line-marker-h t)
+    (remove-hook 'change-major-mode-hook #'my--olivetti-clear-final-line-marker-h t))
   (defun my--olivetti-sync-empty-line-indicator (window enabled)
-    "Keep WINDOW's border beside end-of-buffer markers when ENABLED."
-    (if enabled
+    "Use tildes in WINDOW, including its centering border only when ENABLED.
+A plain tilde remains installed when centering is disabled. Terminal frames
+have no graphical fringe and retain their original indicator mapping."
+    (if (display-graphic-p (window-frame window))
         (let* ((frame (window-frame window))
                (scale (if (boundp 'text-scale-mode-amount)
                           (expt text-scale-mode-step text-scale-mode-amount) 1))
@@ -156,7 +188,17 @@
                           (if (floatp spacing)
                               (truncate (* (frame-char-height frame) spacing)) spacing)))
                (bitmap (my--olivetti-empty-line-bitmap
-                        (car (window-fringes window)) height)))
+                        (car (window-fringes window)) height enabled)))
+          (setq my-olivetti-final-line-display
+                (list (if (or (eq indicate-empty-lines 'right)
+                              (zerop (car (window-fringes window))))
+                          'right-fringe 'left-fringe)
+                      (my--olivetti-empty-line-bitmap
+                       (car (window-fringes window)) height enabled t)
+                      'fringe))
+          (add-hook 'change-major-mode-hook #'my--olivetti-clear-final-line-marker-h nil t)
+          (add-hook 'after-change-functions #'my--olivetti-update-final-line-marker-h nil t)
+          (my--olivetti-update-final-line-marker-h)
           (unless my-olivetti-original-fringe-indicators
             (setq my-olivetti-original-fringe-indicators
                   (list (local-variable-p 'fringe-indicator-alist)
@@ -166,6 +208,7 @@
                         (cons (cons 'empty-line bitmap)
                               (assq-delete-all 'empty-line
                                                (copy-tree fringe-indicator-alist))))))
+      (my--olivetti-clear-final-line-marker-h)
       (when my-olivetti-original-fringe-indicators
         (if (car my-olivetti-original-fringe-indicators)
             (setq-local fringe-indicator-alist
@@ -275,6 +318,9 @@
       (dolist (window (get-buffer-window-list (current-buffer) nil t))
         (my--olivetti-pattern-fringes window))))
   (add-hook 'after-change-major-mode-hook #'my--olivetti-refresh-buffer-display-h t)
+  ;; Normal/split windows also need their EOF bitmap after layout and zoom changes.
+  (add-hook 'window-state-change-functions #'my--olivetti-update-fringe-borders-h)
+  (add-hook 'text-scale-mode-hook #'my--olivetti-refresh-buffer-display-h)
   (add-hook 'olivetti-mode-hook #'my--olivetti-update-fringe-borders-h)
   (add-hook 'doom-load-theme-hook #'my--olivetti-update-fringe-borders-h)
   (defun my--olivetti-workspace-layout-a (original &rest args)
