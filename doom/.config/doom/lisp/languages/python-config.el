@@ -4,15 +4,40 @@
 (after! apheleia
   (set-formatter! 'black :modes '(python-mode python-ts-mode)))
 
+(defun my--python-detect-lsp-setup ()
+  "Return local Python client selection from the current executable search path.
+Prefer ty, then BasedPyright, then Pyright, with Ruff as an optional companion.
+The Pyright backend is also returned when ty is selected, for remote clients."
+  (let* ((backend (cond ((executable-find "basedpyright-langserver") "basedpyright")
+                        ((executable-find "pyright-langserver") "pyright")))
+         (server (cond ((executable-find "ty") 'ty-ls)
+                       (backend 'pyright))))
+    (list :backend (or backend "pyright")
+          ;; A nonempty allowlist prevents unrelated Python servers from starting
+          ;; even if none of the preferred executables are installed.
+          :clients (or (append (when server (list server))
+                               (when (executable-find "ruff") '(ruff)))
+                       '(my-python-no-server)))))
+
+(defvar my-python-lsp-clients nil
+  "Local Python LSP clients selected at configuration load time.
+Restart Emacs after installing or removing server executables.")
+
 ;; Choose before lsp-pyright registers executable paths and server settings.
 ;; Inspect the local Emacs PATH even if this file is loaded from a TRAMP buffer.
-(let ((default-directory "/"))
-  (setq lsp-pyright-langserver-command
-        (if (executable-find "basedpyright-langserver") "basedpyright" "pyright")))
+(let* ((default-directory "/")
+       (setup (my--python-detect-lsp-setup)))
+  (setq my-python-lsp-clients (plist-get setup :clients)
+        lsp-pyright-langserver-command (plist-get setup :backend)))
 
 (defun my--python-enable-semantic-tokens-h ()
-  "Enable Python semantic colors when the language server supports them."
-  (setq-local lsp-semantic-tokens-enable t))
+  "Configure Python clients and semantic colors for the current buffer."
+  (setq-local lsp-semantic-tokens-enable t)
+  ;; Installed ty and Ruff clients are both add-ons. An explicit allowlist is
+  ;; needed to prevent ty and Pyright starting together regardless of priority.
+  ;; Keep the existing remote Pyright setup: these ty/Ruff clients are local.
+  (unless (file-remote-p default-directory)
+    (setq-local lsp-enabled-clients (copy-sequence my-python-lsp-clients))))
 
 (dolist (hook '(python-mode-hook python-ts-mode-hook))
   (add-hook hook #'my--python-enable-semantic-tokens-h))
@@ -58,7 +83,7 @@
     (when (bound-and-true-p lsp-mode)
       (dolist (workspace (lsp-workspaces))
         (when (memq (lsp--client-server-id (lsp--workspace-client workspace))
-                    '(pyright basedpyright pylsp))
+                    '(ty-ls pyright pyright-remote basedpyright pylsp ruff))
           (lsp-workspace-restart workspace)))))
 
   (advice-add 'conda-env-activate-path :around #'my--conda-switch-in-order-a)
