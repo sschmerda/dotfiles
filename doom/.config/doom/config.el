@@ -23,11 +23,13 @@
 
 (load! "lisp/snippets-config")
 
-(load! "lisp/python-config")
+(load! "lisp/languages/python-config")
 
 (load! "lisp/time-popup")
 
 (load! "lisp/format-config")
+
+(load! "lisp/languages/r-config")
 
 (load! "lisp/terminal-config")
 

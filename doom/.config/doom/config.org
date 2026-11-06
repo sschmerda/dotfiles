@@ -113,12 +113,12 @@ Selecting a preset resets these options; individual toggles adjust the buffer. S
 #+end_src
 
 * Python environments and language server
-[[file:lisp/python-config.el][python-config.el]] prefers Basedpyright when =basedpyright-langserver= is on Emacs's local =PATH= at startup, falling back to Pyright otherwise. Selection happens before =lsp-pyright= loads; keep the existing =+pyright= module flag. Restart Emacs after installing or removing a server to refresh this selection; =doom sync= is unnecessary. TRAMP connections need the selected server available on the remote host as well.
+[[file:lisp/languages/python-config.el][python-config.el]] prefers Basedpyright when =basedpyright-langserver= is on Emacs's local =PATH= at startup, falling back to Pyright otherwise. Selection happens before =lsp-pyright= loads; keep the existing =+pyright= module flag. Restart Emacs after installing or removing a server to refresh this selection; =doom sync= is unnecessary. TRAMP connections need the selected server available on the remote host as well.
 
-Python buffers enable semantic tokens when the selected server supports them; other languages retain their existing settings. Pyright without semantic-token support continues using ordinary syntax highlighting. The configuration also repairs Conda environment switching, refreshes Python LSP after environment changes, and enables inspection of library source when type information is unavailable. Package-specific adjustments remain deferred until their respective libraries load.
+Python buffers enable semantic tokens when the selected server supports them; other languages retain their existing settings. Pyright without semantic-token support continues using ordinary syntax highlighting. The configuration also repairs Conda environment switching, refreshes Python LSP after environment changes, and enables inspection of library source when type information is unavailable. Black is explicitly selected as the default Python formatter; projects can override =apheleia-formatter= through =.dir-locals.el=. Package-specific adjustments remain deferred until their respective libraries load.
 
 #+begin_src emacs-lisp
-(load! "lisp/python-config")
+(load! "lisp/languages/python-config")
 #+end_src
 
 * Time popup
@@ -129,10 +129,17 @@ Python buffers enable semantic tokens when the selected server supports them; ot
 #+end_src
 
 * Formatting
-[[file:lisp/format-config.el][format-config.el]] selects Apheleia's =r-styler= formatter for ESS R buffers. Formatting requires the R =styler= package in the environment Emacs uses.
+[[file:lisp/format-config.el][format-config.el]] is reserved for shared formatting behavior. Doom's =:editor (format +onsave)= enables Apheleia formatting on save; its general defaults are retained. Language-specific formatter selections live under =lisp/languages/=.
 
 #+begin_src emacs-lisp
 (load! "lisp/format-config")
+#+end_src
+
+* R
+[[file:lisp/languages/r-config.el][r-config.el]] selects Apheleia's =r-styler= formatter for ESS R buffers. Formatting requires the R =styler= package in the environment Emacs uses.
+
+#+begin_src emacs-lisp
+(load! "lisp/languages/r-config")
 #+end_src
 
 * Terminals

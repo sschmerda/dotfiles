@@ -14,6 +14,9 @@ These instructions apply to this directory and its descendants, including
   Keep implementation there and load it from the appropriate `config.org`
   section using `load!`. Preserve load order, especially macOS setup and the
   Org directory setting before code that depends on them.
+- `lisp/languages/` groups programming-language settings, including mode options,
+  environment integration, LSP and formatter selection. Add files when a language
+  needs custom settings; shared formatting behavior stays in `lisp/format-config.el`.
 - `themes/` contains all local theme entries and shared palette/face helpers in
   one directory, registered by `lisp/themes-config.el`. Theme library symbols
   retain the `landscape-` and `custom-` prefixes; all selectable themes use

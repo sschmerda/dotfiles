@@ -1,5 +1,5 @@
 ;;; format-config.el -*- lexical-binding: t; -*-
 
-;; Format R files on save via Apheleia; requires styler in the R environment Emacs uses.
-(after! apheleia
-  (setf (alist-get 'ess-r-mode apheleia-mode-alist) 'r-styler))
+;; Shared formatting settings belong here. Doom's :editor (format +onsave)
+;; enables Apheleia on save; retain its defaults for now.
+;; Language-specific formatter selections live under lisp/languages/.

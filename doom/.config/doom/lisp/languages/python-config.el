@@ -1,5 +1,9 @@
 ;;; python-config.el -*- lexical-binding: t; -*-
 
+;; Default to Black for Python; projects can override `apheleia-formatter'.
+(after! apheleia
+  (set-formatter! 'black :modes '(python-mode python-ts-mode)))
+
 ;; Choose before lsp-pyright registers executable paths and server settings.
 ;; Inspect the local Emacs PATH even if this file is loaded from a TRAMP buffer.
 (let ((default-directory "/"))
