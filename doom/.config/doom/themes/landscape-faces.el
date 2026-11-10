@@ -64,6 +64,10 @@ Preserve its hue and brightest channel; already saturated colors stay intact."
                ',(let ((color (doom-blend (plist-get palette :comment)
                                          (plist-get palette :bg) 0.65)))
                    (list color color)))
+              (paren-match-bg
+               ',(let ((color (doom-blend (plist-get palette :accent)
+                                         (plist-get palette :line) 0.30)))
+                   (list color color)))
               (ansi-black ,(if light 'fg 'comment))
               (ansi-white ,(if light 'comment 'fg))
               (fg-alt comment) (grey comment)
@@ -122,7 +126,9 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
                                        :strike-through t)
            (evil-ex-substitute-replacement :foreground added-fg :background added-bg)
            (isearch-fail :foreground removed-fg :background removed-bg)
-           (show-paren-match :foreground search-current-fg :background accent)
+           ;; Preserve syntax colors; a matching delimiter is not a search hit.
+           (show-paren-match :foreground 'unspecified :background paren-match-bg
+                             :weight 'normal)
            (show-paren-mismatch :foreground removed-fg :background removed-bg
                                 :underline t)
            (tooltip :foreground fg :background bg-alt)
