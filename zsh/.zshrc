@@ -119,6 +119,11 @@ fi
 # individual app config
 ################################################################################
 
+# Rust
+if [[ -f "$HOME/.cargo/env" ]]; then
+  source "$HOME/.cargo/env"
+fi
+
 # fzf
 if command -v fzf >/dev/null 2>&1; then
   source <(fzf --zsh)
