@@ -25,6 +25,8 @@
 
 (load! "lisp/languages/python-config")
 
+(load! "lisp/project-config")
+
 (load! "lisp/time-popup")
 
 (load! "lisp/format-config")

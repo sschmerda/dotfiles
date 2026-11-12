@@ -123,6 +123,13 @@ Python buffers enable semantic tokens when the selected server supports them; ot
 (load! "lisp/languages/python-config")
 #+end_src
 
+* Project files
+[[file:lisp/project-config.el][project-config.el]] makes =M-x projectile-find-file-all= include hidden and ignored files, while excluding Git's internal metadata. It supplies an explicit file-listing command for compatibility with Doom's function-valued generic command. Results appear without entering a query. Normal =SPC SPC= searches retain their ignore rules and caching. The all-files search can also list large environment and build directories.
+
+#+begin_src emacs-lisp
+(load! "lisp/project-config")
+#+end_src
+
 * Time popup
 [[file:lisp/time-popup.el][time-popup.el]] provides the local and world clock, its popup behaviour and the =SPC t t= binding. Graphical Emacs uses a centred child frame; terminal Emacs uses a bottom popup.
 
