@@ -43,6 +43,13 @@
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
 (setq display-line-numbers-type 'relative)
 
+;; Set buffer-local state before Treemacs is first displayed, avoiding a flash
+;; of inherited numbers while the sidebar replaces a numbered editing window.
+(defun my--treemacs-disable-line-numbers-h ()
+  "Keep line numbers disabled in Treemacs buffers from initialization."
+  (display-line-numbers-mode -1))
+(add-hook 'treemacs-mode-hook #'my--treemacs-disable-line-numbers-h)
+
 ;; Leave one pixel between the split divider and Doom's left Git bars.
 (after! diff-hl
   (defun my--vc-gutter-inset-bar-a (original bitmap bits &optional height width align)

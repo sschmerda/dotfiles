@@ -11,6 +11,11 @@
   (put 'my-olivetti-inhibit-centering 'permanent-local t)
   (defvar my-olivetti-inhibit-layout nil
     "Non-nil while workspace windows are being rebuilt.")
+  (defun my--olivetti-treemacs-window-p (window)
+    "Return non-nil for a left-hand Treemacs sidebar WINDOW."
+    (and (eq (window-parameter window 'window-side) 'left)
+         (with-current-buffer (window-buffer window)
+           (derived-mode-p 'treemacs-mode))))
   (defun my--olivetti-buffer-eligible-p ()
     "Allow file, Dired and shell buffers, excluding internal and display buffers."
     (and (not (minibufferp))
@@ -18,7 +23,7 @@
          (not (bound-and-true-p my-terminal-popup-buffer))
          (not (bound-and-true-p org-tree-slide-mode))
          (not (bound-and-true-p +popup-buffer-mode))
-         (not (derived-mode-p 'pdf-view-mode 'my--time-popup-mode))
+         (not (derived-mode-p 'pdf-view-mode 'my--time-popup-mode 'treemacs-mode))
          (not (string-prefix-p " " (buffer-name)))))
   (defun my--olivetti-enable-buffer (buffer)
     (when (buffer-live-p buffer)
@@ -42,11 +47,12 @@
          (when (bound-and-true-p olivetti-mode)
            (olivetti-set-window window))))
      nil t))
-  (defun my--olivetti-vertical-split-p ()
-    "Return non-nil when any windows in this frame are side by side."
+  (defun my--olivetti-vertical-split-p (&optional frame)
+    "Return non-nil for side-by-side windows other than left Treemacs."
     (let ((left-edges nil))
-      (dolist (window (window-list nil 'no-minibuf))
-        (push (window-left-column window) left-edges))
+      (dolist (window (window-list frame 'no-minibuf))
+        (unless (my--olivetti-treemacs-window-p window)
+          (push (window-left-column window) left-edges)))
       (> (length (delete-dups left-edges)) 1)))
   (defun my--olivetti-refresh-h (&rest _)
     (when (and my-olivetti-enabled
@@ -297,8 +303,37 @@ have no graphical fringe and retain their original indicator mapping."
                (window-live-p window-or-frame))
       (with-current-buffer (window-buffer window-or-frame)
         (when (bound-and-true-p olivetti-mode)
-          (set-window-fringes window-or-frame nil nil nil)))
+          (set-window-fringes window-or-frame nil nil nil)
+          (my--olivetti-treemacs-margins window-or-frame)))
       (my--olivetti-pattern-fringes window-or-frame)))
+  (defun my--olivetti-treemacs-margins (window)
+    "Let a left Treemacs sidebar consume WINDOW's existing outer padding.
+Calculate margins against the editing area including the sidebar footprint,
+so cell rounding matches the original layout. If there isn't enough padding,
+reduce the left margin to zero. Normal editing splits and non-Treemacs side
+windows retain their existing behavior."
+    (when (and my-olivetti-enabled
+               (not my-olivetti-inhibit-layout)
+               (not (my--olivetti-vertical-split-p (window-frame window)))
+               (not (my--olivetti-treemacs-window-p window)))
+      (when-let ((sidebar (cl-find-if #'my--olivetti-treemacs-window-p
+                                    (window-list (window-frame window) 'no-minibuf))))
+        (let* ((margins (window-margins window))
+               (char-width (frame-char-width (window-frame window)))
+               (footprint (- (car (window-pixel-edges window))
+                             (car (window-pixel-edges sidebar))))
+               (virtual-width (+ (window-body-width window t) footprint
+                                 (* char-width (+ (or (car margins) 0)
+                                                  (or (cdr margins) 0)))))
+               (body-width (if (floatp olivetti-body-width)
+                               (max (* char-width olivetti-minimum-body-width)
+                                    (floor (* virtual-width (min 1.0 olivetti-body-width))))
+                             (olivetti-normalize-width olivetti-body-width window)))
+               (padding (/ (- virtual-width body-width) 2.0))
+               (fringes (window-fringes window))
+               (left (max 0 (round (/ (- padding (car fringes) footprint) char-width))))
+               (right (max 0 (round (/ (- padding (cadr fringes)) char-width)))))
+          (set-window-margins window left right)))))
   (advice-add 'olivetti-set-window :after #'my--olivetti-fringe-after-layout-h)
   (defun my--olivetti-slide-layout-a (original &rest args)
     "Suspend centering during slides and rebuild it after Doom restores Org."
