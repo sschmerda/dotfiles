@@ -18,7 +18,8 @@
     "lazyvim.plugins.extras.lang.r",
     "lazyvim.plugins.extras.lang.tex",
     "lazyvim.plugins.extras.lang.yaml",
-    "lazyvim.plugins.extras.test.core"
+    "lazyvim.plugins.extras.test.core",
+    "lazyvim.plugins.extras.util.octo"
   ],
   "install_version": 7,
   "news": {
