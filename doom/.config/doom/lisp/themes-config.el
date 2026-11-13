@@ -71,6 +71,61 @@
           (and name (<= (treesit-node-start name) position)
                (< position (treesit-node-end name))))))))
 
+(defconst my-theme-python-constant-regexp
+  "\\_<_*[A-Z][A-Z0-9]*\\(?:_[A-Z0-9]+\\)*\\_>"
+  "Python names conventionally used for constants.")
+
+(defun my--theme-python-constant-face (face)
+  "Use the constant role for neutral FACE, preserving specific classifications.
+Static and declaration modifiers remain intact. Types, modules, functions,
+parameters, enum members, comments and strings keep their existing faces."
+  (let* ((faces (if (listp face) face (list face)))
+         (neutral '(nil default font-lock-variable-name-face
+                    font-lock-variable-use-face font-lock-property-use-face
+                    lsp-face-semhl-variable lsp-face-semhl-property
+                    lsp-face-semhl-member font-lock-constant-face
+                    lsp-face-semhl-static landscape-semhl-declaration)))
+    (if (seq-every-p (lambda (item) (memq item neutral)) faces)
+        (cons 'font-lock-constant-face
+              (seq-filter (lambda (item)
+                            (memq item '(lsp-face-semhl-static
+                                         landscape-semhl-declaration)))
+                          faces))
+      face)))
+
+(defun my--theme-python-constant-at-point-face ()
+  "Return the constant fallback face for the current Font Lock match."
+  (let* ((position (match-beginning 0))
+         (face (get-text-property position 'face)))
+    (if (and (seq-some (lambda (theme)
+                        (string-prefix-p "custom-" (symbol-name theme)))
+                      custom-enabled-themes)
+             (not (nth 8 (save-excursion
+                           (save-match-data (syntax-ppss position))))))
+        (my--theme-python-constant-face face)
+      face)))
+
+(defun my--theme-python-constant-font-lock-h ()
+  "Add a theme-aware uppercase constant fallback to Python syntax highlighting."
+  (font-lock-add-keywords
+   nil `((,my-theme-python-constant-regexp
+          (0 (my--theme-python-constant-at-point-face) t))) 'append))
+
+(dolist (hook '(python-mode-hook python-ts-mode-hook))
+  (add-hook hook #'my--theme-python-constant-font-lock-h))
+
+(defun my--theme-python-fontify-constants (start end)
+  "Apply the uppercase fallback after semantic highlighting from START to END."
+  (when (derived-mode-p 'python-mode 'python-ts-mode)
+    (save-excursion
+      (save-match-data
+        (goto-char start)
+        (let ((case-fold-search nil))
+          (while (re-search-forward my-theme-python-constant-regexp end t)
+            (let ((begin (match-beginning 0)) (finish (match-end 0)))
+              (put-text-property begin finish 'face
+                                 (my--theme-python-constant-at-point-face)))))))))
+
 (defun my--theme-parameter-fontify-a (original end)
   "Keep parameter declarations accented after ORIGINAL fontifies through END.
 Parameter references use ordinary variable colors in custom themes. Preserve
@@ -81,6 +136,8 @@ all other semantic faces, including types, modifiers and deprecation styles."
                       custom-enabled-themes)
         (with-silent-modifications
           (let ((position start) (limit (min end (point-max))))
+            ;; Inspect server roles before parameter references are neutralized.
+            (my--theme-python-fontify-constants start limit)
             (while (< position limit)
               (let* ((next (next-single-property-change position 'face nil limit))
                      (face (get-text-property position 'face))

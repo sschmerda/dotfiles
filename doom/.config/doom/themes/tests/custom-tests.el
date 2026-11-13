@@ -9,6 +9,70 @@
 (add-to-list 'load-path custom-editor-test-root)
 (add-to-list 'custom-theme-load-path custom-editor-test-root)
 (require 'custom-editor-themes)
+(defvar doom-user-dir)
+
+(ert-deftest custom-editor-python-uppercase-constant-precedence ()
+  (let ((doom-user-dir (expand-file-name "../" custom-editor-test-root)))
+    (load (expand-file-name "lisp/themes-config.el" doom-user-dir) nil t))
+  (should (equal (my--theme-python-constant-face
+                  '(lsp-face-semhl-static lsp-face-semhl-variable))
+                 '(font-lock-constant-face lsp-face-semhl-static)))
+  (dolist (face '(lsp-face-semhl-enum-member lsp-face-semhl-function
+                  lsp-face-semhl-namespace lsp-face-semhl-class
+                  lsp-face-semhl-parameter font-lock-type-face
+                  font-lock-function-name-face font-lock-string-face
+                  font-lock-comment-face))
+    (should (eq (my--theme-python-constant-face face) face)))
+  (landscape-test-select 'custom-landscape-provence-dark)
+  (with-temp-buffer
+    (python-mode)
+    (insert "case Kind.MEDIAN:\n    VALUE_2 = ordinary_name\n# COMMENT\ntext = 'STRING'\nclass HTTP:\n    pass\ndef FUNC():\n    pass\n")
+    (font-lock-ensure)
+    (let ((case-fold-search nil))
+      (dolist (name '("MEDIAN" "VALUE_2"))
+        (goto-char (point-min))
+        (search-forward name)
+        (should (memq 'font-lock-constant-face
+                      (ensure-list (get-text-property (1- (point)) 'face)))))
+      (dolist (entry '(("COMMENT" . font-lock-comment-face)
+                       ("STRING" . font-lock-string-face)
+                       ("HTTP" . font-lock-type-face)
+                       ("FUNC" . font-lock-function-name-face)))
+        (goto-char (point-min))
+        (search-forward (car entry))
+        (should (memq (cdr entry)
+                      (ensure-list (get-text-property (1- (point)) 'face))))))))
+
+(ert-deftest custom-editor-python-uppercase-semantic-fallback ()
+  (let ((doom-user-dir (expand-file-name "../" custom-editor-test-root)))
+    (load (expand-file-name "lisp/themes-config.el" doom-user-dir) nil t))
+  (dolist (theme '(custom-landscape-provence-dark custom-catppuccin-latte doom-one))
+    (landscape-test-select theme)
+    (with-temp-buffer
+      (delay-mode-hooks (python-mode))
+      (insert "MEDIAN CLASS MODULE FUNC PARAM ENUM normal_name")
+      (let ((roles '(lsp-face-semhl-variable lsp-face-semhl-class
+                     lsp-face-semhl-namespace lsp-face-semhl-function
+                     lsp-face-semhl-parameter lsp-face-semhl-enum-member
+                     lsp-face-semhl-variable))
+            spans)
+        (goto-char (point-min))
+        (dolist (role roles)
+          (re-search-forward "[A-Za-z_]+")
+          (put-text-property (match-beginning 0) (match-end 0) 'face role)
+          (push (cons (match-beginning 0) role) spans))
+        (goto-char (point-min))
+        ;; Exercise the same post-semantic path used by the real LSP fontifier.
+        (my--theme-parameter-fontify-a #'ignore (point-max))
+        (dolist (span (nreverse spans))
+          (let ((expected (if (and (string-prefix-p "custom-" (symbol-name theme))
+                                   (= (car span) (point-min)))
+                              '(font-lock-constant-face)
+                            (if (and (string-prefix-p "custom-" (symbol-name theme))
+                                     (eq (cdr span) 'lsp-face-semhl-parameter))
+                                'lsp-face-semhl-variable
+                              (cdr span)))))
+            (should (equal (get-text-property (car span) 'face) expected))))))))
 
 (ert-deftest custom-editor-current-line-number-visibility ()
   ;; Check evaluated faces across both families, including when switching
@@ -230,7 +294,6 @@
             (dolist (surface '(:bg :bg-alt :line))
               (should (>= (landscape-test-contrast foreground (plist-get palette surface)) 4.5)))))))))
 
-(defvar doom-user-dir)
 (defvar doom-theme)
 
 (ert-deftest custom-editor-loader-and-palette-isolation ()
