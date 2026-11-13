@@ -42,8 +42,9 @@
      :changed-bg "#CAC8E2"
      :changed-fg "#245380")
     (provence-dark
-     :bg "#2A1D40"
+     :bg "#39284F"
      :fg "#EEEAE2"
+     :line-number-active "#D19EFF"
      :punctuation "#A7A0A7"
      :keyword "#C8A0FF"
      :function "#CDD47E"
@@ -54,8 +55,8 @@
      :parameter-color "#E5A4D2"
      :comment "#B0A0C7"
      :code-comment "#8E7A9C"
-     :bg-alt "#37274F"
-     :line "#402F5B"
+     :bg-alt "#3E2C55"
+     :line "#443054"
      :accent "#C8A0FF"
      :border "#715896"
      :selection-bg "#564275"

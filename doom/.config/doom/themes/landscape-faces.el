@@ -58,7 +58,8 @@ Preserve its hue and brightest channel; already saturated colors stay intact."
                                          (plist-get palette :punctuation) 0.15)))
                    (list color color)))
               (line-number-active
-               ',(let ((color (landscape--line-number-color (plist-get palette :accent))))
+               ',(let ((color (or (plist-get palette :line-number-active)
+                                  (landscape--line-number-color (plist-get palette :accent)))))
                    (list color color)))
               (line-number-muted
                ',(let ((color (doom-blend (plist-get palette :comment)
