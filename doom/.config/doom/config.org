@@ -190,6 +190,7 @@ history. Its background is tinted with the active theme's keyword accent.
 The thin bottom divider matches the centered-buffer borders using the theme's
 =shadow= color. Both update when switching themes.
 Bottom popups have no header.
+Buffer zoom (=C-== / =C--=) also works in documentation's Evil motion state.
 Fullscreen documentation temporarily uses the normal theme background so its
 text, centering fringes and outer frame edges match; Solaire's popup background
 is restored when leaving fullscreen.

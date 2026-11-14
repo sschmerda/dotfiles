@@ -738,6 +738,10 @@ the language server. Press q to restore the editing layout. Use
   (evil-define-minor-mode-key '(normal motion visual) 'my--documentation-mode
     (kbd "K") #'my--documentation-help-at-point
     (kbd "q") #'my/documentation-quit)
+  ;; Centered help uses motion state; Doom binds buffer zoom only in normal.
+  (evil-define-minor-mode-key 'motion 'my--documentation-mode
+    (kbd "C-=") #'text-scale-increase
+    (kbd "C--") #'text-scale-decrease)
   (with-eval-after-load 'lsp-mode
     (evil-define-key '(normal motion) lsp-help-mode-map
       (kbd "K") #'my--documentation-help-at-point
