@@ -4,7 +4,8 @@
 (use-package! olivetti
   :commands (olivetti-mode my/olivetti-toggle-all)
   :init
-  (setq olivetti-body-width 120)
+  ;; A window fraction keeps the borders fixed when text is zoomed.
+  (setq-default olivetti-body-width 0.45)
   (defvar my-olivetti-enabled nil)
   (defvar-local my-olivetti-inhibit-centering nil
     "Non-nil to exclude this buffer from automatic centering.")
@@ -388,4 +389,4 @@ windows retain their existing behavior."
     (advice-add 'persp-restore-window-conf :around
                 #'my--olivetti-workspace-layout-a)
     (advice-add '+workspace-new :around #'my--olivetti-workspace-layout-a))
-  (setq olivetti-body-width 120))
+  (setq-default olivetti-body-width 0.45))

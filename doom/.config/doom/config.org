@@ -283,6 +283,9 @@ Logs, revisions, diffs and other Magit views opened from the full-width view inh
 #+end_src
 
 * Buffer centring
+Olivetti uses 45% of the available window width, so font zoom changes the text
+size without moving the centering borders. The width still follows window
+resizing, with normal character-cell rounding of the margins.
 Workspace creation and restoration suspend automatic centering and border updates until the complete window layout is available, preserving saved splits when switching or deleting workspaces.
 
 [[file:lisp/olivetti-config.el][olivetti-config.el]] centres visible file, Dired and shell buffers and manages their borders. Centring is disabled whenever editing windows are side by side, including terminal and other sidebar windows, and returns when those splits are closed. A left Treemacs sidebar instead uses the existing left padding: the text stays in its original position when enough padding is available, and its margins are restored when Treemacs closes. If the sidebar exceeds that padding, the text moves only as needed to fit. Treemacs toggling with ordinary editing splits is unchanged. Doom popup buffers, PDF viewers and the clock popup are excluded. Full terminal buffers (=SPC o t T=) can be centred; terminal popups (=SPC o t t=) keep their normal width. Use =SPC t o= to toggle this behaviour.
