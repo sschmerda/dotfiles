@@ -116,7 +116,7 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
                                :weight 'normal)
            (fringe :foreground comment :background bg)
            (shadow :foreground comment)
-           (hl-line :background line :extend t)
+           (hl-line :background selection-bg :extend t)
            (line-number :foreground line-number-muted :background bg-alt)
            (line-number-current-line :inherit 'line-number :foreground line-number-active
                                      :background 'unspecified :weight 'bold)
