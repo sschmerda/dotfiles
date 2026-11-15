@@ -188,13 +188,15 @@ The floating terminal is omitted from the =SPC b b= workspace buffer picker; it 
 [[file:lisp/documentation-config.el][documentation-config.el]] preserves Doom's normal =K= documentation lookup.
 Press =K= again within one second after the lookup completes to expand its
 result into a single Olivetti-centered window.
-In fullscreen, a window-wide header identifies pages by symbol and connected
-language server, such as =Documentation: thread_rng · rust-analyzer=;
-source previews show =Source:=, their path and definition line, including while navigating Help
-history. Its background is tinted with the active theme's keyword accent.
-The thin bottom divider matches the centered-buffer borders using the theme's
-=shadow= color. Both update when switching themes.
-Bottom popups have no header.
+In fullscreen, the bottom mode line identifies the page and connected language
+server, such as =Documentation: thread_rng · rust-analyzer=. Source previews
+show =Documentation - Source:= followed by the filename and definition line.
+The standard Doom mode-line bar precedes a book icon identifying documentation; =Documentation= and =Source= use bold text
+and the theme's mode-line accent color. Terminal Emacs uses =[D]= instead of the icon.
+Long labels are shortened to fit; hover
+shows the full label, including the source path. The bar uses the active theme's
+normal mode-line colors. There is no top header, and bottom popups retain their
+normal mode line.
 Buffer zoom (=C-== / =C--=) also works in documentation's Evil motion state.
 Fullscreen documentation temporarily uses the normal theme background so its
 text, centering fringes and outer frame edges match; Solaire's popup background

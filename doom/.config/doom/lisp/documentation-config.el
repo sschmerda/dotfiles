@@ -2,7 +2,6 @@
 
 (require 'cl-lib)
 (require 'seq)
-(require 'color)
 (require 'face-remap)
 (defvar my-olivetti-inhibit-layout)
 (defvar olivetti-mode)
@@ -20,10 +19,6 @@
   "Source URI and position encoding of a read-only documentation source page.
 The page is a copy, never the actual file-visiting buffer.")
 
-(defvar-local my-documentation-header-face-cookie nil
-  "Buffer-local face adjustment for the fullscreen documentation header.")
-(defvar-local my-documentation-header-solaire-cookie nil
-  "Adjustment for Solaire's higher-priority header face, when present.")
 (defvar-local my-documentation-code-background-cookies nil
   "Local Markdown face adjustments matching the documentation background.")
 
@@ -42,46 +37,16 @@ Only background attributes are remapped; retain all syntax foreground colors."
           (push (face-remap-add-relative face :background background)
                 my-documentation-code-background-cookies))))))
 
-(defun my--documentation-style-header ()
-  "Give this header a contrasting theme background and bottom divider."
-  (when my-documentation-header-face-cookie
-    (face-remap-remove-relative my-documentation-header-face-cookie)
-    (setq my-documentation-header-face-cookie nil))
-  (when my-documentation-header-solaire-cookie
-    (face-remap-remove-relative my-documentation-header-solaire-cookie)
-    (setq my-documentation-header-solaire-cookie nil))
-  (when header-line-format
-    (let* ((foreground (face-foreground 'default nil t))
-           (background (face-background 'default nil t))
-           (accent (or (face-foreground 'font-lock-keyword-face nil t) foreground))
-           (fg (or (color-name-to-rgb accent) (color-name-to-rgb foreground)))
-           (bg (color-name-to-rgb background)))
-      (when (and fg bg)
-        (let ((style (list :foreground foreground
-                           :background (apply #'color-rgb-to-hex
-                                              (cl-mapcar (lambda (b f) (+ (* b 0.65) (* f 0.35))) bg fg))
-                           :underline (list :color (face-foreground 'shadow nil t) :position t)
-                           :extend t :weight 'normal :box nil)))
-          (setq my-documentation-header-face-cookie
-                (face-remap-add-relative 'header-line style))
-          ;; Named Solaire remaps take priority over anonymous face attributes.
-          ;; Remap that face locally too, without changing other buffers.
-          (when (facep 'solaire-header-line-face)
-            (setq my-documentation-header-solaire-cookie
-                  (face-remap-add-relative 'solaire-header-line-face style))))))))
-
-(defun my--documentation-theme-header-h ()
-  "Refresh visible documentation header colors after a theme change."
+(defun my--documentation-theme-h ()
+  "Refresh documentation code surfaces after a theme change."
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
-      (when my-documentation-header-face-cookie
-        (my--documentation-style-header))
       (when my-documentation-code-background-cookies
         (my--documentation-style-code-backgrounds)))))
 
-(add-hook 'doom-load-theme-hook #'my--documentation-theme-header-h)
+(add-hook 'doom-load-theme-hook #'my--documentation-theme-h)
 
-(defun my--documentation-header-label ()
+(defun my--documentation-page-label (&optional compact)
   "Describe this documentation page and its originating language server."
   (let* ((context my-documentation-lsp-context)
          (source (plist-get context :source))
@@ -94,33 +59,49 @@ Only background attributes are remapped; retain all syntax foreground colors."
          (line (plist-get (plist-get (plist-get context :params) :position) :line)))
     (concat
      (if my-documentation-source-page
-         (format "Source: %s%s" (plist-get my-documentation-source-page :path)
+         (format "Documentation - Source: %s%s" (let ((path (plist-get my-documentation-source-page :path)))
+                   (if compact (file-name-nondirectory path) path))
                  (if line (format ":%d" (1+ line)) ""))
        (concat "Documentation" (if topic (concat ": " topic) "")))
      (when servers (concat " · " (string-join (delete-dups servers) ", "))))))
 
-(defun my--documentation-update-header ()
-  "Show a window-wide header only in the expanded documentation view."
-  (let ((state (frame-parameter nil 'my-documentation)))
-    ;; Olivetti's patterned fringes and the frame edges use the normal theme
-    ;; background. Solaire's alternate help background would leave colored strips.
-    (when (and (plist-get state :expanded)
-               (eq (plist-get state :buffer) (current-buffer))
-               (bound-and-true-p solaire-mode))
+(defun my--documentation-mode-line-icon ()
+  "Return a theme-accented book icon, or a portable text indicator."
+  (if (and (display-graphic-p) (fboundp 'nerd-icons-octicon))
+      (nerd-icons-octicon "nf-oct-book" :face 'mode-line-emphasis)
+    (propertize "[D]" 'face 'mode-line-emphasis)))
+
+(defun my--documentation-mode-line-label ()
+  "Return an accented page label and book icon, with full details on hover."
+  (let ((text (replace-regexp-in-string "%" "%%"
+                                       (my--documentation-page-label t) t t)))
+    (add-text-properties 0 (length "Documentation")
+                         '(face (mode-line-emphasis bold)) text)
+    (when (string-match " - \\(Source\\):" text)
+      (add-text-properties (match-beginning 1) (match-end 1)
+                           '(face (mode-line-emphasis bold)) text))
+    (propertize
+     (truncate-string-to-width
+      (concat (my--documentation-mode-line-icon) " " text)
+      (max 1 (- (window-total-width) 2)) nil nil "…")
+     'help-echo (my--documentation-page-label))))
+
+(defun my--documentation-update-presentation ()
+  "Identify expanded documentation in its theme-styled bottom mode line."
+  (let* ((state (frame-parameter nil 'my-documentation))
+         (expanded (and (plist-get state :expanded)
+                        (eq (plist-get state :buffer) (current-buffer)))))
+    ;; Keep Olivetti fringes and the frame edges on the editor background.
+    (when (and expanded (bound-and-true-p solaire-mode))
       (solaire-mode -1))
-    (setq-local header-line-format
-                (when (and (plist-get state :expanded)
-                           (eq (plist-get state :buffer) (current-buffer)))
-                  ;; A native header spans the window, including Olivetti margins.
-                  ;; Use its face for the whole row, rather than a boxed key face.
-                  (list
-                   (propertize
-                    (concat " " (my--documentation-header-label) " ")
-                    'face 'header-line)
-                   (propertize " " 'display '(space :align-to right)
-                               'face 'header-line)))))
-  (my--documentation-style-header)
-  (my--documentation-style-code-backgrounds))
+    (setq-local header-line-format nil)
+    (when expanded
+      (setq-local mode-line-format
+                  '((:eval (when (fboundp 'doom-modeline-segment--bar)
+                             (doom-modeline-segment--bar)))
+                    " " (:eval (my--documentation-mode-line-label)))))
+    (my--documentation-style-code-backgrounds)
+    (force-mode-line-update)))
 
 (defun my--documentation-same-page-p (left right)
   "Return non-nil if replay items LEFT and RIGHT represent the same page.
@@ -183,7 +164,7 @@ Replaying documentation does not make another language-server request."
           (setq my-documentation-last-buffer (current-buffer))
           (setq-local my-documentation-lsp-context context
                       my-documentation-source-page nil)
-          (my--documentation-update-header)
+          (my--documentation-update-presentation)
           ;; lsp-help-mode resets minor modes on each render. Preserve an
           ;; already centered view without relying on deferred layout hooks.
           (when (and centered (not olivetti-mode)) (olivetti-mode 1))
@@ -349,7 +330,7 @@ layout, and register the source page in the same history as hover pages."
                 my-documentation-source-page page
                 lsp--position-column-function (plist-get page :column-function)
                 lsp--move-to-column-function (plist-get page :move-function))
-    (my--documentation-update-header)
+    (my--documentation-update-presentation)
     (read-only-mode 1)
     (my--documentation-mode 1)
     (goto-char (min (point-max) position))
@@ -550,12 +531,7 @@ Read-only source previews in Help use a separate buffer and are unaffected."
           (when (fboundp 'solaire-mode)
             (solaire-mode (if (plist-get state :solaire) 1 -1)))
           (my--documentation-style-code-backgrounds)
-          (when my-documentation-header-face-cookie
-            (face-remap-remove-relative my-documentation-header-face-cookie)
-            (setq my-documentation-header-face-cookie nil))
-          (when my-documentation-header-solaire-cookie
-            (face-remap-remove-relative my-documentation-header-solaire-cookie)
-            (setq my-documentation-header-solaire-cookie nil)))))
+          (setq-local mode-line-format (plist-get state :mode-line)))))
     (set-frame-parameter frame 'my-documentation nil)))
 
 (defun my/documentation-quit ()
@@ -585,6 +561,8 @@ In an ordinary documentation popup, use `quit-window' as usual."
       (user-error "The documentation window is no longer available"))
     (setq state (plist-put state :header-line
                            (buffer-local-value 'header-line-format buffer)))
+    (setq state (plist-put state :mode-line
+                           (buffer-local-value 'mode-line-format buffer)))
     (setq state (plist-put state :solaire
                            (and (boundp 'solaire-mode)
                                 (buffer-local-value 'solaire-mode buffer))))
@@ -600,7 +578,7 @@ In an ordinary documentation popup, use `quit-window' as usual."
       (set-window-dedicated-p (selected-window) nil)
       (set-frame-parameter frame 'my-documentation (plist-put state :expanded t))
       (when (require 'olivetti nil t) (olivetti-mode 1))
-      (my--documentation-update-header)
+      (my--documentation-update-presentation)
       (when (bound-and-true-p evil-local-mode) (evil-motion-state))
       (goto-char position)
       (set-window-start (selected-window) start)))
@@ -730,7 +708,7 @@ not display a documentation window during the lookup are not expanded."
                             :buffer buffer :time (float-time)))
           (set-frame-parameter frame 'my-documentation state)
           (my--documentation-mode 1)
-          (my--documentation-update-header))))
+          (my--documentation-update-presentation))))
     (setq my-documentation-last-buffer buffer)
     (when (and centered (not (plist-get state :expanded)))
       (my--documentation-expand frame state))))
