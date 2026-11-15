@@ -67,6 +67,8 @@ Org and Markdown use visual wrapping with automatic hard filling disabled. Keep 
 #+end_src
 
 * Interface spacing
+The bottom mode line has a thin top separator matching the centered-buffer
+borders and split dividers. It follows the active theme while padding is enabled.
 [[file:lisp/spacing-config.el][spacing-config.el]] enables spacious-padding by default, with modest interface spacing and thin visible dividers between split windows. Use =SPC t P= (capital =P=) to toggle it. Olivetti retains its own window fringes and can be toggled separately with =SPC t o=.
 
 #+begin_src emacs-lisp

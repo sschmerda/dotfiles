@@ -16,7 +16,7 @@
           :fringe-width 8))
   :config
   (defun my--spacious-padding-visible-dividers-h (&rest _)
-    "Keep a contrasting thin separator while spacious padding is enabled."
+    "Keep thin window dividers and a top separator on the bottom mode line."
     (when spacious-padding-mode
       (let ((color (face-attribute 'shadow :foreground nil t))
             custom--inhibit-theme-enable)
@@ -24,7 +24,17 @@
         (dolist (face '(window-divider window-divider-first-pixel
                         window-divider-last-pixel))
           (custom-theme-set-faces 'spacious-padding
-            `(,face ((t (:foreground ,color :background ,color)))))))))
+            `(,face ((t (:foreground ,color :background ,color))))))
+        ;; Retain Spacious Padding's box and any other face attributes.
+        (dolist (face '(mode-line mode-line-active mode-line-inactive))
+          (when-let ((specs (cadr (assq 'spacious-padding (get face 'theme-face)))))
+            (custom-theme-set-faces
+             'spacious-padding
+             (list face
+                   (mapcar (lambda (spec)
+                             (cons (car spec)
+                                   (plist-put (copy-sequence (cdr spec)) :overline color)))
+                           specs))))))))
   (advice-add 'spacious-padding-set-faces :after
               #'my--spacious-padding-visible-dividers-h)
   (spacious-padding-mode 1))
