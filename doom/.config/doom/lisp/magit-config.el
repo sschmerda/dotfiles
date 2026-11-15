@@ -1,5 +1,16 @@
 ;;; magit-config.el -*- lexical-binding: t; -*-
 
+(after! code-review
+  ;; Reuse Forge's auth-source entry rather than requiring a second token.
+  (setq code-review-auth-login-marker 'forge
+        code-review-new-buffer-window-strategy #'pop-to-buffer)
+  ;; Both initial display and later refreshes use the same right-hand popup.
+  (set-popup-rule! "^\\*Code Review\\*$"
+    :side 'right :size 0.6 :select t :modeline t :quit nil :ttl nil)
+  ;; Older code-review releases still call Ghub's relocated GraphQL API.
+  (unless (fboundp 'ghub-graphql)
+    (require 'ghub-legacy)))
+
 (defvar magit-display-buffer-function)
 (defvar magit-bury-buffer-function)
 (defvar magit-previous-window-configuration)
