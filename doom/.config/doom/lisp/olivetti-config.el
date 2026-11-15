@@ -2,7 +2,7 @@
 
 ;; Toggle Olivetti buffer centering without hiding modelines or other windows.
 (use-package! olivetti
-  :commands (olivetti-mode my/olivetti-toggle-all)
+  :commands (olivetti-mode my/olivetti-toggle-all my/olivetti-reset-width)
   :init
   ;; A window fraction keeps the borders fixed when text is zoomed.
   (setq-default olivetti-body-width 0.45)
@@ -70,6 +70,14 @@
     (if my-olivetti-enabled
         (my--olivetti-refresh-h)
       (my--olivetti-disable-all-buffers)))
+  (defun my/olivetti-reset-width ()
+    "Reset this buffer's centered width to the configured Olivetti default.
+Undo width changes made with `olivetti-expand', `olivetti-shrink' or
+`olivetti-set-width'. Read the default dynamically rather than hardcoding a
+percentage. This does not enable or disable centering or change font size."
+    (interactive)
+    (require 'olivetti)
+    (olivetti-set-width (default-value 'olivetti-body-width)))
   (map! :leader
         :desc "Center buffers"
         "t o" #'my/olivetti-toggle-all)
