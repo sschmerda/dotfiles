@@ -15,7 +15,7 @@
 
 (defun my--text-layout-prose-p ()
   "Return non-nil for Org and Markdown prose buffers."
-  (derived-mode-p 'org-mode 'markdown-mode))
+  (derived-mode-p 'org-mode 'markdown-mode 'markdown-ts-mode))
 
 (defun my--text-layout-visual-line-range ()
   "Highlight the current screen row, including its unused horizontal space."

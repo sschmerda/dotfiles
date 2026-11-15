@@ -92,7 +92,7 @@ Selecting a preset resets these options; individual toggles adjust the buffer. S
 #+end_src
 
 * Markdown
-[[file:lisp/markdown-config.el][markdown-config.el]] enables mixed-pitch typography in Markdown and GitHub-flavoured Markdown buffers. Use =SPC m v= to toggle it in the current buffer.
+[[file:lisp/markdown-config.el][markdown-config.el]] enables mixed-pitch typography in both traditional Markdown/GFM and Tree-sitter Markdown buffers. Use =SPC m v= to toggle it in the current buffer. Both modes use the shared prose layout: visual wrapping without automatic hard wrapping, =fill-column= 100 and current-screen-row highlighting. Doom's =+lsp= integration starts an available Markdown language server after project selection; the preview backend remains a separate dependency.
 
 #+begin_src emacs-lisp
 (load! "lisp/markdown-config")
