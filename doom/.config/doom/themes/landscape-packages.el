@@ -18,9 +18,12 @@ inherit keyword styling. Only explicit server or parser roles should use it."
   "Return package face forms, sharing the core landscape semantic palette."
   (let ((faces
          '(
-           (solaire-default-face :foreground fg :background bg-alt)
+           (solaire-default-face :foreground fg :background ui-bg)
+           (solaire-mode-line-face :foreground fg :background ui-bg)
+           (solaire-mode-line-active-face :foreground fg :background ui-bg)
+           (solaire-mode-line-inactive-face :foreground comment :background ui-bg)
            (solaire-hl-line-face :background line :extend t)
-           (solaire-org-hide-face :foreground bg-alt)
+           (solaire-org-hide-face :foreground ui-bg)
            (org-hide :foreground bg)
            (org-indent :inherit 'org-hide)
            (org-block :background bg-alt :extend t)

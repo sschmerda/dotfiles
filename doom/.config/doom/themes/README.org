@@ -5,6 +5,12 @@ All 29 custom-made themes and their shared Lisp helpers live directly in this
 directory. [[file:../lisp/themes-config.el][themes-config.el]] registers it for both library and theme lookup.
 Use =M-x consult-theme= to preview; all names begin with =custom-=.
 
+Mode lines and the Solaire/Vertico minibuffer share a separate UI background:
+darker than the editor in both dark and light themes. UI text uses
+the palette's normal foreground for readability. Syntax and code-block surfaces
+retain their existing colors. Provence dark uses deeper lavender-purple UI
+surfaces against its lavender editor background.
+
 * Theme families
 - [[file:LANDSCAPE.org][Landscape]]: nine regional palettes, each light and dark, with =custom-landscape-= names.
 - [[file:REFERENCE-THEMES.org][Reference-inspired themes]]: Shades of Purple, Gruber, Rosé Pine and Catppuccin,

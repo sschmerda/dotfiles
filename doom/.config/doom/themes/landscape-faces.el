@@ -44,7 +44,12 @@ Preserve its hue and brightest channel; already saturated colors stay intact."
                                              (plist-get palette :bg) amount)
                      collect (list (intern (format "base%d" n))
                                    (list 'quote (list color color))))
-            `((receiver-tone
+            `((ui-bg
+               ',(let ((color (or (plist-get palette :ui-bg)
+                                  (doom-blend "#000000" (plist-get palette :bg)
+                                              (if light 0.10 0.25)))))
+                   (list color color)))
+              (receiver-tone
                ',(let ((color (doom-blend (plist-get palette :keyword)
                                          (plist-get palette :fg) 0.55)))
                    (list color color)))
@@ -86,7 +91,7 @@ Preserve its hue and brightest channel; already saturated colors stay intact."
                                       (plist-get palette :function)) 'constant 'accent))
               (heading-2 type) (heading-3 string)
               (org-navigation function)
-              (modeline-bg bg-alt)
+              (modeline-bg ui-bg)
               (highlight accent) (vertical-bar border) (selection selection-bg)
               (builtin function) (comments syntax-comment) (doc-comments syntax-comment)
               (constants constant) (functions function) (keywords keyword)
@@ -133,9 +138,10 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
            (show-paren-mismatch :foreground removed-fg :background removed-bg
                                 :underline t)
            (tooltip :foreground fg :background bg-alt)
-           (mode-line :foreground fg :background bg-alt)
-           (mode-line-inactive :foreground comment :background bg-alt)
-           (header-line :foreground fg :background bg-alt)
+           (mode-line :foreground fg :background ui-bg)
+           (mode-line-active :foreground fg :background ui-bg)
+           (mode-line-inactive :foreground comment :background ui-bg)
+           (header-line :foreground fg :background ui-bg)
            (tab-bar :foreground fg :background bg-alt)
            (tab-bar-tab :foreground accent :background bg :underline t)
            (tab-bar-tab-inactive :foreground comment :background bg-alt)

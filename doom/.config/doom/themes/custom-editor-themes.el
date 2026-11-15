@@ -18,8 +18,7 @@
     ;; Keep the existing neutral ramps, diagnostics and package color categories;
     ;; use the reference's distinct builtin/variable/operator colors for syntax.
     (dolist (mapping '((builtin . builtin-color) (variables . variable-color)
-                       (operators . operator-color) (doc-comments . doc-color)
-                       (modeline-bg . mode-line-bg)))
+                       (operators . operator-color) (doc-comments . doc-color)))
       (setf (cadr (assq (car mapping) bindings)) (cdr mapping)))
     bindings))
 
@@ -40,7 +39,6 @@
                            font-lock-operator-face font-lock-negation-char-face
                            lsp-face-semhl-operator)
            (doc-color font-lock-doc-face)
-           (mode-line-fg mode-line mode-line-active header-line solaire-mode-line-face)
            (comment mode-line-inactive solaire-mode-line-inactive-face)))
       (dolist (face (cdr mapping))
         (let ((spec (cl-find face faces
@@ -49,12 +47,6 @@
           (if spec
               (setcdr spec (plist-put (cdr spec) :foreground (car mapping)))
             (push `((,face &override) :foreground ,(car mapping)) faces)))))
-    (dolist (face '(mode-line mode-line-active mode-line-inactive header-line
-			      solaire-mode-line-face solaire-mode-line-inactive-face))
-      (let ((spec (cl-find face faces
-                           :key (lambda (spec) (if (consp (car spec))
-                                                   (caar spec) (car spec))))))
-        (setcdr spec (plist-put (cdr spec) :background 'mode-line-bg))))
     (let ((spec (cl-find 'lsp-ui-sideline-current-symbol faces
                          :key (lambda (spec) (if (consp (car spec)) (caar spec) (car spec))))))
       (setcdr spec (plist-put (cdr spec) :background 'selection-bg)))
