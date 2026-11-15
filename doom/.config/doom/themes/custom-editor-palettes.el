@@ -8,6 +8,9 @@
 (defconst custom-editor-palettes
   '(
     (shades-of-purple-dark
+     :modeline-bg "#5B4D22"
+     :modeline-fg "#FFF9DE"
+     :modeline-muted "#E8DAA5"
      :bg "#2D2B55"
      :fg "#FFFFFF"
      :punctuation "#9897AB"
@@ -86,6 +89,9 @@
      :changed-bg "#D4D6DB"
      :changed-fg "#006575")
     (gruber-dark
+     :modeline-bg "#51442A"
+     :modeline-fg "#FFF3D9"
+     :modeline-muted "#E4D2AF"
      :bg "#181818"
      :fg "#E4E4EF"
      :punctuation "#909096"
@@ -164,6 +170,9 @@
      :changed-bg "#D7D0BC"
      :changed-fg "#365779")
     (rose-pine-main
+     :modeline-bg "#503B49"
+     :modeline-fg "#FFF0F0"
+     :modeline-muted "#E4C9D6"
      :bg "#191724"
      :fg "#E0DEF4"
      :punctuation "#8E8C9E"
@@ -203,6 +212,9 @@
      :changed-bg "#2E283B"
      :changed-fg "#C4A7E7")
     (rose-pine-moon
+     :modeline-bg "#58414E"
+     :modeline-fg "#FFF0EF"
+     :modeline-muted "#E7CCD7"
      :bg "#232136"
      :fg "#E0DEF4"
      :punctuation "#A3A1B6"
@@ -320,6 +332,9 @@
      :changed-bg "#D3E1EA"
      :changed-fg "#036A94")
     (catppuccin-frappe
+     :modeline-bg "#354B67"
+     :modeline-fg "#F1F5FF"
+     :modeline-muted "#CAD8EF"
      :bg "#303446"
      :fg "#C6D0F5"
      :punctuation "#9FA8C8"
@@ -359,6 +374,9 @@
      :changed-bg "#3D4758"
      :changed-fg "#99D1DB")
     (catppuccin-macchiato
+     :modeline-bg "#304760"
+     :modeline-fg "#F0F5FF"
+     :modeline-muted "#C8D8EF"
      :bg "#24273A"
      :fg "#CAD3F5"
      :punctuation "#9299B5"
@@ -398,6 +416,9 @@
      :changed-bg "#313C4E"
      :changed-fg "#91D7E3")
     (catppuccin-mocha
+     :modeline-bg "#2E445C"
+     :modeline-fg "#F0F5FF"
+     :modeline-muted "#C6D6EF"
      :bg "#1E1E2E"
      :fg "#CDD6F4"
      :punctuation "#8A90A8"

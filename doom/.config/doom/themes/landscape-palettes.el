@@ -43,6 +43,9 @@
      :changed-fg "#245380")
     (provence-dark
      :bg "#39284F"
+     :modeline-bg "#505735"
+     :modeline-fg "#FFF3D6"
+     :modeline-muted "#DDD3B4"
      :fg "#EEEAE2"
      :line-number-active "#D19EFF"
      :punctuation "#A7A0A7"
@@ -108,6 +111,9 @@
      :changed-bg "#CFC4BB"
      :changed-fg "#22507C")
     (roma-dark
+     :modeline-bg "#5A4630"
+     :modeline-fg "#FFF0D9"
+     :modeline-muted "#E8D3B4"
      :bg "#351F25"
      :fg "#F2E6DA"
      :punctuation "#AF9F99"
@@ -172,6 +178,9 @@
      :changed-bg "#D7D5BC"
      :changed-fg "#275A89")
     (sicilia-dark
+     :modeline-bg "#55502E"
+     :modeline-fg "#FFF6DC"
+     :modeline-muted "#E2DBB9"
      :bg "#142A40"
      :fg "#EDEBE0"
      :punctuation "#A3AAAA"
@@ -236,6 +245,9 @@
      :changed-bg "#BFD2C3"
      :changed-fg "#255582")
     (umbria-dark
+     :modeline-bg "#56472F"
+     :modeline-fg "#FFF1D8"
+     :modeline-muted "#E5D4B5"
      :bg "#1D2D20"
      :fg "#E7EDDD"
      :punctuation "#A6B0A1"
@@ -300,6 +312,9 @@
      :changed-bg "#B4CFD1"
      :changed-fg "#245380")
     (venezia-dark
+     :modeline-bg "#59404D"
+     :modeline-fg "#FFF0F1"
+     :modeline-muted "#E6CBD7"
      :bg "#103339"
      :fg "#E6EFEA"
      :punctuation "#A7B8B6"
@@ -365,6 +380,9 @@
      :changed-bg "#CADCE4"
      :changed-fg "#275C8C")
     (iceland-dark
+     :modeline-bg "#294D56"
+     :modeline-fg "#E9FAFF"
+     :modeline-muted "#BFDCE5"
      :bg "#151D26"
      :fg "#E9F1F3"
      :punctuation "#969EA2"
@@ -429,6 +447,9 @@
      :changed-bg "#D1C7C9"
      :changed-fg "#24537F")
     (firenze-dark
+     :modeline-bg "#554A34"
+     :modeline-fg "#FFF3DF"
+     :modeline-muted "#E2D5BC"
      :bg "#1E332E"
      :fg "#F0EAE3"
      :punctuation "#ABAEA7"
@@ -493,6 +514,9 @@
      :changed-bg "#D1BFB2"
      :changed-fg "#224E78")
     (bologna-dark
+     :modeline-bg "#344B62"
+     :modeline-fg "#F0F6FF"
+     :modeline-muted "#C7D7E9"
      :bg "#3D2320"
      :fg "#F3E5D8"
      :punctuation "#B8A69C"
@@ -557,6 +581,9 @@
      :changed-bg "#D4CFA6"
      :changed-fg "#255583")
     (napoli-dark
+     :modeline-bg "#28524E"
+     :modeline-fg "#EDFFF4"
+     :modeline-muted "#C1E3D5"
      :bg "#153449"
      :fg "#F4ECD5"
      :punctuation "#B5B8AD"

@@ -24,7 +24,8 @@
 
 (defun custom-editor--faces (variant)
   "Return shared package support plus reference-specific faces for VARIANT."
-  (let ((faces (copy-tree (landscape--faces variant (custom-editor--background-mode variant)))))
+  (let* ((landscape-palettes custom-editor-palettes)
+         (faces (copy-tree (landscape--faces variant (custom-editor--background-mode variant)))))
     (dolist
         (mapping
          '((selection-fg lsp-ui-sideline-current-symbol)
@@ -38,8 +39,7 @@
            (operator-color ess-operator-face ess-%op%-face ess-assignment-face
                            font-lock-operator-face font-lock-negation-char-face
                            lsp-face-semhl-operator)
-           (doc-color font-lock-doc-face)
-           (comment mode-line-inactive solaire-mode-line-inactive-face)))
+           (doc-color font-lock-doc-face)))
       (dolist (face (cdr mapping))
         (let ((spec (cl-find face faces
                              :key (lambda (spec) (if (consp (car spec))

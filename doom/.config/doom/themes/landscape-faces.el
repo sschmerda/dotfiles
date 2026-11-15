@@ -91,7 +91,11 @@ Preserve its hue and brightest channel; already saturated colors stay intact."
                                       (plist-get palette :function)) 'constant 'accent))
               (heading-2 type) (heading-3 string)
               (org-navigation function)
-              (modeline-bg ui-bg)
+              (modeline-bg
+               ,(if (plist-member palette :modeline-bg)
+                    (let ((color (plist-get palette :modeline-bg)))
+                      (list 'quote (list color color)))
+                  'ui-bg))
               (highlight accent) (vertical-bar border) (selection selection-bg)
               (builtin function) (comments syntax-comment) (doc-comments syntax-comment)
               (constants constant) (functions function) (keywords keyword)
@@ -138,9 +142,9 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
            (show-paren-mismatch :foreground removed-fg :background removed-bg
                                 :underline t)
            (tooltip :foreground fg :background bg-alt)
-           (mode-line :foreground fg :background ui-bg)
-           (mode-line-active :foreground fg :background ui-bg)
-           (mode-line-inactive :foreground comment :background ui-bg)
+           (mode-line :foreground fg :background modeline-bg)
+           (mode-line-active :foreground fg :background modeline-bg)
+           (mode-line-inactive :foreground comment :background modeline-bg)
            (header-line :foreground fg :background ui-bg)
            (tab-bar :foreground fg :background bg-alt)
            (tab-bar-tab :foreground accent :background bg :underline t)
@@ -247,6 +251,19 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
                                  '(if doom-themes-enable-italic 'italic 'normal))))))
     ;; The document title is distinct from the Org heading hierarchy.
     (push '(org-document-title :foreground module-color) faces)
+    ;; A distinct mode-line surface can supply its own readable text roles.
+    ;; Leave syntax and other interface surfaces on their original palette.
+    (when (plist-member (cdr (assq variant landscape-palettes)) :modeline-fg)
+      (dolist (face '(mode-line mode-line-active solaire-mode-line-face
+                      solaire-mode-line-active-face doom-modeline-buffer-file))
+        (push (list face :foreground 'modeline-fg) faces))
+      (dolist (face '(mode-line-inactive solaire-mode-line-inactive-face
+                      doom-modeline-buffer-path doom-modeline-project-name
+                      doom-modeline-project-parent-dir doom-modeline-persp-name
+                      doom-modeline-persp-buffer-not-in-persp doom-modeline-debug
+                      doom-modeline-input-method-alt doom-modeline-buffer-minor-mode
+                      doom-modeline-evil-motion-state))
+        (push (list face :foreground 'modeline-muted) faces)))
     ;; &override retains framework styles (e.g. Org heading weights) while
     ;; replacing only the attributes above. No global face setters or hooks.
     (let ((merged (make-hash-table :test #'eq)) order)
