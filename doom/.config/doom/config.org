@@ -26,6 +26,9 @@ Custom commands intended for =M-x= or keybindings use =my/=. Internal helpers, h
 #+end_src
 
 * Completion and documentation
+Vertico keeps a fixed completion height even after delayed theme previews.
+Fixed-height sessions reserve blank display rows when there are fewer matches;
+these are not selectable candidates. Dynamic-height sessions are unchanged.
 [[file:lisp/completion-config.el][completion-config.el]] reduces automatic completion's idle delay to 150 ms. Completion documentation appears after 250 ms initially and 500 ms when changing candidates; echo-area documentation uses a 300 ms idle delay.
 
 #+begin_src emacs-lisp
