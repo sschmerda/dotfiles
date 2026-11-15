@@ -201,6 +201,8 @@ text, centering fringes and outer frame edges match; Solaire's popup background
 is restored when leaving fullscreen.
 Code blocks keep syntax colors in both views: explicit language labels are respected, and unlabeled LSP code
 blocks use the source buffer's language. Prose keeps its normal formatting.
+Rendered code backgrounds match the help surface in both views, without
+changing code-block backgrounds in ordinary Markdown files.
 Press =q= to restore the layout
 from before the first lookup. A delayed =K= in source performs a fresh lookup; a prefix
 argument preserves Doom's backend selection. In LSP help buffers, =K= looks up the

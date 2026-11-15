@@ -24,6 +24,23 @@ The page is a copy, never the actual file-visiting buffer.")
   "Buffer-local face adjustment for the fullscreen documentation header.")
 (defvar-local my-documentation-header-solaire-cookie nil
   "Adjustment for Solaire's higher-priority header face, when present.")
+(defvar-local my-documentation-code-background-cookies nil
+  "Local Markdown face adjustments matching the documentation background.")
+
+(defun my--documentation-style-code-backgrounds ()
+  "Match rendered code backgrounds to this documentation buffer's surface.
+Only background attributes are remapped; retain all syntax foreground colors."
+  (mapc #'face-remap-remove-relative my-documentation-code-background-cookies)
+  (setq my-documentation-code-background-cookies nil)
+  (let ((background (face-background
+                     (if (and (bound-and-true-p solaire-mode)
+                              (facep 'solaire-default-face))
+                         'solaire-default-face 'default) nil t)))
+    (when background
+      (dolist (face '(markdown-code-face markdown-pre-face markdown-inline-code-face))
+        (when (facep face)
+          (push (face-remap-add-relative face :background background)
+                my-documentation-code-background-cookies))))))
 
 (defun my--documentation-style-header ()
   "Give this header a contrasting theme background and bottom divider."
@@ -58,7 +75,9 @@ The page is a copy, never the actual file-visiting buffer.")
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
       (when my-documentation-header-face-cookie
-        (my--documentation-style-header)))))
+        (my--documentation-style-header))
+      (when my-documentation-code-background-cookies
+        (my--documentation-style-code-backgrounds)))))
 
 (add-hook 'doom-load-theme-hook #'my--documentation-theme-header-h)
 
@@ -100,7 +119,8 @@ The page is a copy, never the actual file-visiting buffer.")
                     'face 'header-line)
                    (propertize " " 'display '(space :align-to right)
                                'face 'header-line)))))
-  (my--documentation-style-header))
+  (my--documentation-style-header)
+  (my--documentation-style-code-backgrounds))
 
 (defun my--documentation-same-page-p (left right)
   "Return non-nil if replay items LEFT and RIGHT represent the same page.
@@ -529,6 +549,7 @@ Read-only source previews in Help use a separate buffer and are unaffected."
           (setq-local header-line-format (plist-get state :header-line))
           (when (fboundp 'solaire-mode)
             (solaire-mode (if (plist-get state :solaire) 1 -1)))
+          (my--documentation-style-code-backgrounds)
           (when my-documentation-header-face-cookie
             (face-remap-remove-relative my-documentation-header-face-cookie)
             (setq my-documentation-header-face-cookie nil))

@@ -19,6 +19,28 @@
 (defvar my-test-doc-same-window nil)
 (defvar my-test-doc-call-buffers nil)
 
+(ert-deftest my-documentation-code-backgrounds-follow-help-surface-locally ()
+  (require 'markdown-mode)
+  (require 'solaire-mode)
+  (let ((original (face-attribute 'markdown-code-face :background)))
+    (with-temp-buffer
+      (setq-local solaire-mode t)
+      (cl-letf (((symbol-function 'face-background)
+                 (lambda (face &rest _)
+                   (if (eq face 'solaire-default-face) "#403050" "#201030"))))
+        (my--documentation-style-code-backgrounds)
+        (dolist (face '(markdown-code-face markdown-pre-face markdown-inline-code-face))
+          (should (equal (cadr (assq face face-remapping-alist))
+                         '(:background "#403050"))))
+        ;; Fullscreen turns Solaire off; replace, rather than stack, the remaps.
+        (setq-local solaire-mode nil)
+        (my--documentation-style-code-backgrounds)
+        (should (= (length my-documentation-code-background-cookies) 3))
+        (dolist (face '(markdown-code-face markdown-pre-face markdown-inline-code-face))
+          (should (equal (cadr (assq face face-remapping-alist))
+                         '(:background "#201030"))))))
+    (should (equal (face-attribute 'markdown-code-face :background) original))))
+
 (ert-deftest my-documentation-header-styles-solaire-and-cleans-up ()
   (require 'solaire-mode)
   (with-temp-buffer
