@@ -184,6 +184,56 @@ The floating terminal is omitted from the =SPC b b= workspace buffer picker; it 
 (load! "lisp/browsing-config")
 #+end_src
 
+* Signature help
+[[file:lisp/signature-config.el][signature-config.el]] configures automatic LSP signature help. By default, it uses a full-width
+bottom window with arguments and documentation. Its fixed pixel height follows the M-x/Vertico row count and font
+size, capped at 45% of a small frame. Long lines wrap instead of being truncated;
+the height does not change with the number of arguments. Wrapped parameter rows
+with a simple ~name: value~ or ~name = value~ prefix continue beneath the value,
+using visual hanging indentation without inserting spaces into the server text.
+Unrecognized prefixes and layouts too narrow for useful indentation retain normal
+wrapping. Return types following an explicit arrow or colon after a reliably
+identified argument list appear on a separate line after one blank line, with
+bold, theme-specific type coloring. The server's return marker and type text
+remain unchanged. LSP does not provide a separate return-type range, so styling
+requires a server-supplied parameter boundary. Empty or missing parameter metadata
+(including omitted implicit receivers) and unsupported return syntax retain the
+server's layout. Signature help highlights
+the active parameter in bold with the theme's keyword color and a subtle background,
+while slightly dimming other signature text. These fallback colors are derived
+from the active theme's existing faces; explicit theme and user face customizations
+retain priority. This uses lsp-mode's native
+server-supplied parameter ranges. Signature text and its existing properties are
+preserved. Line breaks are inserted before parameters only when the server supplies
+validated ranges or unambiguous labels; otherwise the original layout remains.
+No types, defaults or separators are parsed, and no union expansion or inferred
+syntax coloring is applied.
+The signature window scrolls to center the active parameter where possible without
+taking typing focus. Entering Evil Insert state inside an existing call, or moving
+into one while inserting, activates signature help after a short idle pause.
+The server decides whether a call is present; leaving Insert state cancels help.
+A horizontal divider separates the signature from server-provided documentation.
+When available, documentation for the active parameter appears under an
+=Active parameter= heading alongside the signature documentation. Plain text
+and Markdown use lsp-mode's renderer, with a plain-text fallback if rendering
+fails. No hover request, inferred type information or extra server request is
+used to fill missing documentation. =lsp-signature-doc-lines= still controls the
+documentation limit. Valid overload selection and signature-level active
+parameter metadata take precedence; missing or invalid indexes use protocol
+defaults. Parameter offsets are validated and converted from UTF-16 units,
+and cached server labels are never modified by highlighting.
+Use =M-x my/signature-presentation= to choose =bottom=, =floating= (a bordered
+box near the cursor), or =compact= (an echo-area line). Switching immediately
+closes the old view and redraws any active signature without a server request.
+Only =bottom= includes server-provided documentation. In terminal Emacs,
+=floating= falls back to a bottom window. The command changes this session;
+Customize =my-documentation-signature-style= to save a persistent preference.
+=K= opens the separate documentation reading view as usual.
+
+#+begin_src emacs-lisp
+(load! "lisp/signature-config")
+#+end_src
+
 * Documentation reading view
 [[file:lisp/documentation-config.el][documentation-config.el]] preserves Doom's normal =K= documentation lookup.
 Press =K= again within one second after the lookup completes to expand its

@@ -37,6 +37,8 @@
 
 (load! "lisp/browsing-config")
 
+(load! "lisp/signature-config")
+
 (load! "lisp/documentation-config")
 
 (load! "lisp/lookup-config")
