@@ -44,6 +44,7 @@
 (load! "lisp/lookup-config")
 
 (load! "lisp/magit-config")
+(load! "lisp/git-config")
 
 (load! "lisp/tramp-config")
 

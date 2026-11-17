@@ -327,7 +327,24 @@ Logs, revisions, diffs and other Magit views opened from the full-width view inh
 
 #+begin_src emacs-lisp
 (load! "lisp/magit-config")
+(load! "lisp/git-config")
 #+end_src
+
+[[file:lisp/git-config.el][git-config.el]] provides shared Git commands outside Magit.
+In a saved source buffer, select lines with Evil =V= (or an ordinary active
+region), then use =SPC g v s= (=my/git-stage-selection=) to stage only changed
+lines in that range, splitting hunks. =SPC g v h=
+(=my/git-stage-selected-hunks=) stages every complete Git hunk the selection
+touches, including its three context lines. Neither command opens Magit.
+Existing staged changes and working-tree contents are preserved. A character
+selection stages whole touched lines; visual block selections are rejected.
+Deletion-only changes are anchored to the preceding visible line, or line one
+at the start of the file. Exact selection staging rejects a selection that cuts
+through a replacement block with unequal old/new line counts: select the whole
+block or use the hunk command rather than guessing which removed lines belong
+to which replacements. New files need intent-to-add (=git add -N FILE=) first.
+Binary files, merge-conflicted files and remote buffers are unsupported; unsaved
+buffers or externally changed files must be reconciled before staging.
 
 * Remote access
 [[file:lisp/tramp-config.el][tramp-config.el]] includes the remote connection's own PATH in TRAMP's search paths so tools such as micromamba can be discovered. This applies to Docker and SSH connections.
