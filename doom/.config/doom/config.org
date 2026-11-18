@@ -135,6 +135,56 @@ Python buffers enable semantic tokens when the selected server supports them; ot
 (load! "lisp/project-config")
 #+end_src
 
+* Project symbol overview
+[[file:lisp/project-symbols-config.el][project-symbols-config.el]] provides =M-x my/project-symbols=: a query-free Consult overview grouped by symbol kind. It asks active project language servers for each source file's document symbols, including unopened files and unsaved edits in existing buffers. The configuration does not parse definitions itself.
+
+=M-x my/buffer-symbols= uses the same interface for only the current file, including unsaved edits. It requires an active language server with document-symbol support in that buffer, but does not require a Projectile project or enumerate other files. Local variables are included only if the language server returns them under its current settings.
+
+=C-c C-s= toggles between =[Kind]= and =[Source]=, shown in the prompt. Kind groups are alphabetical, with entries ordered by file path and source position within each group. Source shows the buffer in source order, or the project grouped by file then source order; nested symbols are indented when the server returns a hierarchy. Both presentations retain the current query, kind filter, counts in the =<= menu, and selected symbol. Query matches retain the selected ordering rather than using history, candidate length or relevance ranking. =TAB= and =Shift-TAB= cycle kind groups in Kind presentation. In Source presentation they jump to the next or previous top-level symbol (tree root), across files in the project picker, and wrap at either end. Arrow keys still visit every symbol. If a query or kind filter hides a root, root navigation visits its first matching descendant instead.
+
+=my-buffer-symbols-default-order= and =my-project-symbols-default-order= independently accept =kind= (the default) or =source=. With =my-symbols-remember-order= enabled (the default), an explicit toggle overrides that picker's default for the current Emacs session, independently for buffer and project search. Disable it to start from the configured default every time. Queries and kind filters always start fresh; presentation choices are not saved across Emacs restarts.
+
+Both pickers initially select the innermost symbol whose full range contains the cursor in the originating file. Kind presentation puts that symbol at the top, beneath a sticky counted kind heading. The heading remains visible when scrolling within a kind and changes with the topmost result; headings at later kind boundaries remain visible too. Headings are display rows, never selectable candidates. Source presentation centers the enclosing symbol with preceding context above and children/following symbols below, backfilling near the beginning or end to use the available height. Earlier entries remain accessible in either presentation. The query stays empty and the complete list stays searchable. If no enclosing range is available, normal initial selection applies. Up/Down then scroll only enough to keep the selection visible. TAB and Shift-TAB put the selected kind's first result or Source tree root at the top. Changing a query or kind filter preserves the selected symbol if it still matches: Kind places it at the top and Source centers it. If it no longer matches, the first result is selected at the top; clearing a filter preserves the current selection instead of restoring the original symbol. Presentation changes preserve the chosen symbol and apply the destination presentation's placement. The column header and group headings share the existing picker row budget.
+
+Projectile exclusions, environment markers and common dependency/build directories are excluded. Only files supported by an already active language server are queried. Collection runs on each invocation, shows progress and can be cancelled with =C-g=; failures produce a warning. Once collected, =~=-style Orderless filtering applies locally to the whole list. =TAB= and =Shift-TAB= cycle forward and backward between groups. =SPC c j= retains its existing live workspace-symbol search.
+
+Kinds without a dedicated category, such as constructors, appear under Other. The overview contains the definitions exposed by each server; imports, calls and function-local variables are not necessarily returned as document symbols.
+
+Rows have five aligned columns: kind glyph, symbol name, parent symbol, path with line number, and symbol type. Source indentation stays inside the symbol column so glyphs and parents remain aligned. Each text column has a separate width limit and truncates with an ellipsis; widths adapt to narrower windows. Empty parents show =—=. Paths are relative to the Projectile project root (falling back to the language-server root or current file's directory), omit the project directory name, and start with a root-folder glyph (=./= without Nerd Icons). Long paths shorten from the left to retain the filename and line number. Full symbol names, parent names and paths remain searchable. Icons use theme faces; formatting preserves original candidates and distinct jump targets for same-named definitions. A fixed header names the visible columns and reserves one row inside the existing picker height. =my-symbols-column-widths= configures maximum widths independently, and =my-symbols-visible-columns= selects which columns appear, in the standard order; Symbol is always shown.
+
+Symbol previews place the symbol about one quarter of the way down the visible code window, leaving more context below it. Accepting a result preserves its preview screen row when the minibuffer closes, so the newly available space appears below the symbol. =my-symbols-window-position= configures this fraction from the top (default =0.25=; =nil= keeps normal scrolling). The calculation uses the current code window height, excluding the minibuffer. Buffer boundaries can limit how much context fits above the target. Other Consult commands retain their usual scrolling and cursor flashes remain enabled.
+
+Consult's narrowing prefix is =<= in this configuration. =< a= shows Functions + Methods together, =< F= only Functions, =< M= only Methods, =< s= Structs, and =< c= Classes. =< ?= opens navigation and filter help; =< <= clears the filter. Narrowing preserves the search text and its Orderless syntax, including trailing =~=. The combined filter appears in the which-key prefix popup while the separate Function and Method groups remain available.
+
+Group headings and the =<= menu show counts: =Function (124)= before searching, and =Function (8/124)= for eight query matches. The menu keeps every configured kind visible, including absent kinds with =0= (or =0/0= while searching). Menu counts describe each kind's matches for the query independently of the currently active kind filter, so switching filters remains useful. =Functions + Methods= and =All= have combined counts, and =< ?= shows the same counted kind labels alongside navigation and presentation controls.
+
+Picker-only presentation controls:
+
+- =C-c C-l= toggles Full / Compact columns. Full is the default on every invocation and keeps all configured columns even in narrow windows. Compact hides Parent and Type, keeping the enabled Glyph, Symbol and Path columns with more space for names and paths. It never activates automatically, and toggling does not change the selection, query, filters or searchability of hidden fields. =my-symbols-default-layout= can explicitly select =compact= as the default.
+- =C-c C-d= toggles a read-only details panel with the complete selected name, parent, type, project-relative path and source URI. It follows selection changes, including an explicit no-selection message when filtering removes all matches.
+- =C-c C-h= or =< ?= toggles help with navigation keys, column/marker explanations, Orderless syntax and counted kind filters.
+- =C-c C-w= toggles collection errors. If some files fail, a persistent =[Incomplete: N]= warning remains in the prompt while the successful results stay searchable. Unsupported/excluded files are not reported as failures.
+- =C-c C-o= toggles a =•= marker beside the symbol enclosing the original cursor position. =my-symbols-origin-marker= controls the default (enabled), and =my-symbols-origin-marker-face= controls its appearance. A fixed gutter keeps rows and headers aligned; the marker stays attached to that original symbol when you browse, filter, change ordering or switch layouts. It is absent when no enclosing symbol was reported.
+- =C-c C-r= toggles a subtle background over the currently previewed symbol's full scope in the source window. =my-symbols-scope-highlight= controls the default (enabled). The default tint blends the theme's buffer and line colors at low intensity and stays distinct from both the cursor and preview line. An explicit =my-symbols-scope-face= background overrides this automatic tint. The selected-line highlight stays above it. Highlights follow previews and disappear on cancellation, acceptance or exit. Name-only or missing full ranges are not guessed.
+- =C-c C-t= toggles subtle Source tree guides for this invocation. =my-symbols-tree-guides= controls the default (enabled). Guides reflect the server's hierarchy; flat responses remain flat.
+
+During symbol preview, the normal cursor-line highlight is temporarily hidden so it does not mark the original line as well as the previewed symbol. It is restored when the picker closes.
+
+Column settings can be changed with =M-x customize-variable= or in configuration. For example (not executed here):
+
+#+begin_example
+(setq my-symbols-column-widths
+      '((glyph . 2) (symbol . 40) (parent . 20) (path . 60) (type . 14))
+      my-symbols-visible-columns '(glyph symbol parent path type)
+      my-symbols-default-layout 'full)
+#+end_example
+
+Panels appear beside the source without moving focus out of the query. =C-M-v= and =C-M-S-v= scroll the panel; pressing its shortcut again closes it. Panels and their generated buffers are cleaned up when the picker exits. These bindings do not change ordinary source-buffer keys. No extra language-server requests are made for the panels or guides.
+
+#+begin_src emacs-lisp
+(load! "lisp/project-symbols-config")
+#+end_src
+
 * Time popup
 [[file:lisp/time-popup.el][time-popup.el]] provides the local and world clock, its popup behaviour and the =SPC t t= binding. Graphical Emacs uses a centred child frame; terminal Emacs uses a bottom popup.
 

@@ -27,6 +27,8 @@
 
 (load! "lisp/project-config")
 
+(load! "lisp/project-symbols-config")
+
 (load! "lisp/time-popup")
 
 (load! "lisp/format-config")
