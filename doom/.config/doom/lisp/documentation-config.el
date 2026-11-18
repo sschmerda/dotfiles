@@ -15,10 +15,6 @@
   "LSP source context being rendered or restored from Help history.")
 (defvar my-documentation-last-buffer nil
   "Most recent documentation buffer opened by the custom lookup commands.")
-(defvar-local my-documentation-source-page nil
-  "Source URI and position encoding of a read-only documentation source page.
-The page is a copy, never the actual file-visiting buffer.")
-
 (defvar-local my-documentation-code-background-cookies nil
   "Local Markdown face adjustments matching the documentation background.")
 
@@ -46,7 +42,7 @@ Only background attributes are remapped; retain all syntax foreground colors."
 
 (add-hook 'doom-load-theme-hook #'my--documentation-theme-h)
 
-(defun my--documentation-page-label (&optional compact)
+(defun my--documentation-page-label (&optional _compact)
   "Describe this documentation page and its originating language server."
   (let* ((context my-documentation-lsp-context)
          (source (plist-get context :source))
@@ -55,15 +51,9 @@ Only background attributes are remapped; retain all syntax foreground colors."
                       (mapcar (lambda (workspace)
                                 (symbol-name (lsp--client-server-id (lsp--workspace-client workspace))))
                               (lsp-workspaces)))))
-         (topic (plist-get context :symbol))
-         (line (plist-get (plist-get (plist-get context :params) :position) :line)))
-    (concat
-     (if my-documentation-source-page
-         (format "Documentation - Source: %s%s" (let ((path (plist-get my-documentation-source-page :path)))
-                   (if compact (file-name-nondirectory path) path))
-                 (if line (format ":%d" (1+ line)) ""))
-       (concat "Documentation" (if topic (concat ": " topic) "")))
-     (when servers (concat " · " (string-join (delete-dups servers) ", "))))))
+         (topic (plist-get context :symbol)))
+    (concat "Documentation" (if topic (concat ": " topic) "")
+            (when servers (concat " · " (string-join (delete-dups servers) ", "))))))
 
 (defun my--documentation-mode-line-icon ()
   "Return a theme-accented book icon, or a portable text indicator."
@@ -77,9 +67,6 @@ Only background attributes are remapped; retain all syntax foreground colors."
                                        (my--documentation-page-label t) t t)))
     (add-text-properties 0 (length "Documentation")
                          '(face (mode-line-emphasis bold)) text)
-    (when (string-match " - \\(Source\\):" text)
-      (add-text-properties (match-beginning 1) (match-end 1)
-                           '(face (mode-line-emphasis bold)) text))
     (propertize
      (truncate-string-to-width
       (concat (my--documentation-mode-line-icon) " " text)
@@ -104,16 +91,12 @@ Only background attributes are remapped; retain all syntax foreground colors."
     (force-mode-line-update)))
 
 (defun my--documentation-same-page-p (left right)
-  "Return non-nil if replay items LEFT and RIGHT represent the same page.
-Hover refreshes may have new markers or cursor offsets within the same symbol.
-Source previews additionally distinguish definition positions in the same file."
-  (and (memq (car left) '(my--documentation-replay-lsp my--documentation-replay-source))
+  "Return non-nil if replay items LEFT and RIGHT represent the same hover page."
+  (and (eq (car left) 'my--documentation-replay-lsp)
        (eq (car left) (car right))
        (equal (cadr left) (cadr right))
        (eq (plist-get (nth 2 left) :source) (plist-get (nth 2 right) :source))
-       (equal (nth 3 left) (nth 3 right))
-       (or (eq (car left) 'my--documentation-replay-lsp)
-           (equal (nth 4 left) (nth 4 right)))))
+       (equal (nth 3 left) (nth 3 right))))
 
 (defun my--documentation-clean-history ()
   "Remove consecutive duplicate pages from native Help history."
@@ -162,22 +145,12 @@ Replaying documentation does not make another language-server request."
       (when valid
         (with-current-buffer "*lsp-help*"
           (setq my-documentation-last-buffer (current-buffer))
-          (setq-local my-documentation-lsp-context context
-                      my-documentation-source-page nil)
+          (setq-local my-documentation-lsp-context context)
           (my--documentation-update-presentation)
           ;; lsp-help-mode resets minor modes on each render. Preserve an
           ;; already centered view without relying on deferred layout hooks.
           (when (and centered (not olivetti-mode)) (olivetti-mode 1))
           (my--documentation-mode 1))))))
-
-(defun my--documentation-symbol-at-point ()
-  "Return the help identifier at point, excluding prose punctuation."
-  (save-excursion
-    (skip-chars-backward "[:alnum:]_$")
-    (let ((start (point)))
-      (skip-chars-forward "[:alnum:]_$")
-      (unless (= start (point))
-        (buffer-substring-no-properties start (point))))))
 
 (defun my--documentation-field (object key)
   "Read protocol KEY from either a plist or hash-table OBJECT."
@@ -245,185 +218,62 @@ a list of faces to a link such as [`ThreadRng`](URL)."
                    (or (my--documentation-field location :targetSelectionRange)
                        (my--documentation-field location :range)) :start)))
 
-(defun my--documentation-signature-positions (context name)
-  "Find NAME within server-provided definition ranges for CONTEXT.
-These are candidate source positions, not inferred types: the server must
-resolve each candidate. No language-specific parser or LSP process is added."
-  (let* ((definitions (my--documentation-locations
-                       (my--documentation-lsp-request
-                        context "textDocument/definition" (plist-get context :params))))
-         candidates)
-    (dolist (definition (seq-take definitions 4))
-      (let* ((params (my--documentation-location-params definition))
-             (uri (my--documentation-field (plist-get params :textDocument) :uri))
-             (path (lsp--uri-to-path uri))
-             (range (or (my--documentation-field definition :targetRange)
-                        (my--documentation-field definition :range))))
-        ;; Never open a new remote connection merely to inspect documentation.
-        (when (and (string-prefix-p "file:" uri)
-                   (not (file-remote-p path)) (file-readable-p path))
-          (with-temp-buffer
-            (insert-file-contents path)
-            (let* ((start (lsp--position-to-point (my--documentation-field range :start)))
-                   (end (lsp--position-to-point (my--documentation-field range :end)))
-                   (case-fold-search nil))
-              (goto-char start)
-              (while (and (< (length candidates) 16)
-                          (re-search-forward (concat "\\_<" (regexp-quote name) "\\_>") end t))
-                (let ((finish (match-end 0)))
-                  (goto-char (match-beginning 0))
-                  (push (list :textDocument (list :uri uri)
-                              :position (lsp--cur-position)) candidates)
-                  (goto-char finish))))))))
-    (nreverse candidates)))
+(defun my--documentation-location-key (location)
+  "Return LOCATION's navigation destination, ignoring origin/call-site metadata."
+  (let* ((params (my--documentation-location-params location))
+         (uri (my--documentation-field (plist-get params :textDocument) :uri))
+         (position (plist-get params :position))
+         (line (my--documentation-field position :line))
+         (column (my--documentation-field position :character)))
+    (if (and (stringp uri) (integerp line) (integerp column))
+        (list uri line column)
+      location)))
 
-(defun my--documentation-resolve-symbol (context name)
-  "Resolve NAME through CONTEXT's language server; return a source location.
-Try the original symbol and names in its server-provided definition range,
-then exact workspace-symbol results. Server coverage determines availability."
-  (let* ((marker (plist-get context :marker))
-         (origin (plist-get context :params))
-         (same (and (markerp marker) (marker-buffer marker)
-                    (with-current-buffer (marker-buffer marker)
-                      (save-excursion
-                        (goto-char marker) (equal name (thing-at-point 'symbol t))))))
-         (candidates (if same (list origin)
-                       (my--documentation-signature-positions context name)))
-         locations)
-    (while (and candidates (not locations))
-      (setq locations (my--documentation-locations
-                       (my--documentation-lsp-request
-                        context "textDocument/definition" (pop candidates)))))
-    (unless locations
-      (let ((symbols (my--documentation-lsp-request
-                      context "workspace/symbol" (list :query name))))
-        (dolist (symbol (append symbols nil))
-          (when (equal (my--documentation-field symbol :name) name)
-            (when-let* ((location (my--documentation-field symbol :location))
-                        (range (my--documentation-field location :range)))
-              (push location locations))))))
-    (unless locations
-      (user-error "The language server cannot resolve %s from this documentation" name))
-    (if (= (length locations) 1) (car locations)
-      (let* ((choices (cl-loop for location in locations for index from 1
-                              collect (cons (format "%d: %s" index
-                                                    (lsp--location-uri location)) location)))
-             (choice (completing-read "Definition: " choices nil t)))
-        (cdr (assoc choice choices))))))
+(defun my--documentation-unique-locations (locations)
+  "Keep one entry per definition destination in LOCATIONS, in server order.
+LocationLink originSelectionRange describes the use site, not the definition.
+Different definitions in the same file must retain separate choices."
+  (let ((seen (make-hash-table :test 'equal)) result)
+    (seq-doseq (location locations)
+      (let ((key (my--documentation-location-key location)))
+        (unless (gethash key seen)
+          (puthash key t seen)
+          (push location result))))
+    (nreverse result)))
 
-(defun my--documentation-source-params ()
-  "Return the actual LSP source position represented by the current source page."
-  (list :textDocument (list :uri (plist-get my-documentation-source-page :uri))
-        :position (lsp--cur-position)))
-
-(defun my--documentation-replay-source (contents context page position)
-  "Show cached source CONTENTS at POSITION with CONTEXT and PAGE in Help.
-No file buffer is made read-only. Reuse the documentation window and its
-layout, and register the source page in the same history as hover pages."
-  (my--documentation-record-page
-   (list #'my--documentation-replay-source contents context page position))
-  (with-current-buffer "*lsp-help*"
-    (let ((inhibit-read-only t))
-      (erase-buffer)
-      (insert contents))
-    (setq-local my-documentation-lsp-context context
-                my-documentation-source-page page
-                lsp--position-column-function (plist-get page :column-function)
-                lsp--move-to-column-function (plist-get page :move-function))
-    (my--documentation-update-presentation)
-    (read-only-mode 1)
-    (my--documentation-mode 1)
-    (goto-char (min (point-max) position))
-    (when-let ((window (get-buffer-window (current-buffer))))
-      (set-window-point window (point))
-      (set-window-start window (line-beginning-position)))))
-
-(defun my--documentation-show-source (context location)
-  "Display LOCATION as an isolated, syntax-colored source page in Help.
-Prefer unsaved source text if a file buffer already exists. Otherwise read
-without visiting the file or starting another LSP server."
-  (let* ((source (plist-get context :source))
-         (uri (lsp--location-uri location))
-         (path (with-current-buffer source (lsp--uri-to-path uri)))
-         (visiting (get-file-buffer path))
-         (mode (buffer-local-value 'major-mode source))
-         (column (buffer-local-value 'lsp--position-column-function source))
-         (move (buffer-local-value 'lsp--move-to-column-function source))
-         (page (list :uri uri :path path :column-function column :move-function move))
-         (params (my--documentation-location-params location))
-         (next-context (list :source source :params params))
-         contents position)
-    (with-temp-buffer
-      (if visiting
-          (insert (with-current-buffer visiting
-                    (save-restriction
-                      (widen) (buffer-substring-no-properties (point-min) (point-max)))))
-        (insert-file-contents path))
-      ;; Preserve every character, so source positions remain valid. Delayed
-      ;; hooks allow syntax colors without file hooks or language-server startup.
-      (condition-case nil
-          (progn (delay-mode-hooks (funcall mode)) (font-lock-ensure))
-        (error nil))
-      (setq-local lsp--move-to-column-function move)
-      (setq position (lsp--position-to-point (plist-get params :position))
-            contents (buffer-string)))
-    (my--documentation-replay-source contents next-context page position)))
-
-(defun my--documentation-lsp-definition ()
-  "Show a definition inside documentation, leaving actual source buffers untouched."
-  (interactive)
-  (unless my-documentation-lsp-context (user-error "No originating LSP context"))
-  (let* ((context my-documentation-lsp-context)
-         (name (or (my--documentation-symbol-at-point) (user-error "No symbol at point")))
-         (locations (when my-documentation-source-page
-                      (my--documentation-locations
-                       (my--documentation-lsp-request
-                        context "textDocument/definition" (my--documentation-source-params)))))
-         (location
-          (if my-documentation-source-page
-              (cond ((null locations) (user-error "No definition for %s" name))
-                    ((= (length locations) 1) (car locations))
-                    (t (let* ((choices
-                               (cl-loop for item in locations for index from 1
-                                        collect (cons (format "%d: %s" index (lsp--location-uri item)) item)))
-                              (choice (completing-read "Definition: " choices nil t)))
-                         (cdr (assoc choice choices)))))
-            (my--documentation-resolve-symbol context name))))
-    (my--documentation-show-source context location)))
+(defun my--documentation-choose-location (locations name)
+  "Choose among server-provided LOCATIONS for NAME without guessing."
+  (setq locations (my--documentation-unique-locations locations))
+  (cond ((null locations) (user-error "The language server cannot resolve %s from this documentation" name))
+        ((= (length locations) 1) (car locations))
+        (t (let* ((choices (cl-loop for location in locations for index from 1
+                                  collect (cons (format "%d: %s" index (lsp--location-uri location)) location)))
+                  (choice (completing-read "Definition: " choices nil t)))
+             (cdr (assoc choice choices))))))
 
 (defun my/documentation-open-source ()
-  "Leave LSP documentation and visit its real source file for editing.
-From a source preview, visit the same file at the preview cursor position.
-From a documentation page, ask its original server for the topic's definition.
-Restore the pre-documentation layout before visiting the file. Existing file
-permissions and read-only settings are respected. Bound to C-c C-o in LSP Help;
-gd remains read-only preview navigation, and q still closes documentation."
+  "Leave LSP Help and open the documented topic's actual source.
+Ask the originating server at the saved source position, never at text copied
+into Help. Restore the editing layout before visiting the definition. Existing
+permissions and read-only settings are preserved. Bound to C-c C-o in LSP Help."
   (interactive)
-  (unless (and (derived-mode-p 'lsp-help-mode) my-documentation-lsp-context)
-    (user-error "This command requires an LSP documentation page or source preview"))
+  (unless (and (derived-mode-p 'lsp-help-mode)
+               (plist-get my-documentation-lsp-context :params))
+    (user-error "This page has no saved LSP source position"))
   (let* ((context my-documentation-lsp-context)
          (source (plist-get context :source))
-         (preview my-documentation-source-page)
-         (locations (unless preview
-                      (my--documentation-locations
-                       (my--documentation-lsp-request
-                        context "textDocument/definition" (plist-get context :params)))))
-         (location (cond ((= (length locations) 1) (car locations))
-                         (locations
-                          (let* ((choices (cl-loop for item in locations for i from 1
-                                                   collect (cons (format "%d: %s" i (lsp--location-uri item)) item)))
-                                 (choice (completing-read "Source definition: " choices nil t)))
-                            (cdr (assoc choice choices))))))
-         (params (if preview (my--documentation-source-params)
-                   (when location (my--documentation-location-params location))))
-         (path (if preview (plist-get preview :path)
-                 (when location
-                   (with-current-buffer source (lsp--uri-to-path (lsp--location-uri location))))))
-         (move (if preview (plist-get preview :move-function)
-                 (when (buffer-live-p source)
-                   (buffer-local-value 'lsp--move-to-column-function source)))))
-    (unless path (user-error "The language server has no source definition for this page"))
-    ;; Open first so a missing/unreadable file leaves the documentation intact.
+         (locations (my--documentation-locations
+                     (my--documentation-lsp-request
+                      context "textDocument/definition" (plist-get context :params))))
+         (location (my--documentation-choose-location
+                    locations (or (plist-get context :symbol) "source")))
+         (params (my--documentation-location-params location))
+         (uri (my--documentation-field (plist-get params :textDocument) :uri))
+         (path (with-current-buffer source (lsp--uri-to-path uri)))
+         (move (buffer-local-value 'lsp--move-to-column-function source)))
+    ;; Resolve only existing source. Never create an empty file for virtual URIs.
+    (unless (and path (file-readable-p path))
+      (user-error "The server did not provide a readable source file"))
     (let* ((target (find-file-noselect path))
            (position (with-current-buffer target
                        (save-restriction
@@ -431,54 +281,107 @@ gd remains read-only preview navigation, and q still closes documentation."
                          (let ((lsp--move-to-column-function move))
                            (lsp--position-to-point (plist-get params :position)))))))
       (my/documentation-quit)
-      ;; Record the editing location, rather than the temporary Help buffer.
       (when (fboundp 'better-jumper-set-jump) (better-jumper-set-jump))
       (when (fboundp 'xref-push-marker-stack) (xref-push-marker-stack))
       (switch-to-buffer target)
       (widen)
       (goto-char position))))
 
-(defun my--documentation-help-at-point (&optional arg)
-  "Look up the help symbol through LSP, retaining repeated-K expansion."
-  (interactive "P")
-  (let ((state (frame-parameter nil 'my-documentation)))
-    (if (or arg (not (derived-mode-p 'lsp-help-mode))
-            (not my-documentation-lsp-context)
-            (and (eq last-command 'my/documentation)
-                 (not (plist-get state :expanded))
-                 (<= (- (float-time) (or (plist-get state :time) 0))
-                     my-documentation-repeat-delay)))
-        (my/documentation arg)
-      (let* ((context my-documentation-lsp-context)
-             (name (or (my--documentation-symbol-at-point) (user-error "No symbol at point")))
-             (params (if my-documentation-source-page
-                         (my--documentation-source-params)
-                       (my--documentation-location-params
-                        (my--documentation-resolve-symbol context name))))
-             (hover (my--documentation-lsp-request context "textDocument/hover" params)))
-        (unless (my--documentation-field hover :contents)
-          (user-error "The language server has no documentation for %s" name))
-        (let ((my--documentation-source-mode
-               (buffer-local-value 'major-mode (plist-get context :source)))
-              (my--documentation-render-context
-               (list :source (plist-get context :source) :symbol name :params params)))
-          (lsp--display-contents (my--documentation-field hover :contents)))
-        (with-current-buffer "*lsp-help*"
-          (setq-local my-documentation-lsp-context
-                      (list :source (plist-get context :source) :symbol name :params params))
-          (my--documentation-mode 1))))))
+(defvar-local my-documentation-code-rendering nil
+  "Non-nil only in temporary LSP Markdown rendering buffers.")
+
+(defun my--documentation-code-mode (mode)
+  "Choose a parser-backed Python highlighter when available; otherwise use MODE."
+  (if (memq mode '(python-mode python-ts-mode))
+      (if (and (fboundp 'python-ts-mode) (fboundp 'treesit-ready-p)
+               (treesit-ready-p 'python t))
+          'python-ts-mode
+        'python-mode)
+    mode))
+
+(defun my--documentation-fontify-snippet (text mode)
+  "Color TEXT with MODE in an isolated buffer without running editing hooks."
+  (with-temp-buffer
+    (insert text)
+    (let ((treesit-font-lock-level (if (eq mode 'python-ts-mode) 4
+                                   (bound-and-true-p treesit-font-lock-level))))
+      ;; Only mode initialization is delayed; fontification must run outside
+      ;; that scope so Tree-sitter can finish its font-lock initialization.
+      (delay-mode-hooks (funcall mode))
+      (font-lock-ensure))
+    (unless (equal text (buffer-substring-no-properties (point-min) (point-max)))
+      (error "Example mode changed the snippet text"))
+    (buffer-string)))
+
+(defun my--documentation-fontify-code-a (original language start end)
+  "Fontify documentation code without editing hooks or another LSP server.
+Prefer Python's parser when available, with ordinary syntax coloring as fallback.
+Preserve every character, including prompts/output; copy only syntax faces.
+Other Markdown buffers retain their ordinary fontification behavior."
+  (if (not my-documentation-code-rendering)
+      (funcall original language start end)
+    (let* ((fallback (if language (markdown-get-lang-mode language)
+                       markdown-fontify-code-block-default-mode))
+           (preferred (my--documentation-code-mode fallback)))
+      (when (fboundp preferred)
+        (let* ((text (buffer-substring-no-properties start end))
+               (modified (buffer-modified-p))
+               (rendered (condition-case error-data
+                             (my--documentation-fontify-snippet text preferred)
+                           (error (if (eq preferred 'python-ts-mode)
+                                      (my--documentation-fontify-snippet text 'python-mode)
+                                    (signal (car error-data) (cdr error-data))))))
+               (position 0))
+          (remove-text-properties start end '(face nil))
+          (while (< position (length rendered))
+            (let ((next (next-single-property-change position 'face rendered (length rendered)))
+                  (face (get-text-property position 'face rendered)))
+              (when face (put-text-property (+ start position) (+ start next) 'face face))
+              (setq position next)))
+          (add-text-properties start end
+                               '(font-lock-fontified t fontified t font-lock-multiline t))
+          (set-buffer-modified-p modified))))))
+
+(with-eval-after-load 'markdown-mode
+  (advice-add 'markdown-fontify-code-block-natively :around
+              #'my--documentation-fontify-code-a))
+
+(defun my--documentation-normalize-closing-fences ()
+  "Remove ignored trailing whitespace from matching Markdown closing fences.
+Some markdown-mode versions require a closing fence to end at its last marker,
+while CommonMark permits trailing spaces/tabs. Change only closing markup in
+this temporary rendering buffer, preserving code, prose and opening fences.
+Respect fence character and length so shorter or nested-looking literal fences
+inside a code block are not treated as its closing delimiter."
+  (save-excursion
+    (goto-char (point-min))
+    (let (marker width)
+      (while (re-search-forward "^ \\{0,3\\}\\(`\\{3,\\}\\|~\\{3,\\}\\)\\([^\n]*\\)$" nil t)
+        (let* ((fence (match-string-no-properties 1))
+               (tail (match-string-no-properties 2))
+               (character (aref fence 0)))
+          (if marker
+              (when (and (= marker character) (>= (length fence) width)
+                         (string-match-p "\\`[ \t]*\\'" tail))
+                (delete-region (match-beginning 2) (match-end 2))
+                (setq marker nil width nil))
+            ;; Backticks cannot occur in the info string of a backtick opener.
+            (unless (and (= character ?`) (string-match-p "`" tail))
+              (setq marker character width (length fence)))))))))
 
 (defun my--documentation-render-markdown-a (original &rest args)
   "Render documentation with ORIGINAL and ARGS using the source language.
 Explicitly labeled code blocks retain their own language. Unlabeled blocks
 use the source mode, rather than the help buffer's mode. Prose remains Markdown."
+  (my--documentation-normalize-closing-fences)
   (let ((lsp-buffer-major-mode (or my--documentation-source-mode lsp-buffer-major-mode)))
-    (apply original args)))
+    (prog1 (apply original args)
+      (setq-local my-documentation-code-rendering t))))
 
 (defun my--documentation-library-view-a (original &rest args)
   "Keep library source navigation from automatically enabling View mode.
 Preserve explicitly enabled View mode and existing read-only state.
-Read-only source previews in Help use a separate buffer and are unaffected."
+Documentation never copies source into Help."
   (let ((view-was-enabled (bound-and-true-p view-mode))
         (was-read-only buffer-read-only))
     (prog1 (apply original args)
@@ -494,7 +397,7 @@ Read-only source previews in Help use a separate buffer and are unaffected."
   (advice-add 'lsp--fix-markdown-links :after #'my--documentation-fix-links-h)
   (advice-add 'lsp--display-contents :around #'my--documentation-display-lsp-a)
   (advice-add 'lsp-describe-thing-at-point :around #'my--documentation-track-lsp-a)
-  (define-key lsp-help-mode-map (kbd "K") #'my--documentation-help-at-point)
+  (define-key lsp-help-mode-map (kbd "K") #'my/documentation)
   (define-key lsp-help-mode-map (kbd "C-c C-o") #'my/documentation-open-source))
 
 (defcustom my-documentation-repeat-delay 1.0
@@ -510,10 +413,13 @@ Read-only source previews in Help use a separate buffer and are unaffected."
 
 (defvar my--documentation-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "K") #'my--documentation-help-at-point)
+    (define-key map (kbd "K") #'my/documentation)
     (define-key map (kbd "q") #'my/documentation-quit)
     (define-key map [remap quit-window] #'my/documentation-quit)
     map))
+
+;; Also replace the old resolver binding when reloading this file in Emacs.
+(define-key my--documentation-mode-map (kbd "K") #'my/documentation)
 
 (define-minor-mode my--documentation-mode
   "Handle repeated K and q in documentation opened by `my/documentation'."
@@ -595,15 +501,12 @@ consecutive invocation within `my-documentation-repeat-delay' focuses that
 lookup's result in a single window, centered with Olivetti. Press q to restore
 the window layout from before the lookup. This is a normal Emacs window.
 
-A prefix argument always performs a fresh lookup, preserving Doom's backend
-selection. In LSP help, K looks up the identifier using the original server;
-gd shows an isolated, read-only source preview in the same documentation view,
-without visiting or changing the actual source buffer. RET follows links.
-C-o or < goes back through native
-Help history; C-i or > goes forward. Nested lookups and history retain the current
-popup or centered view. Other delayed invocations from the result return to
-the original source window. External browsers and asynchronous results that do
-not display a documentation window during the lookup are not expanded."
+In source, a prefix argument preserves Doom's backend selection. LSP Help is
+a reading view: K only expands a prompt repeat of the initial lookup, and gd
+performs no lookup. Follow explicit documentation links with RET, or use
+C-c C-o to open the documented topic's source. C-o/< and C-i/> navigate cached
+Help history. External browsers and asynchronous results not displayed during
+the initial lookup are not expanded."
   (interactive "P")
   (let* ((frame (selected-frame))
          (state (frame-parameter frame 'my-documentation))
@@ -621,6 +524,8 @@ not display a documentation window during the lookup are not expanded."
                           my-documentation-repeat-delay))))
     (if repeat
         (my--documentation-expand frame state)
+      (when (derived-mode-p 'lsp-help-mode)
+        (user-error "Documentation is a reading view; follow links or use C-c C-o for source"))
       (when (and state (eq (current-buffer) buffer))
         (if (plist-get state :expanded)
             (my/documentation-quit)
@@ -730,12 +635,10 @@ the language server. Press q to restore the editing layout. Use
   (my--documentation-reopen t))
 
 (with-eval-after-load 'evil
-  ;; Help navigation has its own history; never enter the editing jumplist.
-  (evil-add-command-properties #'my--documentation-lsp-definition :jump nil)
   (define-key evil-normal-state-map (kbd "K") #'my/documentation)
   (define-key evil-visual-state-map (kbd "K") #'my/documentation)
   (evil-define-minor-mode-key '(normal motion visual) 'my--documentation-mode
-    (kbd "K") #'my--documentation-help-at-point
+    (kbd "K") #'my/documentation
     (kbd "q") #'my/documentation-quit)
   ;; Centered help uses motion state; Doom binds buffer zoom only in normal.
   (evil-define-minor-mode-key 'motion 'my--documentation-mode
@@ -743,8 +646,8 @@ the language server. Press q to restore the editing layout. Use
     (kbd "C--") #'text-scale-decrease)
   (with-eval-after-load 'lsp-mode
     (evil-define-key '(normal motion) lsp-help-mode-map
-      (kbd "K") #'my--documentation-help-at-point
-      (kbd "g d") #'my--documentation-lsp-definition
+      (kbd "K") #'my/documentation
+      (kbd "g d") #'ignore
       (kbd "C-o") #'help-go-back
       (kbd "C-i") #'help-go-forward
       (kbd "<") #'help-go-back

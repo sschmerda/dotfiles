@@ -235,75 +235,53 @@ Customize =my-documentation-signature-style= to save a persistent preference.
 #+end_src
 
 * Documentation reading view
-[[file:lisp/documentation-config.el][documentation-config.el]] preserves Doom's normal =K= documentation lookup.
-Press =K= again within one second after the lookup completes to expand its
-result into a single Olivetti-centered window.
-In fullscreen, the bottom mode line identifies the page and connected language
-server, such as =Documentation: thread_rng · rust-analyzer=. Source previews
-show =Documentation - Source:= followed by the filename and definition line.
-The standard Doom mode-line bar precedes a book icon identifying documentation; =Documentation= and =Source= use bold text
-and the theme's mode-line accent color. Terminal Emacs uses =[D]= instead of the icon.
-Long labels are shortened to fit; hover
-shows the full label, including the source path. The bar uses the active theme's
-normal mode-line colors. There is no top header, and bottom popups retain their
-normal mode line.
-Buffer zoom (=C-== / =C--=) also works in documentation's Evil motion state.
-Fullscreen documentation temporarily uses the normal theme background so its
-text, centering fringes and outer frame edges match; Solaire's popup background
-is restored when leaving fullscreen.
-Code blocks keep syntax colors in both views: explicit language labels are respected, and unlabeled LSP code
-blocks use the source buffer's language. Prose keeps its normal formatting.
-Rendered code backgrounds match the help surface in both views, without
-changing code-block backgrounds in ordinary Markdown files.
-Press =q= to restore the layout
-from before the first lookup. A delayed =K= in source performs a fresh lookup; a prefix
-argument preserves Doom's backend selection. In LSP help buffers, =K= looks up the
-identifier at point and =g d= previews its definition through the originating
-language server. Names are resolved from server-provided source definition ranges
-or exact workspace-symbol results; availability depends on the server's coverage,
-especially for library symbols. The help buffer does not start its own server.
-Rendered documentation links, including code-styled links, are buttons: use
-=TAB=/=Shift-TAB= to move between them and =RET= to follow their supplied targets.
-Web links open using the normal LSP link handler. Unrelated popups, external browsers
-and asynchronous results not displayed during the lookup are not promoted.
-Nested LSP lookups, source previews and history navigation retain the current
-bottom-popup or centered layout. Native Help history stores each page's source context:
-=C-o= or =<= goes back, and =C-i= or =>= goes forward. Returning to a page restores its
-cursor position and reuses cached documentation without another LSP request.
-Refreshing the same page does not add a duplicate history step or discard Forward.
-=TAB= remains link traversal in graphical Emacs; terminals that send the same
-event for =TAB= and =C-i= use it for Forward, with =Shift-TAB= available for links.
-=g d= within Help shows a separate, syntax-colored source snapshot inside
-=*lsp-help*=, rather than visiting or locking the real file buffer. All source
-previews are read-only, including project code; ordinary source buffers retain
-their existing editability. The preview uses unsaved text if the file is already
-open. Cached history pages do not update until another lookup is performed.
-=K= and further =g d= lookups within a source preview use its real source URI
-and cursor position with the original server; no additional server is started.
-Within Help, =C-o= and =C-i= use exactly the same page history as =<= and =>=,
-covering both documentation and source previews. They never fall back to the
-editing jumplist. Normal =g d= visits source without automatically enabling
-View mode for library files: use =C-o=/=C-i= for source navigation, while =q=
-remains available in documentation. Explicit View mode and existing read-only
-settings are preserved.
-Following a new topic after going back clears the
-old forward history, as in normal Emacs Help.
-Use =C-c C-o= in LSP documentation or =M-x my/documentation-open-source= to
-leave the documentation view, restore the editing layout and visit real source.
-From a preview it opens the file at the preview cursor; from documentation it
-resolves the current topic's definition through the original server. Existing
-file permissions and read-only settings are preserved. =g d= continues to
-navigate isolated source previews.
-To return to the last page without looking up a symbol, use
-=M-x my/documentation-reopen= for the bottom popup or
-=M-x my/documentation-reopen-centered= for centered fullscreen. Both reuse the
-existing buffer, cursor position and history without requesting documentation
-again. =q= closes the popup or restores the layout from before fullscreen.
-The commands also include =my/documentation=, =my/documentation-quit= and
-=my/documentation-open-source=; use =C-h f= for their documentation. Isolated behavior tests are in
-[[file:lisp/tests/documentation-tests.el][documentation-tests.el]] and run with
-=emacs -Q --batch -l lisp/tests/documentation-tests.el -f ert-run-tests-batch-and-exit=
-from the Doom configuration directory.
+[[file:lisp/documentation-config.el][documentation-config.el]] preserves Doom's normal =K= lookup in source.
+Press =K= again within one second to expand its result into a single
+Olivetti-centered window. Press =q= to restore the previous layout.
+
+LSP documentation is a reading view. Arbitrary identifiers in prose or examples
+are not resolved: =gd= does nothing, and =K= only expands a prompt repeat of
+the initial lookup. Ordinary source =K= and =gd= remain available as usual.
+This avoids guessing imports, constructing synthetic LSP documents or choosing
+unrelated symbols from documentation text. The language targets and verification
+policy are recorded in [[file:AGENTS.md][AGENTS.md]].
+
+Code examples keep syntax highlighting for their declared language, falling
+back to the source language for unlabeled blocks. Python prefers Tree-sitter
+when its grammar is available and falls back to ordinary Python highlighting.
+Prompts and output remain intact. Editing-mode hooks are suppressed; examples
+never activate environments or language servers. Rendering normalizes ignored
+trailing whitespace on matching Markdown closing fences. Rendered code
+backgrounds match the Help surface without changing ordinary Markdown buffers.
+
+Explicit documentation links remain buttons: =TAB=/=Shift-TAB= traverses them
+and =RET= follows their supplied targets through the normal LSP link handler.
+=C-o= or =<= goes back through native Help history; =C-i= or =>= goes forward.
+History reuses cached documentation without another LSP request. Refreshing a
+page does not add a duplicate history step or discard Forward. Graphical Emacs
+keeps =TAB= for links; terminals that send the same event for =TAB= and =C-i=
+use it for Forward, with =Shift-TAB= available for links.
+
+Use =C-c C-o= or =M-x my/documentation-open-source= to leave LSP Help and
+open the documented topic's actual source. This asks the original server at
+the saved source position, regardless of the cursor position in Help. Multiple
+definitions require selection; missing/unreadable source produces an explicit
+error. Source opens with its existing permissions and read-only settings.
+Normal source navigation does not automatically enable View mode; existing
+explicit View mode is preserved.
+
+In fullscreen, the bottom mode line identifies the topic and server, with an
+accented book icon and bold =Documentation= label. Terminal Emacs uses =[D]=.
+There is no top header. Buffer zoom (=C-== / =C--=) also works in Evil motion
+state. Fullscreen uses the normal theme background to match its fringes;
+Solaire's popup background is restored on leaving fullscreen.
+
+=M-x my/documentation-reopen= reopens the last page at the bottom;
+=M-x my/documentation-reopen-centered= reopens it centered. Both retain contents,
+cursor position and history. External browsers and asynchronous results not
+displayed during the initial lookup are not expanded. Use =C-h f= for command
+documentation. Focused tests live in
+[[file:lisp/tests/documentation-tests.el][documentation-tests.el]].
 
 #+begin_src emacs-lisp
 (load! "lisp/documentation-config")
