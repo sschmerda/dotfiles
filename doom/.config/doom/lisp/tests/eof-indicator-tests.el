@@ -30,11 +30,13 @@
      ;; bitmap installation and window transitions are verified separately.
      (cl-letf (((symbol-function 'display-graphic-p) (lambda (&optional _) my-test-eof-graphical))
                ((symbol-function 'frame-char-height) (lambda (&optional _) 20))
+               ((symbol-function 'window-default-line-height)
+                (lambda (&optional _) (ceiling (* 16 (expt text-scale-mode-step text-scale-mode-amount)))))
                ((symbol-function 'window-fringes) (lambda (&optional _) '(8 8 nil nil)))
                ((symbol-function 'fringe-bitmap-p) (lambda (symbol) (gethash symbol my-test-eof-bitmaps)))
                ((symbol-function 'define-fringe-bitmap)
-                (lambda (symbol rows height width &rest _)
-                  (puthash symbol (list (copy-sequence rows) height width) my-test-eof-bitmaps)))
+                (lambda (symbol rows height width &optional align)
+                  (puthash symbol (list (copy-sequence rows) height width align) my-test-eof-bitmaps)))
                ((symbol-function 'set-fringe-bitmap-face) #'ignore))
        (with-temp-buffer ,@body))))
 
@@ -50,6 +52,9 @@
             (rows (car (gethash plain my-test-eof-bitmaps))))
        (should-not (eq plain 'empty-line))
        (should (= 2 (cl-count-if (lambda (row) (> row 0)) rows)))
+       ;; Prose rows use remapped font metrics, and each row gets one mark.
+       (should (= 16 (cadr (gethash plain my-test-eof-bitmaps))))
+       (should (eq 'center (nth 3 (gethash plain my-test-eof-bitmaps))))
        (should (cl-every (lambda (row) (= 0 (logand row #x80))) rows))
        (my--olivetti-sync-empty-line-indicator window t)
        (my--olivetti-sync-empty-line-indicator window nil)

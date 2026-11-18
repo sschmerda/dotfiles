@@ -152,7 +152,7 @@ percentage. This does not enable or disable centering or change font size."
 When FINAL-LINE-P, omit the tilde on the actual final, editable buffer line."
     (setq width (max 3 (min 16 width))
           height (max 2 height))
-    (let ((bitmap (intern (format "my--olivetti-%s-%s-%dx%d"
+    (let ((bitmap (intern (format "my--olivetti-%s-%s-row-%dx%d"
                                   (if final-line-p "final-line" "empty-line")
                                   (if border-p "border" "plain") width height))))
       (unless (fringe-bitmap-p bitmap)
@@ -164,7 +164,11 @@ When FINAL-LINE-P, omit the tilde on the actual final, editable buffer line."
           (unless final-line-p
             (aset rows middle (logior border (logand #b011001 mask)))
             (aset rows (1+ middle) (logior border (logand #b100110 mask))))
-          (define-fringe-bitmap bitmap rows height width '(center t))
+          ;; A periodic tilde uses frame coordinates as its phase, which can
+          ;; clip or duplicate marks when its period differs from row height.
+          ;; Only the plain final-line border needs continuous tiling.
+          (define-fringe-bitmap bitmap rows height width
+            (if final-line-p '(center t) 'center))
           (set-fringe-bitmap-face bitmap 'fringe)))
       bitmap))
   (defvar-local my-olivetti-final-line-overlay nil)
@@ -198,14 +202,9 @@ Only an overlay moves; buffer text, undo history and point remain untouched."
 A plain tilde remains installed when centering is disabled. Terminal frames
 have no graphical fringe and retain their original indicator mapping."
     (if (display-graphic-p (window-frame window))
-        (let* ((frame (window-frame window))
-               (scale (if (boundp 'text-scale-mode-amount)
-                          (expt text-scale-mode-step text-scale-mode-amount) 1))
-               (spacing (or line-spacing 0))
-               (spacing (if (consp spacing) (+ (car spacing) (cdr spacing)) spacing))
-               (height (+ (ceiling (* (frame-char-height frame) scale))
-                          (if (floatp spacing)
-                              (truncate (* (frame-char-height frame) spacing)) spacing)))
+        (let* (;; This includes buffer face remapping, zoom and line spacing.
+               ;; Frame font metrics do not describe mixed-pitch prose rows.
+               (height (window-default-line-height window))
                (bitmap (my--olivetti-empty-line-bitmap
                         (car (window-fringes window)) height enabled)))
           (setq my-olivetti-final-line-display
