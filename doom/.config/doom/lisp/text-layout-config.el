@@ -28,7 +28,12 @@
       (let* ((end (point))
              (last (and (> end start) (char-before end)))
              (anchor (if (memq last '(?\s ?\t ?\n)) (1- end) end))
-             (position (posn-at-point anchor))
+             ;; Stretching a real space or inserting padding at point can move
+             ;; the insertion bar to the far edge of the decorative glyph.
+             ;; Keep the text highlight, but leave editing geometry untouched.
+             (position (unless (memq (bound-and-true-p evil-state)
+                                     '(insert replace))
+                         (posn-at-point anchor)))
              ;; Pixel widths work on Emacs 29 and respect the actual text area,
              ;; including Olivetti margins and proportional fonts.
              (width (and position
