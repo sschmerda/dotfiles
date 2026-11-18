@@ -129,13 +129,138 @@ Partial unequal replacement blocks are ambiguous and are rejected."
               (cl-incf delta (- new-size old-size)))))))
     (when pieces (concat header "\n" (apply #'concat (nreverse pieces))))))
 
-(defun my--git-stage-source (beg end whole-hunks)
-  "Stage saved source lines BEG to END; WHOLE-HUNKS expands intersecting hunks."
+(defun my--git-discard-hunks-patch (diff first last)
+  "Keep complete hunks of DIFF touched by source lines FIRST through LAST.
+Preserve original working-tree coordinates for reverse application."
+  (let* ((parsed (my--git-stage-parse diff)) (header (car parsed)) pieces)
+    (dolist (hunk (cdr parsed))
+      (let* ((start (plist-get hunk :new-start))
+             (count (plist-get hunk :new-count))
+             (anchor (max 1 start))
+             (finish (if (> count 0) (+ start count -1) anchor)))
+        (when (and (<= first finish) (<= anchor last))
+          (push (concat (format "@@ -%d,%d +%d,%d @@\n"
+                                (plist-get hunk :old-start) (plist-get hunk :old-count)
+                                start count)
+                        (plist-get hunk :body)) pieces))))
+    (when pieces (concat header "\n" (apply #'concat (nreverse pieces))))))
+
+(defvar-local my-git-discard-context nil
+  "Pending source, patch and snapshots for this discard preview.")
+
+(defun my--git-file-hash (file)
+  "Hash FILE's literal bytes to detect changes while a preview is open."
+  (with-temp-buffer
+    (set-buffer-multibyte nil)
+    (insert-file-contents-literally file)
+    (secure-hash 'sha256 (current-buffer))))
+
+(defun my--git-selection-refresh ()
+  "Finish a source-selection Git operation and refresh its indicators."
+  (deactivate-mark)
+  (when (and (fboundp 'evil-visual-state-p) (evil-visual-state-p)) (evil-exit-visual-state))
+  (when (bound-and-true-p diff-hl-mode) (diff-hl-update))
+  (when (fboundp 'magit-refresh-all) (magit-refresh-all)))
+
+(defun my--git-discard-cancel ()
+  "Cancel this discard preview without changing source or index."
+  (interactive)
+  (setq my-git-discard-context nil)
+  (quit-window t))
+
+(defun my--git-discard-confirm ()
+  "Discard exactly the previewed unstaged hunks after validating snapshots.
+If the source buffer, file or index changed, keep the preview and require a
+fresh selection. No modified source buffer is overwritten."
+  (interactive)
+  (let* ((context my-git-discard-context)
+         (source (plist-get context :source))
+         (file (plist-get context :file))
+         (root (plist-get context :root))
+         (relative (plist-get context :relative))
+         (patch (plist-get context :patch)))
+    (unless (and context (buffer-live-p source))
+      (user-error "The originating source buffer is no longer available"))
+    (unless (= (buffer-chars-modified-tick) (plist-get context :preview-tick))
+      (user-error "Preview text changed; cancel and select the hunks again"))
+    (with-current-buffer source
+      (when buffer-read-only (user-error "The source buffer is read-only"))
+      (unless (and buffer-file-name (equal (file-truename buffer-file-name) file)
+                   (not (buffer-modified-p))
+                   (= (buffer-chars-modified-tick) (plist-get context :tick))
+                   (verify-visited-file-modtime (current-buffer))
+                   (file-readable-p file)
+                   (equal (my--git-file-hash file) (plist-get context :hash)))
+        (user-error "Source changed since preview; cancel and select the hunks again"))
+      (let ((default-directory root))
+        (unless (equal (plist-get context :index)
+                       (my--git-stage-run nil "--literal-pathspecs" "ls-files" "--stage" "--" relative))
+          (user-error "Index changed since preview; cancel and select the hunks again"))
+        (my--git-stage-run patch "apply" "--reverse" "--check" "--unidiff-zero" "--whitespace=nowarn" "-")
+        (my--git-stage-run patch "apply" "--reverse" "--unidiff-zero" "--whitespace=nowarn" "-"))
+      (revert-buffer t t t)
+      (my--git-selection-refresh))
+    (my--git-discard-cancel)
+    (message "Discarded previewed unstaged hunks; staged changes preserved")))
+
+(require 'diff-mode)
+(define-derived-mode my--git-discard-preview-mode diff-mode "Discard preview"
+  "Review unstaged hunks before discarding them.
+The diff shows existing changes: additions will be removed and deletions restored.
+Press c or C-c C-c to confirm, q or C-c C-k to cancel."
+  (setq-local buffer-read-only t
+              header-line-format
+              " Unstaged changes to discard — c: confirm discard · q: cancel"))
+
+;; Keep Diff's highlighting, but inherit read-only browsing keys rather than
+;; patch editing/application commands that bypass this preview's confirmation.
+(set-keymap-parent my--git-discard-preview-mode-map special-mode-map)
+(define-key my--git-discard-preview-mode-map (kbd "M-n") #'diff-hunk-next)
+(define-key my--git-discard-preview-mode-map (kbd "M-p") #'diff-hunk-prev)
+(define-key my--git-discard-preview-mode-map (kbd "c") #'my--git-discard-confirm)
+(define-key my--git-discard-preview-mode-map (kbd "C-c C-c") #'my--git-discard-confirm)
+(define-key my--git-discard-preview-mode-map (kbd "q") #'my--git-discard-cancel)
+(define-key my--git-discard-preview-mode-map (kbd "C-c C-k") #'my--git-discard-cancel)
+(with-eval-after-load 'evil
+  (evil-set-initial-state 'my--git-discard-preview-mode 'motion)
+  (evil-define-key '(normal motion) my--git-discard-preview-mode-map
+    (kbd "c") #'my--git-discard-confirm
+    (kbd "q") #'my--git-discard-cancel))
+
+(defun my--git-discard-preview (context)
+  "Display the exact patch in CONTEXT without modifying source or index."
+  (let ((buffer (get-buffer-create "*Git discard preview*")))
+    (with-current-buffer buffer
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (insert (decode-coding-string
+                 (plist-get context :patch)
+                 (or (coding-system-base
+                      (buffer-local-value 'buffer-file-coding-system (plist-get context :source)))
+                     'utf-8))))
+      (my--git-discard-preview-mode)
+      (setq-local my-git-discard-context
+                  (plist-put context :preview-tick (buffer-chars-modified-tick))
+                  default-directory (plist-get context :root))
+      (goto-char (point-min)))
+    (let ((window (if (fboundp '+popup-buffer)
+                      (+popup-buffer buffer '((side . bottom) (size . 0.4)
+                                              (select . t) (quit . t) (ttl . nil)))
+                    (display-buffer buffer
+                                    '(display-buffer-at-bottom (window-height . 0.4))))))
+      (unless (window-live-p window)
+        (kill-buffer buffer)
+        (user-error "Cannot display the discard preview"))
+      (select-window window))))
+
+(defun my--git-selection-source (beg end whole-hunks &optional discard)
+  "Stage saved source BEG to END, or DISCARD complete intersecting hunks.
+WHOLE-HUNKS expands staging to entire hunks; discarding always uses whole hunks."
   (unless buffer-file-name (user-error "This buffer does not visit a file"))
-  (when (file-remote-p buffer-file-name) (user-error "Source selection staging currently supports local files only"))
-  (when (buffer-modified-p) (user-error "Save the buffer before staging a source selection"))
+  (when (file-remote-p buffer-file-name) (user-error "Source selection Git commands currently support local files only"))
+  (when (buffer-modified-p) (user-error "Save the buffer before changing selected Git hunks"))
   (unless (verify-visited-file-modtime (current-buffer))
-    (user-error "File changed on disk; revert or reconcile it before staging"))
+    (user-error "File changed on disk; revert or reconcile it before changing Git hunks"))
   (unless (< beg end) (user-error "Select at least one source line"))
   (save-restriction
     (widen)
@@ -146,27 +271,38 @@ Partial unequal replacement blocks are ambiguous and are rejected."
              (relative (file-relative-name file root))
              (first (line-number-at-pos beg t))
              (last (line-number-at-pos (max beg (1- end)) t))
+             (hash (when discard (my--git-file-hash file)))
              (snapshot (my--git-stage-run nil "--literal-pathspecs" "ls-files" "--stage" "--" relative)))
         (unless (string-match-p "\\`100\\(?:644\\|755\\) " snapshot)
           (user-error "Select a tracked regular file; for a new file use git add -N first"))
         (unless (string-empty-p (my--git-stage-run nil "--literal-pathspecs" "ls-files" "--unmerged" "--" relative))
-          (user-error "Resolve the file's merge conflict before staging a selection"))
+          (user-error "Resolve the file's merge conflict before changing selected hunks"))
         (let* ((diff (my--git-stage-run nil "--literal-pathspecs" "diff" "--no-ext-diff" "--no-textconv"
                                          "--no-color" "--no-renames" "--src-prefix=a/" "--dst-prefix=b/"
                                          "--diff-algorithm=myers" "--inter-hunk-context=0"
-                                         (if whole-hunks "--unified=3" "--unified=0") "--" relative))
-               (patch (my--git-stage-patch diff first last whole-hunks)))
+                                         (if (or whole-hunks discard) "--unified=3" "--unified=0") "--" relative))
+               (patch (if discard (my--git-discard-hunks-patch diff first last)
+                        (my--git-stage-patch diff first last whole-hunks))))
+          (when (and discard (string-match-p "^new file mode " diff))
+            (user-error "Discarding selections in intent-to-add files is unsupported"))
           (unless patch (user-error "No unstaged text changes in the selected range"))
-          (unless (and (verify-visited-file-modtime (current-buffer))
+          (unless (and (not (buffer-modified-p))
+                       (verify-visited-file-modtime (current-buffer))
                        (equal snapshot (my--git-stage-run nil "--literal-pathspecs" "ls-files" "--stage" "--" relative)))
             (user-error "File or index changed while preparing the patch; retry"))
-          (my--git-stage-run patch "apply" "--cached" "--check" "--unidiff-zero" "--whitespace=nowarn" "-")
-          (my--git-stage-run patch "apply" "--cached" "--unidiff-zero" "--whitespace=nowarn" "-")
-          (deactivate-mark)
-          (when (and (fboundp 'evil-visual-state-p) (evil-visual-state-p)) (evil-exit-visual-state))
-          (when (bound-and-true-p diff-hl-mode) (diff-hl-update))
-          (when (fboundp 'magit-refresh-all) (magit-refresh-all))
-          (message "Staged %s from selected source lines" (if whole-hunks "intersecting hunks" "changed lines")))))))
+          (if discard
+              (progn
+                (when buffer-read-only (user-error "The source buffer is read-only"))
+                (unless (equal hash (my--git-file-hash file))
+                  (user-error "Source changed while preparing preview; retry"))
+                (my--git-discard-preview
+                 (list :source (current-buffer) :file file :root root :relative relative
+                       :index snapshot :hash hash :tick (buffer-chars-modified-tick) :patch patch)))
+            (my--git-stage-run patch "apply" "--cached" "--check" "--unidiff-zero" "--whitespace=nowarn" "-")
+            (my--git-stage-run patch "apply" "--cached" "--unidiff-zero" "--whitespace=nowarn" "-")
+            (my--git-selection-refresh)
+            (message "Staged %s from selected source lines"
+                     (if whole-hunks "intersecting hunks" "changed lines"))))))))
 
 (defun my/git-stage-selection (beg end)
   "Stage changed lines within the active source selection, splitting hunks.
@@ -176,7 +312,7 @@ whole block instead. Deleted-only blocks belong to the preceding visible line,
 or line one for deletions at the start of a file. Existing staged changes and
 working-tree contents are preserved. New files require Git intent-to-add first."
   (interactive (my--git-stage-region))
-  (my--git-stage-source beg end nil))
+  (my--git-selection-source beg end nil))
 
 (defun my/git-stage-selected-hunks (beg end)
   "Stage complete Git hunks touched by the active source selection.
@@ -184,9 +320,23 @@ A hunk includes three context lines on either side, as in Git's default diff.
 Selecting any part of that range stages the whole hunk. The buffer must be saved.
 Deleted-only blocks without context use the same anchor as `my/git-stage-selection'."
   (interactive (my--git-stage-region))
-  (my--git-stage-source beg end t))
+  (my--git-selection-source beg end t))
+
+(defun my/git-discard-selected-hunks (beg end)
+  "Discard complete unstaged Git hunks touched by the source selection.
+Open a read-only diff preview of exactly the unstaged hunks to discard.
+In the preview, c confirms and q cancels; C-c C-c and C-c C-k also work.
+Confirmation rechecks the source and index before restoring index contents.
+This may discard changed lines outside the selection in the same hunk, including
+its three context lines. Staged changes and untouched hunks are preserved.
+The buffer must be saved, writable and current on disk. Refresh it after applying.
+Character and line selections are supported; visual blocks, intent-to-add files
+and remote files are not."
+  (interactive (my--git-stage-region))
+  (my--git-selection-source beg end t t))
 
 (map! :leader
-      (:prefix ("g v" . "stage selection")
+      (:prefix ("g v" . "visual selection")
        :desc "Stage selected changed lines" "s" #'my/git-stage-selection
-       :desc "Stage intersecting hunks" "h" #'my/git-stage-selected-hunks))
+       :desc "Stage intersecting hunks" "h" #'my/git-stage-selected-hunks
+       :desc "Discard intersecting unstaged hunks" "d" #'my/git-discard-selected-hunks))

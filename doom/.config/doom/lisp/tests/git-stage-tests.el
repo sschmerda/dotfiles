@@ -180,3 +180,181 @@
       (let ((before (my--git-stage-run nil "ls-files" "--stage")))
         (should-error (my-test-stage-lines 2 2) :type 'user-error)
         (should (equal before (my--git-stage-run nil "ls-files" "--stage")))))))
+
+(defun my-test-discard-lines (first last &optional decline)
+  "Preview and discard FIRST through LAST, or DECLINE the preview."
+  (save-window-excursion
+    (with-current-buffer (find-file-noselect my-test-stage-file)
+      (goto-char (point-min))
+      (forward-line (1- first))
+      (let ((beg (point)))
+        (forward-line (1+ (- last first)))
+        (my/git-discard-selected-hunks beg (point)))))
+  (save-window-excursion
+    (unwind-protect
+        (with-current-buffer "*Git discard preview*"
+          (select-window (display-buffer (current-buffer)))
+          (if decline
+              (progn (my--git-discard-cancel) (user-error "Discard cancelled"))
+            (my--git-discard-confirm)))
+      (when (get-buffer "*Git discard preview*") (kill-buffer "*Git discard preview*")))))
+
+(defun my-test-discard-worktree ()
+  (with-temp-buffer
+    (set-buffer-multibyte nil)
+    (insert-file-contents-literally my-test-stage-file)
+    (buffer-string)))
+
+(ert-deftest my-git-discard-whole-hunk-from-context-preserves-other-hunks ()
+  (let* ((old (mapconcat (lambda (i) (format "%d\n" i)) (number-sequence 1 35) ""))
+         (new (replace-regexp-in-string "^25$" "X25"
+               (replace-regexp-in-string "^6$" "X6"
+                (replace-regexp-in-string "^3$" "X3" old)))))
+    (my-test-stage-repository old new
+      (my-test-discard-lines 4 4)
+      (should (equal (my-test-discard-worktree) (replace-regexp-in-string "^25$" "X25" old)))
+      (should (equal (my-test-stage-index) old))
+      (with-current-buffer (find-file-noselect my-test-stage-file)
+        (should (equal (buffer-string) (my-test-discard-worktree)))
+        (should-not (buffer-modified-p))))))
+
+(ert-deftest my-git-discard-preserves-staged-version ()
+  (my-test-stage-repository "a\nb\nc\n" "A\nb\nc\n"
+    (my--git-stage-run nil "add" "--" my-test-stage-file)
+    (let ((staged (my--git-stage-run nil "diff" "--cached")))
+      (my-test-stage-write "A\nB\nc\n")
+      (my-test-discard-lines 2 2)
+      (should (equal (my-test-discard-worktree) "A\nb\nc\n"))
+      (should (equal (my--git-stage-run nil "diff" "--cached") staged)))))
+
+(ert-deftest my-git-discard-skipped-offset-changing-hunk ()
+  (let* ((old (mapconcat (lambda (i) (format "%d\n" i)) (number-sequence 1 40) ""))
+         (new (concat "extra\n" (replace-regexp-in-string "^25$" "X25" old))))
+    (my-test-stage-repository old new
+      (my-test-discard-lines 26 26)
+      (should (equal (my-test-discard-worktree) (concat "extra\n" old))))))
+
+(ert-deftest my-git-discard-multiple-hunks-with-offset-changes ()
+  (let* ((old (mapconcat (lambda (i) (format "%d\n" i)) (number-sequence 1 45) ""))
+         (new (concat "extra\n" (replace-regexp-in-string "^25\n" "" old))))
+    (my-test-stage-repository old new
+      (my-test-discard-lines 1 45)
+      (should (equal (my-test-discard-worktree) old)))))
+
+(ert-deftest my-git-discard-no-final-newline-and-crlf ()
+  (dolist (pair '(("a\nb" . "a\nB") ("a\r\nb\r\n" . "a\r\nB\r\n")
+                  ("a\nb\n" . "a\nb")))
+    (my-test-stage-repository (car pair) (cdr pair)
+      (my-test-discard-lines 2 2)
+      (should (equal (my-test-discard-worktree) (car pair))))))
+
+(ert-deftest my-git-discard-decline-preserves-worktree-and-index ()
+  (my-test-stage-repository "a\nb\n" "a\nB\n"
+    (should-error (my-test-discard-lines 2 2 t) :type 'user-error)
+    (should (equal (my-test-discard-worktree) "a\nB\n"))
+    (should (equal (my-test-stage-index) "a\nb\n"))))
+
+(ert-deftest my-git-discard-rechecks-source-after-preview ()
+  (my-test-stage-repository "a\nb\n" "a\nB\n"
+    (save-window-excursion
+      (unwind-protect
+          (progn
+            (with-current-buffer (find-file-noselect my-test-stage-file)
+              (my/git-discard-selected-hunks (point-min) (point-max)))
+            (my-test-stage-write "external\n")
+            (with-current-buffer "*Git discard preview*"
+              (should-error (my--git-discard-confirm) :type 'user-error)))
+        (when (get-buffer "*Git discard preview*") (kill-buffer "*Git discard preview*"))))
+    (should (equal (my-test-discard-worktree) "external\n"))
+    (should (equal (my-test-stage-index) "a\nb\n"))))
+
+(ert-deftest my-git-discard-rejects-unsaved-and-read-only-buffers ()
+  (my-test-stage-repository "a\nb\n" "a\nB\n"
+    (with-current-buffer (find-file-noselect my-test-stage-file)
+      (let ((buffer-read-only t))
+        (should-error (my/git-discard-selected-hunks (point-min) (point-max)) :type 'user-error))
+      (insert "unsaved")
+      (should-error (my/git-discard-selected-hunks (point-min) (point-max)) :type 'user-error))
+    (should (equal (my-test-discard-worktree) "a\nB\n"))))
+
+(ert-deftest my-git-discard-literal-path-and-intent-to-add-guard ()
+  (let ((my-test-stage-file "-odd [x] ü.txt"))
+    (my-test-stage-repository "a\nb\n" "a\nB\n"
+      (my-test-discard-lines 2 2)
+      (should (equal (my-test-discard-worktree) "a\nb\n"))))
+  (my-test-stage-repository "a\n" "A\n"
+    (my--git-stage-run nil "rm" "--cached" "--" my-test-stage-file)
+    (my--git-stage-run nil "add" "-N" "--" my-test-stage-file)
+    (should-error (my-test-discard-lines 1 1) :type 'user-error)
+    (should (equal (my-test-discard-worktree) "A\n"))))
+
+(defmacro my-test-with-discard-preview (&rest body)
+  "Prepare the entire fixture file for preview, then evaluate BODY there."
+  `(save-window-excursion
+     (unwind-protect
+         (progn
+           (switch-to-buffer (find-file-noselect my-test-stage-file))
+           (my/git-discard-selected-hunks (point-min) (point-max))
+           (with-current-buffer "*Git discard preview*" ,@body))
+       (when (get-buffer "*Git discard preview*") (kill-buffer "*Git discard preview*")))))
+
+(ert-deftest my-git-discard-preview-is-exact-read-only-and-cancel-restores-window ()
+  (let* ((old (mapconcat (lambda (i) (format "%d\n" i)) (number-sequence 1 40) ""))
+         (new (replace-regexp-in-string "^25$" "X25"
+               (replace-regexp-in-string "^3$" "X3" old))))
+    (my-test-stage-repository old new
+      (save-window-excursion
+        (switch-to-buffer (find-file-noselect my-test-stage-file))
+        (let ((source-window (selected-window)) (source (current-buffer)))
+          (goto-char (point-min))
+          (forward-line 3)
+          (my/git-discard-selected-hunks (point) (1+ (point)))
+          (should (derived-mode-p 'my--git-discard-preview-mode))
+          (should buffer-read-only)
+          (should (equal (buffer-string)
+                         (decode-coding-string (plist-get my-git-discard-context :patch) 'utf-8)))
+          (should (string-match-p "[+]X3" (buffer-string)))
+          (should-not (string-match-p "[+]X25" (buffer-string)))
+          (should-not (key-binding (kbd "C-c C-a")))
+          (should (eq (key-binding (kbd "c")) #'my--git-discard-confirm))
+          (should (eq (key-binding (kbd "q")) #'my--git-discard-cancel))
+          (should (equal (my-test-discard-worktree) new))
+          (should (equal (my-test-stage-index) old))
+          (call-interactively (key-binding (kbd "q")))
+          (should-not (get-buffer "*Git discard preview*"))
+          (should (eq (selected-window) source-window))
+          (should (eq (current-buffer) source))
+          (should (equal (my-test-discard-worktree) new)))))))
+
+(ert-deftest my-git-discard-preview-rejects-index-change ()
+  (my-test-stage-repository "a\nb\n" "a\nB\n"
+    (my-test-with-discard-preview
+      (my--git-stage-run nil "add" "--" my-test-stage-file)
+      (should-error (my--git-discard-confirm) :type 'user-error)
+      (should (equal (my-test-discard-worktree) "a\nB\n"))
+      (should (equal (my-test-stage-index) "a\nB\n")))))
+
+(ert-deftest my-git-discard-preview-rejects-unsaved-source-edits ()
+  (my-test-stage-repository "a\nb\n" "a\nB\n"
+    (my-test-with-discard-preview
+      (with-current-buffer (plist-get my-git-discard-context :source) (insert "unsaved"))
+      (should-error (my--git-discard-confirm) :type 'user-error)
+      (should (equal (my-test-discard-worktree) "a\nB\n")))))
+
+(ert-deftest my-git-discard-preview-hash-detects-same-size-and-timestamp-edit ()
+  (my-test-stage-repository "a\nb\n" "a\nB\n"
+    (my-test-with-discard-preview
+      (let ((mtime (file-attribute-modification-time (file-attributes my-test-stage-file))))
+        (my-test-stage-write "a\nC\n")
+        (set-file-times my-test-stage-file mtime))
+      (should-error (my--git-discard-confirm) :type 'user-error)
+      (should (equal (my-test-discard-worktree) "a\nC\n")))))
+
+(ert-deftest my-git-discard-preview-rejects-edited-preview-and-closed-source ()
+  (my-test-stage-repository "a\nb\n" "a\nB\n"
+    (my-test-with-discard-preview
+      (let ((inhibit-read-only t)) (insert "edited preview\n"))
+      (should-error (my--git-discard-confirm) :type 'user-error)
+      (kill-buffer (plist-get my-git-discard-context :source))
+      (should-error (my--git-discard-confirm) :type 'user-error)
+      (should (equal (my-test-discard-worktree) "a\nB\n")))))

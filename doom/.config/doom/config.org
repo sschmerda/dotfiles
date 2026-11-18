@@ -309,18 +309,29 @@ Logs, revisions, diffs and other Magit views opened from the full-width view inh
 #+end_src
 
 [[file:lisp/git-config.el][git-config.el]] provides shared Git commands outside Magit.
+The =SPC g v= group is labelled =visual selection=.
 In a saved source buffer, select lines with Evil =V= (or an ordinary active
 region), then use =SPC g v s= (=my/git-stage-selection=) to stage only changed
 lines in that range, splitting hunks. =SPC g v h=
 (=my/git-stage-selected-hunks=) stages every complete Git hunk the selection
-touches, including its three context lines. Neither command opens Magit.
-Existing staged changes and working-tree contents are preserved. A character
+touches, including its three context lines. =SPC g v d=
+(=my/git-discard-selected-hunks=) discards complete unstaged hunks touched by
+the selection after showing a read-only diff preview. The preview displays the
+existing changes that will be undone, including changes outside the selection
+within the same hunk. Scroll normally, press =c= (or =C-c C-c=) to confirm, or
+=q= (or =C-c C-k=) to cancel. Confirmation rejects changes to the source buffer,
+file or index made since the preview was prepared. It restores those hunks from the index and
+refreshes the source buffer; staged changes and untouched hunks remain intact.
+Discarding can remove changes outside the selection within the same hunk.
+These commands do not open Magit.
+Both staging commands preserve prior staged changes and working-tree contents. A character
 selection stages whole touched lines; visual block selections are rejected.
 Deletion-only changes are anchored to the preceding visible line, or line one
 at the start of the file. Exact selection staging rejects a selection that cuts
 through a replacement block with unequal old/new line counts: select the whole
 block or use the hunk command rather than guessing which removed lines belong
-to which replacements. New files need intent-to-add (=git add -N FILE=) first.
+to which replacements. Staging new files needs intent-to-add (=git add -N FILE=)
+first; discarding hunks in intent-to-add files is unsupported.
 Binary files, merge-conflicted files and remote buffers are unsupported; unsaved
 buffers or externally changed files must be reconciled before staging.
 
