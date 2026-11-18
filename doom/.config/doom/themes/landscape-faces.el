@@ -28,6 +28,14 @@ Preserve its hue and brightest channel; already saturated colors stay intact."
          (light (if background-mode (eq background-mode 'light)
                   (string-suffix-p "-light" (symbol-name variant))))
          (iceland (string-prefix-p "iceland-" (symbol-name variant)))
+         (ui-background (or (plist-get palette :ui-bg)
+                            (doom-blend "#000000" (plist-get palette :bg)
+                                        (if light 0.10 0.25))))
+         (modeline-background (or (plist-get palette :modeline-bg) ui-background))
+         ;; Inactive windows retain a hint of the active bar's hue, while
+         ;; receding toward the editor surface in both light and dark themes.
+         (inactive-background (doom-blend modeline-background (plist-get palette :bg) 0.20))
+         (inactive-foreground (doom-blend (plist-get palette :fg) inactive-background 0.65))
          (bindings
           (cl-loop for (key value) on palette by #'cddr
                    collect (list (intern (substring (symbol-name key) 1))
@@ -44,11 +52,7 @@ Preserve its hue and brightest channel; already saturated colors stay intact."
                                              (plist-get palette :bg) amount)
                      collect (list (intern (format "base%d" n))
                                    (list 'quote (list color color))))
-            `((ui-bg
-               ',(let ((color (or (plist-get palette :ui-bg)
-                                  (doom-blend "#000000" (plist-get palette :bg)
-                                              (if light 0.10 0.25)))))
-                   (list color color)))
+            `((ui-bg ',(list ui-background ui-background))
               (receiver-tone
                ',(let ((color (doom-blend (plist-get palette :keyword)
                                          (plist-get palette :fg) 0.55)))
@@ -91,11 +95,9 @@ Preserve its hue and brightest channel; already saturated colors stay intact."
                                       (plist-get palette :function)) 'constant 'accent))
               (heading-2 type) (heading-3 string)
               (org-navigation function)
-              (modeline-bg
-               ,(if (plist-member palette :modeline-bg)
-                    (let ((color (plist-get palette :modeline-bg)))
-                      (list 'quote (list color color)))
-                  'ui-bg))
+              (modeline-bg ',(list modeline-background modeline-background))
+              (modeline-bg-inactive ',(list inactive-background inactive-background))
+              (modeline-fg-inactive ',(list inactive-foreground inactive-foreground))
               (highlight accent) (vertical-bar border) (selection selection-bg)
               (builtin function) (comments syntax-comment) (doc-comments syntax-comment)
               (constants constant) (functions function) (keywords keyword)
@@ -144,7 +146,7 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
            (tooltip :foreground fg :background bg-alt)
            (mode-line :foreground fg :background modeline-bg)
            (mode-line-active :foreground fg :background modeline-bg)
-           (mode-line-inactive :foreground comment :background modeline-bg)
+           (mode-line-inactive :foreground modeline-fg-inactive :background modeline-bg-inactive)
            (header-line :foreground fg :background ui-bg)
            (tab-bar :foreground fg :background bg-alt)
            (tab-bar-tab :foreground accent :background bg :underline t)
@@ -257,8 +259,7 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
       (dolist (face '(mode-line mode-line-active solaire-mode-line-face
                       solaire-mode-line-active-face doom-modeline-buffer-file))
         (push (list face :foreground 'modeline-fg) faces))
-      (dolist (face '(mode-line-inactive solaire-mode-line-inactive-face
-                      doom-modeline-buffer-path doom-modeline-project-name
+      (dolist (face '(doom-modeline-buffer-path doom-modeline-project-name
                       doom-modeline-project-parent-dir doom-modeline-persp-name
                       doom-modeline-persp-buffer-not-in-persp doom-modeline-debug
                       doom-modeline-input-method-alt doom-modeline-buffer-minor-mode

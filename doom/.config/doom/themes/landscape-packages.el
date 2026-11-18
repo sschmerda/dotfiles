@@ -21,7 +21,7 @@ inherit keyword styling. Only explicit server or parser roles should use it."
            (solaire-default-face :foreground fg :background ui-bg)
            (solaire-mode-line-face :foreground fg :background modeline-bg)
            (solaire-mode-line-active-face :foreground fg :background modeline-bg)
-           (solaire-mode-line-inactive-face :foreground comment :background modeline-bg)
+           (solaire-mode-line-inactive-face :foreground modeline-fg-inactive :background modeline-bg-inactive)
            (solaire-hl-line-face :background selection-bg :extend t)
            (solaire-org-hide-face :foreground ui-bg)
            (org-hide :foreground bg)

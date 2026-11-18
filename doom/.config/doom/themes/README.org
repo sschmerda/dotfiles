@@ -8,6 +8,9 @@ Use =M-x consult-theme= to preview; all names begin with =custom-=.
 Dark themes use a distinct mode-line background drawn from a secondary palette
 color, with coordinated bright text and readable subdued labels. Provence uses
 olive, Venezia rose, Iceland glacial teal, and Catppuccin blue, for example.
+Across light and dark themes, inactive window bars blend toward the editor
+background and use quieter, readable text. Active bars retain their palette
+colors; Solaire variants follow the same active/inactive distinction.
 Documentation and the Solaire/Vertico minibuffer retain their separate darker
 UI background. Light themes retain their shared darker UI surface. Syntax and
 code-block surfaces keep their existing colors.
