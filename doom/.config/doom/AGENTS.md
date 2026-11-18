@@ -39,11 +39,75 @@ These instructions apply to this directory and its descendants, including
   such as `after!`, when accessing packages that may not have loaded yet.
 - Check existing bindings before assigning keys. Keep command docstrings,
   which-key descriptions and `config.org` documentation consistent.
+- Every custom interactive feature must provide discoverable, context-specific
+  help explaining its commands, keybindings and relevant options. Use a local
+  `C-c C-h` binding by default, or `C-h` in a dedicated interface where appropriate.
+  Preserve Emacs's standard help bindings in ordinary buffers, and keep the help
+  text and documented bindings synchronized with the implementation.
 - Keep configuration portable across systems. Guard platform-specific behavior
   and discover executables and SDK paths rather than hardcoding this machine's
   username, installation paths or environment names.
 - Distinguish local and TRAMP paths explicitly. Load local libraries and native
   modules in a local directory context; run remote tooling in its remote context.
+
+## Language support contract
+
+- Required primary programming-language targets: **Python, R, Rust, Emacs Lisp,
+  Go, C, C++, and Java**. Java is a support target even while its Doom module is
+  disabled; this is not permission to enable it automatically.
+- Also preserve the enabled Lua and shell workflows. Track JavaScript/TypeScript
+  as planned targets while their modules/tooling are unavailable. Org, Markdown,
+  LaTeX and data files retain their existing non-programming workflows.
+- Every new language-facing feature must be checked against this target set.
+  Prefer one shared implementation driven by provider capabilities. Add language
+  adapters only for demonstrated differences; do not silently assume Python
+  syntax, namespace rules, server behavior or environment conventions.
+- Apply shared changes (documentation, signature help, search, themes, navigation,
+  Git integration and layout) to every target where they are meaningful. For an
+  intrinsically language-specific facility, such as Conda activation, explicitly
+  mark other targets not applicable rather than inventing artificial equivalents.
+  Emacs Lisp normally uses native Help/Eldoc/Xref instead of an invented LSP server.
+- Preserve text and source buffers. Missing parser/server metadata must have a
+  readable fallback or an explicit unsupported result. Never guess an import,
+  discard a qualifier to choose an unrelated symbol, run example code, edit the
+  originating document as a lookup trick, or start another LSP server for Help.
+- Test pure behavior for each applicable adapter and real installed tooling for
+  changed server interactions. Missing executables/grammars are recorded as
+  unverified, not passed. Update the evidence table below when support changes;
+  do not call all Doom functionality verified merely because one fixture passes.
+- Local protocol tests do not establish TRAMP support, a functioning REPL/debugger,
+  formatter availability, or complete in-editor integration. Verify those layers
+  separately when changing them. Do not install/enable modules or contact remote
+  hosts merely to fill gaps in this table without task authorization.
+
+### Documentation reading view (2026-11-18)
+
+Documentation displays the provider's text and explicit links, with syntax
+highlighting, popup/centered presentation and cached Help history. It does not
+resolve arbitrary names in prose/examples, create synthetic source documents,
+scan source for matching identifiers or search workspace symbols from Help.
+The source action requests a definition only at the original saved LSP source
+position. Missing/unreadable sources fail explicitly. Native Emacs Lisp Help
+retains its native buttons and navigation.
+
+| Target | Shared behavior and verification boundary |
+| --- | --- |
+| Python | Shared reading view; parser-backed example highlighting has isolated tests, including prompts and long Markdown fences. No example-name lookup. |
+| R, Rust, Go, C, C++, Java | Same provider-driven reading view and original-position source action; no language-specific resolution adapters. Isolated protocol/UI tests do not establish complete live server integration for each language. Java remains a target without enabling its module. |
+| Emacs Lisp | Native Doom/Helpful/Eldoc/Xref; native Help behavior is covered by isolated window tests. No invented LSP server. |
+| Lua / shell | Preserve enabled workflows using the same reading view. Live server integration remains unverified. |
+| JavaScript / TypeScript | Planned targets; no live integration claim while tooling/modules are unavailable. |
+
+Run the focused tests from the repository root:
+
+```sh
+emacs -Q --batch -l doom/.config/doom/lisp/tests/documentation-tests.el -f ert-run-tests-batch-and-exit
+emacs -Q --batch -l doom/.config/doom/lisp/tests/signature-tests.el -f ert-run-tests-batch-and-exit
+```
+
+Package paths/grammar availability may differ across hosts; report skips and
+missing dependencies explicitly. Add the feature's relevant formatter, environment,
+search or theme tests rather than treating these documentation tests as universal.
 
 ## Validation and scope
 
