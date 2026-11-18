@@ -19,21 +19,26 @@
   (add-to-list 'load-path directory)
   (add-to-list 'custom-theme-load-path directory))
 
-;; This lsp-ui version renders informational diagnostics with `success'. Keep
-;; their color aligned with Flycheck/Flymake without recoloring DONE/success.
+;; lsp-ui uses diagnostic levels as faces. Resolve generated/tagged levels to
+;; their registered Flycheck faces; they are levels, not face names themselves.
+;; Custom themes also align ordinary info colors without recoloring DONE/success.
 (defun my--theme-diagnostic-face (face)
-  "Replace only the informational diagnostic FACE, preserving other styles."
-  (cond ((eq face 'success) 'landscape-diagnostic-info)
+  "Resolve tagged diagnostic FACE and apply custom themes' info color."
+  (cond ((and (symbolp face) (not (facep face)) (get face 'flycheck-error-level))
+         (let ((registered (get face 'flycheck-error-list-face)))
+           (if (facep registered) registered 'shadow)))
+        ((and (eq face 'success)
+              (seq-some (lambda (theme) (string-prefix-p "custom-" (symbol-name theme)))
+                        custom-enabled-themes))
+         'landscape-diagnostic-info)
         ((and (listp face) (not (keywordp (car face))))
          (mapcar #'my--theme-diagnostic-face face))
         (t face)))
 
 (defvar lsp-ui-sideline--ovs)
 (defun my--theme-sideline-diagnostics-h (buffer &rest _)
-  "Align informational sideline colors in BUFFER while custom themes are active."
-  (when (and (buffer-live-p (get-buffer buffer))
-             (seq-some (lambda (theme) (string-prefix-p "custom-" (symbol-name theme)))
-                       custom-enabled-themes))
+  "Repair diagnostic face references in BUFFER and align custom theme info colors."
+  (when (buffer-live-p (get-buffer buffer))
     (with-current-buffer buffer
       (when (boundp 'lsp-ui-sideline--ovs)
         (dolist (overlay lsp-ui-sideline--ovs)
@@ -48,7 +53,8 @@
                         (put-text-property position end 'face
                                            (my--theme-diagnostic-face face) string))
                       (setq position end)))
-                  (overlay-put overlay 'after-string string))))))))))
+                  (unless (equal-including-properties original string)
+                    (overlay-put overlay 'after-string string)))))))))))
 
 (with-eval-after-load 'lsp-ui-sideline
   (advice-add 'lsp-ui-sideline--diagnostics :after #'my--theme-sideline-diagnostics-h))
