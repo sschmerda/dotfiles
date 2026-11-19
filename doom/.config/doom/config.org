@@ -36,6 +36,10 @@ these are not selectable candidates. Dynamic-height sessions are unchanged.
 #+end_src
 
 * Navigation
+After =SPC w >=, =SPC w <=, =SPC w += or =SPC w -=, repeat or switch resize
+directions with bare =>=, =<=, =+= and =-=. Use === to balance splits, =C-h=
+for resize help, or =q=/=C-g= to exit. Any other key exits and runs normally.
+
 [[file:lisp/navigation-config.el][navigation-config.el]] extends Doom's Nav Flash to counted Evil vertical motions of at least 10 lines, including visual-line motions in Org and the custom upward motion in Magit. Successful Avy jumps such as =g s s= also flash their destination. Ordinary single-line movement stays quiet; Doom's exclusions and the clock popup's flash suppression still apply.
 
 Evil Snipe searches for literal whitespace, preserving Vim's =t<Space>= behavior: stop before the space and exclude it from a visual selection.

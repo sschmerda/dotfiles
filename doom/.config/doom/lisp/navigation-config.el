@@ -1,5 +1,47 @@
 ;;; navigation-config.el -*- lexical-binding: t; -*-
 
+(defvar my-window-resize-repeat-active nil)
+
+(defun my/window-resize-help ()
+  "Explain the active split-window resize keys."
+  (interactive)
+  (message "Resize: > wider, < narrower, + taller, - shorter, = balance; q/C-g exit; other keys exit and run normally"))
+
+(defvar my-window-resize-repeat-map
+  (let ((map (make-sparse-keymap)))
+    (dolist (binding '((">" . evil-window-increase-width)
+                       ("<" . evil-window-decrease-width)
+                       ("+" . evil-window-increase-height)
+                       ("-" . evil-window-decrease-height)
+                       ("=" . balance-windows)
+                       ("q" . ignore)
+                       ("C-g" . keyboard-quit)
+                       ("C-h" . my/window-resize-help)
+                       ("C-c C-h" . my/window-resize-help)))
+      (define-key map (kbd (car binding)) (cdr binding)))
+    map)
+  "Transient keys available after resizing a split window.")
+
+(defun my--window-resize-repeat-a (&rest _)
+  "Allow bare resize keys after an interactive Evil window resize."
+  (when (and (memq this-command '(evil-window-increase-width evil-window-decrease-width
+                                 evil-window-increase-height evil-window-decrease-height))
+             (not my-window-resize-repeat-active))
+    (setq my-window-resize-repeat-active t)
+    (set-transient-map
+     my-window-resize-repeat-map
+     (lambda ()
+       (memq this-command '(evil-window-increase-width evil-window-decrease-width
+                            evil-window-increase-height evil-window-decrease-height
+                            balance-windows my/window-resize-help)))
+     (lambda () (setq my-window-resize-repeat-active nil)))
+    (my/window-resize-help)))
+
+(after! evil
+  (dolist (command '(evil-window-increase-width evil-window-decrease-width
+                     evil-window-increase-height evil-window-decrease-height))
+    (advice-add command :after #'my--window-resize-repeat-a)))
+
 (after! evil-snipe
   ;; Match literal whitespace so t<Space> stops before it, as in Vim.
   (setq evil-snipe-skip-leading-whitespace nil))
