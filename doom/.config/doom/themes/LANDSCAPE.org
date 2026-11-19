@@ -80,6 +80,17 @@ private variables were copied. Upstream Doom retains its own attribution and
 license. This collection adds original palette bindings and semantic mappings.
 
 ** Color semantics and surfaces
+
+Current-line highlighting retains its primary-accent tint on the palette's
+=line= surface. Visual selection uses the palette's explicit =selection-accent=,
+chosen from a secondary hue: for example, sage/teal in Provence, blue in Iceland,
+Bologna and Napoli, and cyan in Rosé Pine and Catppuccin. It blends that accent
+with a neutral dark/light surface to preserve its hue, then lifts it
+in dark variants or deepens it in light variants until it has at least 1.65:1
+luminance contrast against the cursor row. Both highlights
+preserve the text's syntax foreground colors. This shared behavior also
+applies to the custom reference-inspired families and follows theme switching.
+
 Ordinary identifiers, parameter references and member accesses stay at =fg=.
 Recognized parameter declarations generally use an =argument= color blended from =constant= and =fg=, with
 rose/berry Provence overrides to separate parameters from numbers and strings,

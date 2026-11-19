@@ -3,9 +3,42 @@
 ;; Original mappings for the user-approved landscape palettes.  Doom's framework
 ;; supplies package support; no Tokyo Night implementation is copied here.
 (require 'cl-lib)
+(require 'color)
 (require 'doom-themes)
 (require 'landscape-palettes)
 (require 'landscape-packages)
+
+(defun landscape--color-luminance (hex)
+  "Return relative sRGB luminance for hexadecimal color HEX."
+  (cl-loop for start in '(1 3 5)
+           for weight in '(0.2126 0.7152 0.0722)
+           for channel = (/ (string-to-number (substring hex start (+ start 2)) 16) 255.0)
+           sum (* weight (if (<= channel 0.04045) (/ channel 12.92)
+                           (expt (/ (+ channel 0.055) 1.055) 2.4)))))
+
+(defun landscape--visual-selection-background (row tint light)
+  "Separate TINT from ROW by at least 1.65:1 luminance contrast.
+Lift the theme tint in dark themes and deepen it in LIGHT themes."
+  (let ((row-luminance (landscape--color-luminance row))
+        (hsl (apply #'color-rgb-to-hsl
+                    (cl-loop for start in '(1 3 5)
+                             collect (/ (string-to-number
+                                         (substring tint start (+ start 2)) 16) 255.0))))
+        (color tint))
+    (setf (cadr hsl) (max 0.16 (cadr hsl)))
+    (setq color (apply #'color-rgb-to-hex
+                       (append (apply #'color-hsl-to-rgb hsl) '(2))))
+    (while (let ((luminance (landscape--color-luminance color)))
+             (and (if light (> (nth 2 hsl) 0.0) (< (nth 2 hsl) 1.0))
+                  (or (if light (>= luminance row-luminance)
+                        (<= luminance row-luminance))
+                      (< (/ (+ 0.05 (max luminance row-luminance))
+                            (+ 0.05 (min luminance row-luminance))) 1.65))))
+      ;; Adjust lightness without washing the secondary hue into gray.
+      (setf (nth 2 hsl) (max 0.0 (min 1.0 (+ (nth 2 hsl) (if light -0.01 0.01)))))
+      (setq color (apply #'color-rgb-to-hex
+                         (append (apply #'color-hsl-to-rgb hsl) '(2)))))
+    color))
 
 (defun landscape--line-number-color (accent)
   "Make hexadecimal ACCENT up to 20 percent more saturated for line numbers.
@@ -36,6 +69,16 @@ Preserve its hue and brightest channel; already saturated colors stay intact."
          ;; receding toward the editor surface in both light and dark themes.
          (inactive-background (doom-blend modeline-background (plist-get palette :bg) 0.20))
          (inactive-foreground (doom-blend (plist-get palette :fg) inactive-background 0.65))
+         ;; Keep the existing primary-accent row color independent of selection.
+         (row-tint (doom-blend (plist-get palette :accent)
+                              (plist-get palette :selection-bg) 0.25))
+         (current-line-background (doom-blend row-tint
+                                             (plist-get palette :line) 0.40))
+         (visual-tint (doom-blend (plist-get palette :selection-accent)
+                                 (if light "#FFFFFF" "#000000")
+                                 (if light 0.25 0.40)))
+         (visual-background (landscape--visual-selection-background
+                             current-line-background visual-tint light))
          (bindings
           (cl-loop for (key value) on palette by #'cddr
                    collect (list (intern (substring (symbol-name key) 1))
@@ -53,6 +96,10 @@ Preserve its hue and brightest channel; already saturated colors stay intact."
                      collect (list (intern (format "base%d" n))
                                    (list 'quote (list color color))))
             `((ui-bg ',(list ui-background ui-background))
+              ;; Active text selection is stronger than passive row/picker
+              ;; surfaces, using this variant's secondary selection accent.
+              (visual-bg ',(list visual-background visual-background))
+              (current-line-bg ',(list current-line-background current-line-background))
               (receiver-tone
                ',(let ((color (doom-blend (plist-get palette :keyword)
                                          (plist-get palette :fg) 0.55)))
@@ -102,7 +149,7 @@ Preserve its hue and brightest channel; already saturated colors stay intact."
               (builtin function) (comments syntax-comment) (doc-comments syntax-comment)
               (constants constant) (functions function) (keywords keyword)
               (methods function) (operators fg) (strings string) (variables fg)
-              (numbers constant) (region selection-bg)
+              (numbers constant) (region visual-bg)
               (vc-modified changed-fg) (vc-added added-fg) (vc-deleted removed-fg)))))
 
 (defun landscape--faces (&optional variant background-mode)
@@ -118,7 +165,7 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
                                :weight 'normal)
            (fringe :foreground comment :background bg)
            (shadow :foreground comment)
-           (hl-line :background selection-bg :extend t)
+           (hl-line :foreground 'unspecified :background current-line-bg :extend t)
            (line-number :foreground line-number-muted :background bg-alt)
            (line-number-current-line :inherit 'line-number :foreground line-number-active
                                      :background 'unspecified :weight 'bold)
@@ -126,8 +173,8 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
            (minibuffer-prompt :foreground accent)
            (link :foreground accent :underline t)
            (link-visited :foreground accent :underline t)
-           (region :foreground selection-fg :background selection-bg
-                   :distant-foreground selection-fg :extend t)
+           (region :inherit 'unspecified :foreground 'unspecified :background visual-bg
+                   :distant-foreground 'unspecified :extend t)
            (secondary-selection :foreground selection-fg :background selection-bg)
            (highlight :foreground selection-fg :background selection-bg)
            (match :foreground search-fg :background search-bg)

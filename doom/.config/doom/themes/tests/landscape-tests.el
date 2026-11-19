@@ -214,7 +214,9 @@ color-vision accessibility or of a major mode's token classifications."
     (let* ((theme (intern (format "custom-landscape-%s" (car entry))))
            (palette (cdr entry)))
       (landscape-test-select theme)
-      (dolist (mapping '((region selection) (vertico-current selection)
+      ;; Active text regions preserve syntax with a distinct background;
+      ;; custom-editor-visual-selection-preserves-syntax covers both families.
+      (dolist (mapping '((vertico-current selection)
                          (corfu-current selection) (isearch search-current)
                          (lazy-highlight search) (magit-diff-added added)
                          (magit-diff-removed removed) (ediff-current-diff-C changed)))
