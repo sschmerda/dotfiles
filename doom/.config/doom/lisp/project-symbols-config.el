@@ -1,6 +1,9 @@
 ;;; project-symbols-config.el --- Query-free LSP buffer and project symbols -*- lexical-binding: t; -*-
 
 (require 'cl-lib)
+(require 'completion-search-config
+         (expand-file-name "completion-search-config.el"
+                           (file-name-directory (or load-file-name buffer-file-name))))
 (require 'hl-line)
 (defvar +nav-flash-exclude-commands)
 (eval-when-compile (require 'consult-lsp nil t))
@@ -378,7 +381,7 @@ An explicitly customized scope background still takes precedence."
            (if (plist-get view :tree-guides) "on" "off")
            (if (plist-get view :scope-highlight) "on" "off")
            (if (plist-get view :origin-marker) "on" "off"))
-   "Navigation\nBoth presentations initially select the symbol enclosing the original cursor.\nKind: selection at top with a sticky kind heading; Source: centered with context.\nTAB / Shift-TAB place the target group or root at the top.\nFiltering keeps a surviving selection; otherwise it selects the first match.\n↑ / ↓           Select each result\nTAB / Shift-TAB Kind: cycle categories; Source: next / previous tree root\nRET             Jump to the selected symbol\nC-g             Cancel\n\nPresentation\nC-c C-s         Toggle Kind / Source\nC-c C-l         Toggle Full / Compact columns\nC-c C-t         Toggle Source tree guides\nC-c C-r         Toggle the preview scope highlight\nC-c C-o         Toggle the original-position marker\nC-c C-d         Toggle full details for the selected result\nC-c C-w         Toggle collection errors\nC-c C-h         Toggle this help panel\nC-M-v / C-M-S-v Scroll the panel down / up\n\nColumns\nFull: Glyph | Symbol | Parent | Path | Type\nCompact: Glyph | Symbol | Path (subject to configured visibility).\nThe folder marker means the project root; — means no parent.\n• in the gutter marks the symbol enclosing the original cursor position; it stays there as you browse.\nEllipses and hidden columns change display only. Full names, paths and annotations remain searchable.\n\nConfiguration (M-x customize-variable)\nmy-symbols-column-widths: maximum widths, independently per column\nmy-symbols-visible-columns: columns enabled in Full layout\nmy-symbols-default-layout: full (default) or compact\nmy-symbols-tree-guides: default Source guides\nmy-symbols-scope-highlight: default scope highlighting\nmy-symbols-scope-face: M-x customize-face (optional scope background override)\nmy-symbols-origin-marker: default original-position marker\nmy-symbols-origin-marker-face: M-x customize-face\n\nScope preview\nThe cursor-line background marks the full range supplied by the server; the destination row uses the visual selection color.\nThe stale cursor-line highlight is hidden during preview and restored on exit.\nJump flashes are suppressed; the cursor lands at the exact LSP symbol start.\nNo scope is inferred from a name-only location. It clears when previewing stops.\n\nSearch\nExisting Orderless syntax applies; a trailing ~ enables fuzzy subsequence matching.\n\nKind filters\n"
+   "Navigation\nBoth presentations initially select the symbol enclosing the original cursor.\nKind: selection at top with a sticky kind heading; Source: centered with context.\nTAB / Shift-TAB place the target group or root at the top.\nFiltering keeps a surviving selection; otherwise it selects the first match.\n↑ / ↓           Select each result\nTAB / Shift-TAB Kind: cycle categories; Source: next / previous tree root\nRET             Jump to the selected symbol\nC-g             Cancel\n\nPresentation\nC-c C-s         Toggle Kind / Source\nC-c C-l         Toggle Full / Compact columns\nC-c C-t         Toggle Source tree guides\nC-c C-r         Toggle the preview scope highlight\nC-c C-o         Toggle the original-position marker\nC-c C-d         Toggle full details for the selected result\nC-c C-w         Toggle collection errors\nC-c C-h         Toggle this help panel\nC-M-v / C-M-S-v Scroll the panel down / up\n\nColumns\nFull: Glyph | Symbol | Parent | Path | Type\nCompact: Glyph | Symbol | Path (subject to configured visibility).\nThe folder marker means the project root; — means no parent.\n• in the gutter marks the symbol enclosing the original cursor position; it stays there as you browse.\nEllipses and hidden columns change display only. Full names, paths and annotations remain searchable.\n\nConfiguration (M-x customize-variable)\nmy-symbols-column-widths: maximum widths, independently per column\nmy-symbols-visible-columns: columns enabled in Full layout\nmy-symbols-default-layout: full (default) or compact\nmy-symbols-tree-guides: default Source guides\nmy-symbols-scope-highlight: default scope highlighting\nmy-symbols-scope-face: M-x customize-face (optional scope background override)\nmy-symbols-origin-marker: default original-position marker\nmy-symbols-origin-marker-face: M-x customize-face\n\nScope preview\nThe cursor-line background marks the full range supplied by the server; the destination row uses the visual selection color.\nThe stale cursor-line highlight is hidden during preview and restored on exit.\nJump flashes are suppressed; the cursor lands at the exact LSP symbol start.\nNo scope is inferred from a name-only location. It clears when previewing stops.\n\nSearch\nC-c C-f toggles Normal (Orderless) / Fuzzy (Fussy). See the matching guide below.\nFuzzy queries show flat ranked results. Clearing the query restores Kind/Source.\nTAB / Shift-TAB select the next / previous result in a flat ranked list.\n\nKind filters\n"
    (if consult-narrow-key
        (format "%s ? opens this help; %s clears the kind filter.\n"
                consult-narrow-key (key-description (consult--widen-key)))
@@ -387,7 +390,8 @@ An explicitly customized scope background still takes precedence."
                 (format "%s %c  %s" (or consult-narrow-key "") (car entry)
                         (my--project-symbols-count-label view (car entry) (cdr entry))))
               (plist-get view :types) "\n")
-   "\n\nCollection\n"
+   "\n\n" (my--completion-search-help-text)
+   "\nCollection\n"
    (if (plist-get view :failures)
        (format "%d files failed; results are incomplete. C-c C-w shows the errors.\n"
                (length (plist-get view :failures)))
@@ -414,7 +418,7 @@ An explicitly customized scope background still takes precedence."
                        ('details (my--symbols-selected))
                        ('help (list (plist-get view :input) (plist-get view :order)
                                     (plist-get view :tree-guides) (plist-get view :layout)
-                                    (plist-get view :scope-highlight)))
+                                    (plist-get view :scope-highlight) my--completion-search-mode))
                        (_ kind))))
       (when (or force (not (equal signature (plist-get view :panel-signature))))
         ;; Resolve selected-candidate state before changing to the panel buffer.
@@ -547,10 +551,14 @@ An explicitly customized scope background still takes precedence."
 
 (defun my--symbols-sort (view candidates)
   "Sort matching CANDIDATES by VIEW's presentation, independently of history."
-  (let ((ranks (plist-get view (if (eq (plist-get view :order) 'source)
-                                  :source-ranks :kind-ranks))))
-    (cl-stable-sort (copy-sequence candidates)
-                    (lambda (a b) (< (gethash a ranks 0) (gethash b ranks 0))))))
+  (if (my--completion-search-query-p)
+      (cl-stable-sort (copy-sequence candidates)
+                      (lambda (a b) (> (or (get-text-property 0 'completion-score a) 0)
+                                       (or (get-text-property 0 'completion-score b) 0))))
+    (let ((ranks (plist-get view (if (eq (plist-get view :order) 'source)
+                                    :source-ranks :kind-ranks))))
+      (cl-stable-sort (copy-sequence candidates)
+                      (lambda (a b) (< (gethash a ranks 0) (gethash b ranks 0)))))))
 
 (defun my--symbols-roots (candidates)
   "Map all CANDIDATES to their source-tree roots, before query filtering.
@@ -599,7 +607,8 @@ LSP ranges include their start and exclude their end."
 (defun my--symbols-place-selection (&optional top)
   "Place the selection at TOP, or according to the current presentation."
   (setq my--symbols-placement
-        (if (or top (eq (plist-get my--symbols-view :order) 'kind)) 'top 'center)))
+        (if (or top (my--completion-search-query-p)
+                (eq (plist-get my--symbols-view :order) 'kind)) 'top 'center)))
 
 (defun my--symbols-select-initial (candidate)
   "Select CANDIDATE at the top in Kind, or centered with context in Source."
@@ -613,7 +622,7 @@ LSP ranges include their start and exclude their end."
 (defun my--symbols-update-filter (original &rest args)
   "Preserve a surviving selection when ORIGINAL updates this picker's filter."
   (if (not my--symbols-view) (apply original args)
-    (let* ((signature (list (minibuffer-contents-no-properties) consult--narrow))
+    (let* ((signature (list (minibuffer-contents-no-properties) consult--narrow my--completion-search-mode))
            (changed (and (not (eq my--symbols-filter-signature :unset))
                          (not (equal signature my--symbols-filter-signature))))
            (selected (my--symbols-selected))
@@ -634,28 +643,29 @@ LSP ranges include their start and exclude their end."
   "Move N tree roots in Source presentation, or cycle kind groups in Kind.
 When a root is filtered out, visit its first visible descendant instead."
   (interactive "p")
-  (if (not (eq (plist-get my--symbols-view :order) 'source))
-      (vertico-next-group n)
-    (vertico--update)
-    (let ((roots (plist-get my--symbols-view :roots))
-          (index 0) previous keys positions)
-      (dolist (candidate vertico--candidates)
-        (let ((root (gethash candidate roots)))
-          (unless (equal root previous)
-            (push root keys)
-            (push index positions)
-            (setq previous root)))
-        (cl-incf index))
-      (setq keys (nreverse keys) positions (nreverse positions))
-      (when positions
-        (let* ((current (and (>= vertico--index 0)
-                             (gethash (nth vertico--index vertico--candidates) roots)))
-               (section (and current (cl-position current keys :test #'equal)))
-               (steps (or n 1))
-               (target (if (zerop steps) 0
-                         (if section (mod (+ section steps) (length positions))
-                           (if (> steps 0) 0 (1- (length positions)))))))
-          (vertico--goto (nth target positions))))))
+  (cond ((my--completion-search-query-p) (vertico-next (or n 1)))
+        ((not (eq (plist-get my--symbols-view :order) 'source)) (vertico-next-group n))
+        (t
+         (vertico--update)
+         (let ((roots (plist-get my--symbols-view :roots))
+               (index 0) previous keys positions)
+           (dolist (candidate vertico--candidates)
+             (let ((root (gethash candidate roots)))
+               (unless (equal root previous)
+                 (push root keys)
+                 (push index positions)
+                 (setq previous root)))
+             (cl-incf index))
+           (setq keys (nreverse keys) positions (nreverse positions))
+           (when positions
+             (let* ((current (and (>= vertico--index 0)
+                                  (gethash (nth vertico--index vertico--candidates) roots)))
+                    (section (and current (cl-position current keys :test #'equal)))
+                    (steps (or n 1))
+                    (target (if (zerop steps) 0
+                              (if section (mod (+ section steps) (length positions))
+                                (if (> steps 0) 0 (1- (length positions)))))))
+               (vertico--goto (nth target positions)))))))
   (my--symbols-place-selection t))
 
 (defun my--symbols-previous-group (&optional n)
@@ -667,7 +677,9 @@ When a root is filtered out, visit its first visible descendant instead."
   "Display VIEW's presentation in the minibuffer prompt."
   (when-let ((overlay (plist-get view :order-overlay)))
     (overlay-put overlay 'before-string
-                 (concat (propertize (if (eq (plist-get view :order) 'kind) "[Kind] " "[Source] ")
+                 (concat (propertize (my--completion-search-label) 'face 'minibuffer-prompt)
+                         (propertize (if (my--completion-search-query-p) "[Ranked] "
+                                       (if (eq (plist-get view :order) 'kind) "[Kind] " "[Source] "))
                                      'face 'minibuffer-prompt)
                          (propertize (if (eq (plist-get view :layout) 'compact) "[Compact] " "[Full] ")
                                      'face 'shadow)
@@ -737,7 +749,8 @@ When a root is filtered out, visit its first visible descendant instead."
     (dolist (binding '(("C-c C-d" . my--symbols-details) ("C-c C-h" . my--symbols-help)
                        ("C-c C-w" . my--symbols-errors) ("C-c C-t" . my--symbols-toggle-guides)
                        ("C-c C-l" . my--symbols-toggle-layout) ("C-c C-r" . my--symbols-toggle-scope)
-                       ("C-c C-o" . my--symbols-toggle-origin)))
+                       ("C-c C-o" . my--symbols-toggle-origin)
+                       ("C-c C-f" . my--completion-search-toggle)))
       (define-key map (kbd (car binding)) (cdr binding)))
     (when consult-narrow-key
       (define-key map (vconcat (kbd consult-narrow-key) (kbd "?"))
@@ -793,13 +806,14 @@ Cache by input and cursor position; group callbacks reuse the same counts."
   (when (minibufferp)
     (let* ((input (minibuffer-contents-no-properties))
            (position (- (point) (minibuffer-prompt-end)))
-           (signature (cons input position)))
+           (signature (list input position my--completion-search-mode)))
       (unless (equal signature (plist-get view :signature))
         (let ((matches (if (equal input "")
                            (plist-get view :candidates)
                          ;; A nil predicate deliberately ignores kind narrowing.
-                         (let ((result (completion-all-completions
-                                        input minibuffer-completion-table nil position)))
+                         (let* ((completion-lazy-hilit-fn nil)
+                                (result (completion-all-completions
+                                         input minibuffer-completion-table nil position)))
                            ;; Completion results can have a dotted base-size tail.
                            (when result (setcdr (last result) nil))
                            result))))
@@ -847,6 +861,12 @@ Cache by input and cursor position; group callbacks reuse the same counts."
           :setup (lambda ()
                    (setq-local my--symbols-view view my--symbols-opening-offset nil my--symbols-placement nil
                                my--symbols-filter-signature :unset)
+                   (my--completion-search-setup
+                    (if (eq (plist-get view :scope) 'buffer) 'buffer-symbols 'project-symbols)
+                    (lambda ()
+                      (setf (plist-get view :signature) nil)
+                      (my--symbols-show-order view)
+                      (my--symbols-place-selection)))
                    (setf (plist-get view :picker-buffer) (current-buffer)
                          (plist-get view :previous-scroll-buffer) other-window-scroll-buffer
                          (plist-get view :previous-scroll-window) minibuffer-scroll-window)
@@ -854,7 +874,7 @@ Cache by input and cursor position; group callbacks reuse the same counts."
                    ;; controls priority here, preserving other bindings.
                    (let ((toggle-map (make-sparse-keymap)))
                      (define-key toggle-map (kbd "C-c C-s") #'my--symbols-toggle-order)
-                     (dolist (key '("C-c C-d" "C-c C-h" "C-c C-w" "C-c C-t" "C-c C-l" "C-c C-r" "C-c C-o"))
+                     (dolist (key '("C-c C-d" "C-c C-h" "C-c C-w" "C-c C-t" "C-c C-l" "C-c C-r" "C-c C-o" "C-c C-f"))
                        (define-key toggle-map (kbd key) (lookup-key map (kbd key))))
                      (setq-local emulation-mode-map-alists
                                  (cons (list (cons 'my--symbols-view toggle-map))
@@ -867,21 +887,23 @@ Cache by input and cursor position; group callbacks reuse the same counts."
                              (lambda ()
                                (vertico--update)
                                (my--project-symbols-refresh-counts view)
+                               (my--symbols-show-order view)
                                (my--symbols-track-selection view)
                                (my--symbols-sync-scope view)
                                (my--symbols-update-panel view)) nil t))
           :group (lambda (candidate transform)
                    (if transform candidate
                      (my--project-symbols-refresh-counts view)
-                     (if (eq (plist-get view :order) 'source)
-                         (when (eq (plist-get view :scope) 'project)
-                           (let ((location (my--symbols-relative-location candidate (plist-get view :root))))
-                             (replace-regexp-in-string
-                              ":[0-9]+\\'" ""
-                              location)))
-                       (let* ((key (get-text-property 0 'consult--type candidate))
-                              (name (alist-get key consult-lsp-symbols-narrow)))
-                         (my--project-symbols-count-label view key (or name "Other")))))))))
+                     (cond ((my--completion-search-query-p) nil)
+                           ((eq (plist-get view :order) 'source)
+                            (when (eq (plist-get view :scope) 'project)
+                              (let ((location (my--symbols-relative-location candidate (plist-get view :root))))
+                                (replace-regexp-in-string
+                                 ":[0-9]+\\'" ""
+                                 location))))
+                           (t (let* ((key (get-text-property 0 'consult--type candidate))
+                                     (name (alist-get key consult-lsp-symbols-narrow)))
+                                (my--project-symbols-count-label view key (or name "Other"))))))))))
 
 (defcustom my-project-symbols-excluded-directories
   '(".git" ".venv" "venv" "env" ".env" ".direnv" ".tox" ".nox"
@@ -1191,7 +1213,10 @@ Group titles occupy display rows only; they never enter the candidate list."
               (push index lines)
               (cl-incf used)
               (cl-incf index)))
-          (let ((affixed (vertico--affixate (mapcar vertico--hilit (nreverse raw)))))
+          (let ((affixed (vertico--affixate (mapcar (lambda (candidate)
+                                                  (my--completion-search-highlight
+                                                   (funcall vertico--hilit candidate)))
+                                                (nreverse raw)))))
             (mapcar
              (lambda (line)
                (if (stringp line) line
@@ -1242,6 +1267,21 @@ Optional DISPLAY replaces the visible text before truncation and padding."
       (put-text-property 0 (length raw) 'display shown raw)
       raw)))
 
+(defun my--symbols-highlight-location (candidate location)
+  "Project CANDIDATE's fuzzy path highlights onto displayed relative LOCATION.
+The collector and Projectile may use different roots; retain match positions
+only in their common suffix, including through left-truncated path cells."
+  (if (not (my--completion-search-query-p)) location
+    (let* ((location (copy-sequence location))
+           (source (1- (length candidate))) (target (1- (length location))))
+      (while (and (>= source 0) (>= target 0)
+                  (= (aref candidate source) (aref location target)))
+        (when (memq 'my-completion-fuzzy-match
+                    (ensure-list (get-text-property source 'face candidate)))
+          (add-face-text-property target (1+ target) 'my-completion-fuzzy-match nil location))
+        (setq source (1- source) target (1- target)))
+      location)))
+
 (defun my--symbols-path-tail (path width)
   "Shorten PATH from the left to WIDTH columns, retaining file and line."
   (if (<= (string-width path) width) path
@@ -1272,7 +1312,8 @@ Optional DISPLAY replaces the visible text before truncation and padding."
              (parent-width (alist-get 'parent plan 0))
              (path-width (alist-get 'path plan 0))
              (type-width (alist-get 'type plan 0))
-             (tree (if (eq (plist-get view :order) 'source)
+             (tree (if (and (eq (plist-get view :order) 'source)
+                            (not (my--completion-search-query-p)))
                        (if (plist-get view :tree-guides)
                            (or (gethash candidate (plist-get view :tree-prefixes)) "")
                          (make-string (* 2 (or (lsp-get symbol :my-depth) 0)) ?\s))
@@ -1280,7 +1321,8 @@ Optional DISPLAY replaces the visible text before truncation and padding."
              (tree (substring tree (max 0 (- (length tree) (1- name-width)))))
              (indent (string-width tree))
              (shown-name (truncate-string-to-width name (- name-width indent) nil nil "…"))
-             (location (my--symbols-relative-location candidate (plist-get view :root)))
+             (location (my--symbols-highlight-location
+                        candidate (my--symbols-relative-location candidate (plist-get view :root))))
              (shown-path (concat root-icon
                                  (my--symbols-path-tail location (max 1 (- path-width (string-width root-icon))))))
              (text (copy-sequence candidate)))
@@ -1293,12 +1335,12 @@ Optional DISPLAY replaces the visible text before truncation and padding."
               (concat (my--symbols-origin-prefix view candidate)
                       (when (> glyph-width 0)
                         (concat (truncate-string-to-width (or (alist-get (lsp-get symbol :kind) icons) "")
-                                                         glyph-width nil ?\s) "  "))
+                                                          glyph-width nil ?\s) "  "))
                       (propertize tree 'face 'shadow))
               (concat (make-string (- name-width indent (string-width shown-name)) ?\s)
                       (when (> parent-width 0) "  ")
                       (my--symbols-display-cell (if (equal parent "") "—" parent)
-                                                     parent-width 'completions-annotations)
+                                                parent-width 'completions-annotations)
                       (when (> path-width 0) "  ")
                       (my--symbols-display-cell location path-width 'shadow shown-path)
                       (when (> type-width 0) "  ")

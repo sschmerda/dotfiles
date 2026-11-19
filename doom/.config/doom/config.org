@@ -35,6 +35,43 @@ these are not selectable candidates. Dynamic-height sessions are unchanged.
 (load! "lisp/completion-config")
 #+end_src
 
+** Optional ranked search
+[[file:lisp/completion-search-config.el][completion-search-config.el]] provides opt-in Normal/Fuzzy matching. The first integration is =my/project-symbols= and =my/buffer-symbols=. File, buffer and =M-x= pickers retain their existing behavior and will be integrated separately.
+
+=C-c C-f= toggles the current symbol picker between =[Normal]= (Orderless) and =[Fuzzy]= (Fussy). Both engines receive the collected symbol candidates; Fuzzy does not rank an Orderless-filtered subset. The query and kind filter are preserved, as is the selected result if it still matches. The same text may mean something different to each engine. Session toggles do not change defaults or persist to the next invocation.
+
+Normal remains the default. In Fuzzy mode, a nonblank query produces a flat list ranked by match score, with no Kind headings, Source indentation or tree guides. Columns, previews, details and Consult kind filters remain available. TAB / Shift-TAB move to the next / previous result in this flat list. Clearing the query restores the chosen Kind or Source representation and retains the current selection. =C-c C-s= can still choose the representation to restore.
+
+The default backend is =fzf-native=: Fussy uses its native C batch matcher for both filtering and scoring, without launching the =fzf= executable. Compatible macOS Intel/Apple Silicon binaries are bundled with the pinned package. Normal search remains usable if the native backend is unavailable; entering Fuzzy mode then reports the load error. Choose =flx= explicitly for the Emacs Lisp backend, whose syntax and scoring differ from fzf. No backend is silently substituted.
+
+Matched characters use =my-completion-fuzzy-match=: a theme-derived warning accent, bold and underlined, including on the selected row. Matching uses the complete symbol candidate name and location even when the displayed columns truncate them. Parent/type annotation operators belong to Normal mode; kind narrowing is available in both modes. The original candidates and their LSP targets are preserved.
+
+=C-c C-h= or =< ?= opens the existing non-selecting help panel with the active matcher, operator examples, controls, configuration options and manual references. In Normal mode it documents =!= exclusion, =&= annotation matching, === literal text, =^= prefix, =~= subsequences, backtick initialism and =%= character folding. Fuzzy/fzf mode documents fzf terms, quoting, exclusions, alternatives, prefix/suffix anchors and smart case. These are separate syntaxes. The installed full Orderless manual is available outside the picker with =C-h i m orderless RET=.
+
+Defaults and appearance can be changed with =M-x customize-variable= / =M-x customize-face=. For example:
+
+#+begin_example
+(setq my-completion-search-default 'normal
+      my-completion-search-defaults '((project-symbols . normal)
+                                      (buffer-symbols . fuzzy))
+      my-completion-fuzzy-backend 'fzf-native)
+;; M-x customize-face RET my-completion-fuzzy-match
+#+end_example
+
+Packages are declared in =packages.el=; run =doom sync= after installing this configuration. Backend loading is lazy, on entering Fuzzy mode. A newly started Emacs uses the generated package configuration; the implementation can also be loaded into an existing session without restarting it. Loaded native modules cannot be replaced in place when their ABI changes; follow the backend's restart instruction in that case.
+
+Verification uses the actual native module and optional flx backend, real completion tables and the symbol regression suite:
+
+#+begin_example
+LSP_USE_PLISTS=true emacs -Q --batch -l doom/.config/doom/lisp/tests/completion-search-tests.el -f ert-run-tests-batch-and-exit
+#+end_example
+
+The matcher is language-independent and adds no language-server requests or symbol providers. Real server/UI checks cover Python and Rust; other LSP languages use the same candidate path. Emacs Lisp's native symbol/navigation facilities are not replaced. Collection caching, persistent indexing, and semantic retrieval remain separate work.
+
+#+begin_src emacs-lisp
+(load! "lisp/completion-search-config")
+#+end_src
+
 * Navigation
 After =SPC w >=, =SPC w <=, =SPC w += or =SPC w -=, repeat or switch resize
 directions with bare =>=, =<=, =+= and =-=. Use === to balance splits, =C-h=
@@ -146,7 +183,7 @@ Python buffers enable semantic tokens when the selected server supports them; ot
 
 =M-x my/buffer-symbols= uses the same interface for only the current file, including unsaved edits. It requires an active language server with document-symbol support in that buffer, but does not require a Projectile project or enumerate other files. Local variables are included only if the language server returns them under its current settings.
 
-=C-c C-s= toggles between =[Kind]= and =[Source]=, shown in the prompt. Kind groups are alphabetical, with entries ordered by file path and source position within each group. Source shows the buffer in source order, or the project grouped by file then source order; nested symbols are indented when the server returns a hierarchy. Both presentations retain the current query, kind filter, counts in the =<= menu, and selected symbol. Query matches retain the selected ordering rather than using history, candidate length or relevance ranking. =TAB= and =Shift-TAB= cycle kind groups in Kind presentation. In Source presentation they jump to the next or previous top-level symbol (tree root), across files in the project picker, and wrap at either end. Arrow keys still visit every symbol. If a query or kind filter hides a root, root navigation visits its first matching descendant instead.
+=C-c C-s= toggles between =[Kind]= and =[Source]=, shown in the prompt. Kind groups are alphabetical, with entries ordered by file path and source position within each group. Source shows the buffer in source order, or the project grouped by file then source order; nested symbols are indented when the server returns a hierarchy. Both presentations retain the current query, kind filter, counts in the =<= menu, and selected symbol. In Normal mode, query matches retain the selected ordering rather than using history, candidate length or relevance ranking. Fuzzy mode uses a flat ranked list for nonblank queries; see [[*Optional ranked search][Optional ranked search]]. =TAB= and =Shift-TAB= cycle kind groups in Kind presentation. In Source presentation they jump to the next or previous top-level symbol (tree root), across files in the project picker, and wrap at either end. Arrow keys still visit every symbol. If a query or kind filter hides a root, root navigation visits its first matching descendant instead.
 
 =my-buffer-symbols-default-order= and =my-project-symbols-default-order= independently accept =kind= (the default) or =source=. With =my-symbols-remember-order= enabled (the default), an explicit toggle overrides that picker's default for the current Emacs session, independently for buffer and project search. Disable it to start from the configured default every time. Queries and kind filters always start fresh; presentation choices are not saved across Emacs restarts.
 
@@ -160,7 +197,7 @@ Rows have five aligned columns: kind glyph, symbol name, parent symbol, path wit
 
 Symbol previews place the symbol about one quarter of the way down the visible code window, leaving more context below it. Accepting a result preserves its preview screen row when the minibuffer closes, so the newly available space appears below the symbol. =my-symbols-window-position= configures this fraction from the top (default =0.25=; =nil= keeps normal scrolling). The calculation uses the current code window height, excluding the minibuffer. Buffer boundaries can limit how much context fits above the target. Both symbol pickers suppress Nav Flash during previews and accepted jumps so it cannot cover the destination highlight. Cursor placement uses zero-based LSP columns and the provider's negotiated Unicode encoding. Other Consult commands retain their usual scrolling and cursor flashes.
 
-Consult's narrowing prefix is =<= in this configuration. =< a= shows Functions + Methods together, =< F= only Functions, =< M= only Methods, =< s= Structs, and =< c= Classes. =< ?= opens navigation and filter help; =< <= clears the filter. Narrowing preserves the search text and its Orderless syntax, including trailing =~=. The combined filter appears in the which-key prefix popup while the separate Function and Method groups remain available.
+Consult's narrowing prefix is =<= in this configuration, independently of Normal/Fuzzy matching. =< a= shows Functions + Methods together, =< F= only Functions, =< M= only Methods, =< s= Structs, and =< c= Classes. =< ?= opens navigation and filter help; =< <= clears the filter. Narrowing preserves the search text and its Orderless syntax, including trailing =~=. The combined filter appears in the which-key prefix popup while the separate Function and Method groups remain available.
 
 Group headings and the =<= menu show counts: =Function (124)= before searching, and =Function (8/124)= for eight query matches. The menu keeps every configured kind visible, including absent kinds with =0= (or =0/0= while searching). Menu counts describe each kind's matches for the query independently of the currently active kind filter, so switching filters remains useful. =Functions + Methods= and =All= have combined counts, and =< ?= shows the same counted kind labels alongside navigation and presentation controls.
 

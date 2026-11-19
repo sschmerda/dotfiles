@@ -59,6 +59,15 @@
 ;; Add comfortable interface spacing around frames and windows.
 (package! spacious-padding)
 
+;; Optional ranked minibuffer search. The native scorer includes macOS binaries.
+(package! fussy
+  :recipe (:host github :repo "jojojames/fussy" :branch "main")
+  :pin "4e2a5e70c80da35d2ac7ddc0e3146bead827d564")
+(package! fzf-native
+  :recipe (:host github :repo "dangduc/fzf-native" :branch "main"
+           :files (:defaults "bin"))
+  :pin "20a16a277764436e003f1d84cb9f0352263f3bad")
+
 ;; Add an online English thesaurus backend for Doom lookup synonyms.
 (package! powerthesaurus
   :recipe (:host github :repo "doomelpa/powerthesaurus"))
