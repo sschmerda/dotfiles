@@ -9,6 +9,12 @@
 ;; change `org-directory'. It must be set before org loads!
 (setq org-directory "~/org/")
 
+(after! org-modern
+  ;; The default level-three triangles lack glyphs in some system fonts.
+  (setq org-modern-fold-stars
+        '(("▶" . "▼") ("▷" . "▽") ("▸" . "▾")
+          ("▹" . "▿") ("▸" . "▾"))))
+
 (after! org
   ;; Prose paragraphs occupy one source line, so navigate their screen rows.
   ;; Leave operator-state motions (for example dj) on source lines.
