@@ -79,6 +79,8 @@ borders and split dividers. It follows the active theme while padding is enabled
 #+end_src
 
 * Org
+Heading padding uses display-only spaces, so hidden stars stay hidden over cursor-line and visual-selection backgrounds. Source view retains the real heading stars.
+
 [[file:lisp/org-config.el][org-config.el]] sets the notes directory and uses visible-line numbering in Org buffers so folded text does not contribute hidden lines to the count. Org starts in editing view: proportional prose with monospace code and tables, with hidden markup revealed at the text cursor. The =SPC m v= view menu offers:
 
 | Key | Action                                           |

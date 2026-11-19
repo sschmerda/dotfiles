@@ -9,7 +9,30 @@
 ;; change `org-directory'. It must be set before org loads!
 (setq org-directory "~/org/")
 
+(defun my--org-blank-leading-stars-a (&rest _)
+  "Display hidden source stars as spaces after Org Modern styles a heading."
+  (when (and org-hide-leading-stars (bound-and-true-p org-indent-mode))
+    (let ((start (match-beginning 1)) (end (match-end 1)))
+      (when (and start end)
+        (with-silent-modifications
+          (while (< start end)
+            (put-text-property start (1+ start) 'display " ")
+            (setq start (1+ start))))))))
+
+(defun my--org-blank-indent-stars-a (&rest _)
+  "Use actual spaces for Org Indent's synthetic heading padding."
+  (dotimes (level (length org-indent--heading-line-prefixes))
+    (let ((prefix (copy-sequence (aref org-indent--heading-line-prefixes level))))
+      (dotimes (index (length prefix))
+        (when (eq (aref prefix index) ?*) (aset prefix index ?\s)))
+      (aset org-indent--heading-line-prefixes level prefix))))
+
+(after! org-indent
+  (advice-add 'org-indent--compute-prefixes :after #'my--org-blank-indent-stars-a))
+
 (after! org-modern
+  ;; Color-matched stars become visible over cursor/selection backgrounds.
+  (advice-add 'org-modern--star :after #'my--org-blank-leading-stars-a)
   ;; The default level-three triangles lack glyphs in some system fonts.
   (setq org-modern-fold-stars
         '(("▶" . "▼") ("▷" . "▽") ("▸" . "▾")
