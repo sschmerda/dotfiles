@@ -1,6 +1,8 @@
 ;;; project-symbols-config.el --- Query-free LSP buffer and project symbols -*- lexical-binding: t; -*-
 
 (require 'cl-lib)
+(require 'hl-line)
+(defvar +nav-flash-exclude-commands)
 (eval-when-compile (require 'consult-lsp nil t))
 ;; These packages are required by the command, not eagerly at editor startup.
 (declare-function projectile-project-root "projectile" (&optional dir))
@@ -85,7 +87,7 @@ that original symbol when selection, ordering, layout or filters change."
 
 (defface my-symbols-scope-face
   '((t (:extend t)))
-  "Scope styling; an unspecified background gets a faint theme-derived tint.
+  "Scope styling; an unspecified background uses the cursor-line highlight.
 An explicitly customized background takes precedence over the derived color."
   :group 'convenience)
 
@@ -140,38 +142,16 @@ Consult scrolling. Buffer boundaries can limit the available context."
           (plist-get view :scope-buffer) nil)))
 
 (defun my--symbols-scope-style (&optional window)
-  "Return a scope face distinct from WINDOW's cursor and preview lines.
-Derive a faint background tint from the active theme, without changing its
-line faces. Respect an explicitly customized scope background."
+  "Use WINDOW's cursor-line background for the symbol scope.
+An explicitly customized scope background still takes precedence."
   (require 'color)
   (let* ((frame (if (window-live-p window) (window-frame window) (selected-frame)))
          (custom (face-attribute 'my-symbols-scope-face :background frame nil))
-         (base (color-name-to-rgb (face-background 'default frame t) frame))
-         (lines (delq nil (mapcar (lambda (face)
-                                   (when (facep face)
-                                     (color-name-to-rgb (face-background face frame t) frame)))
-                                 '(hl-line consult-preview-line))))
-         (hex (lambda (rgb) (apply #'color-rgb-to-hex (append rgb '(2)))))
-         (forbidden (mapcar hex (delq nil (cons base lines))))
-         (accents (append lines
-                          (delq nil (mapcar
-                                     (lambda (entry)
-                                       (when (facep (car entry))
-                                         (color-name-to-rgb
-                                          (face-attribute (car entry) (cdr entry) frame t) frame)))
-                                     '((region . :background) (font-lock-keyword-face . :foreground)
-                                       (default . :foreground))))))
-         (background
-          (if (and (stringp custom) (color-name-to-rgb custom frame)) custom
-            (when base
-              (cl-loop for accent in accents thereis
-                       (cl-loop for alpha in '(0.3 0.45 0.2) for mixed =
-                                (funcall hex (cl-mapcar (lambda (a b) (+ (* alpha a) (* (- 1 alpha) b))) accent base))
-                                for displayed = (color-name-to-rgb mixed frame)
-                                when (and displayed (not (member (funcall hex displayed) forbidden)))
-                                return mixed))))))
+         (background (if (and (stringp custom) (color-name-to-rgb custom frame))
+                         custom
+                       (face-background 'hl-line frame t))))
     (append '(:inherit my-symbols-scope-face :extend t)
-            (if background (list :background background) '(:underline t)))))
+            (when (stringp background) (list :background background)))))
 
 (defun my--symbols-refresh-scope (view)
   "Highlight VIEW's current preview scope without moving point or scrolling."
@@ -220,11 +200,47 @@ line faces. Respect an explicitly customized scope background."
       (push (cons overlay (overlay-get overlay 'face)) (plist-get view :cursor-lines))
       (overlay-put overlay 'face nil))))
 
+(defun my--symbols-location-marker (buffer position encoding)
+  "Make a marker for LSP POSITION in BUFFER using negotiated ENCODING."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (save-excursion
+        (save-restriction
+          (widen)
+          (let ((lsp--move-to-column-function
+                 (pcase encoding
+                   ("utf-8" #'lsp--move-to-utf-8-column)
+                   ("utf-16" #'lsp--move-to-utf-16-column)
+                   ("utf-32" #'lsp--move-to-utf-32-column)
+                   (_ lsp--move-to-column-function))))
+            (copy-marker
+             (lsp--position-to-point
+              (my--project-symbols-object
+               :line (1- (lsp-translate-line (1+ (lsp-get position :line))))
+               :character (lsp-translate-column (lsp-get position :character)))))))))))
+
+(defun my--symbols-location-state (view)
+  "Return Consult's jump state with exact, zero-based LSP positions for VIEW."
+  (let ((open (consult--temporary-files))
+        (jump (consult--jump-state)))
+    (lambda (action candidate)
+      (when (eq action 'exit) (funcall open))
+      (funcall jump action
+               (when candidate
+                 (let* ((location (lsp-get candidate :location))
+                        (uri (lsp-get location :uri))
+                        (encodings (plist-get view :scope-encodings)))
+                   (when uri
+                     (my--symbols-location-marker
+                      (funcall (if (eq action 'finish) #'find-file open) (lsp--uri-to-path uri))
+                      (lsp-get (lsp-get location :range) :start)
+                      (and encodings (gethash candidate encodings))))))))))
+
 (defun my--symbols-state (&optional view)
   "Return Consult's LSP preview state with picker scrolling and scope display."
-  (let ((state (consult-lsp--symbols--state))
-        (view (or view (list :scope-highlight my-symbols-scope-highlight
-                            :scope-overlay nil :scope-candidate nil :scope-window nil :scope-buffer nil)))
+  (let* ((view (or view (list :scope-highlight my-symbols-scope-highlight
+                             :scope-overlay nil :scope-candidate nil :scope-window nil :scope-buffer nil)))
+        (state (my--symbols-location-state view))
         preview-candidate preview-row exit-row)
     ;; Keep this slot on the shared plist even for callers supplying a view.
     ;; Adding a missing property later can replace only a closure's local head.
@@ -239,9 +255,11 @@ line faces. Respect an explicitly customized scope background."
       (when (and (eq action 'exit) my-symbols-window-position)
         (setq exit-row (floor (* (max 0.0 (min 1.0 my-symbols-window-position))
                                  (window-body-height)))))
-      ;; Keep Doom's cursor flash and any other jump hooks. The binding covers
-      ;; only this state call, including Consult's final accepted jump.
-      (let ((consult-after-jump-hook
+      ;; Suppress Nav Flash only while this picker previews/accepts a jump.
+      ;; Keep all other jump hooks and restore ordinary navigation afterwards.
+      (let ((+nav-flash-exclude-commands
+             (cons this-command (bound-and-true-p +nav-flash-exclude-commands)))
+            (consult-after-jump-hook
              (append consult-after-jump-hook
                      (list (lambda ()
                              (my--symbols-recenter
@@ -360,7 +378,7 @@ line faces. Respect an explicitly customized scope background."
            (if (plist-get view :tree-guides) "on" "off")
            (if (plist-get view :scope-highlight) "on" "off")
            (if (plist-get view :origin-marker) "on" "off"))
-   "Navigation\nBoth presentations initially select the symbol enclosing the original cursor.\nKind: selection at top with a sticky kind heading; Source: centered with context.\nTAB / Shift-TAB place the target group or root at the top.\nFiltering keeps a surviving selection; otherwise it selects the first match.\n↑ / ↓           Select each result\nTAB / Shift-TAB Kind: cycle categories; Source: next / previous tree root\nRET             Jump to the selected symbol\nC-g             Cancel\n\nPresentation\nC-c C-s         Toggle Kind / Source\nC-c C-l         Toggle Full / Compact columns\nC-c C-t         Toggle Source tree guides\nC-c C-r         Toggle the preview scope highlight\nC-c C-o         Toggle the original-position marker\nC-c C-d         Toggle full details for the selected result\nC-c C-w         Toggle collection errors\nC-c C-h         Toggle this help panel\nC-M-v / C-M-S-v Scroll the panel down / up\n\nColumns\nFull: Glyph | Symbol | Parent | Path | Type\nCompact: Glyph | Symbol | Path (subject to configured visibility).\nThe folder marker means the project root; — means no parent.\n• in the gutter marks the symbol enclosing the original cursor position; it stays there as you browse.\nEllipses and hidden columns change display only. Full names, paths and annotations remain searchable.\n\nConfiguration (M-x customize-variable)\nmy-symbols-column-widths: maximum widths, independently per column\nmy-symbols-visible-columns: columns enabled in Full layout\nmy-symbols-default-layout: full (default) or compact\nmy-symbols-tree-guides: default Source guides\nmy-symbols-scope-highlight: default scope highlighting\nmy-symbols-scope-face: M-x customize-face (optional scope background override)\nmy-symbols-origin-marker: default original-position marker\nmy-symbols-origin-marker-face: M-x customize-face\n\nScope preview\nA faint theme-derived tint marks the full range supplied by the server, distinct from the cursor line.\nThe stale cursor-line highlight is hidden during preview and restored on exit.\nNo scope is inferred from a name-only location. It clears when previewing stops.\n\nSearch\nExisting Orderless syntax applies; a trailing ~ enables fuzzy subsequence matching.\n\nKind filters\n"
+   "Navigation\nBoth presentations initially select the symbol enclosing the original cursor.\nKind: selection at top with a sticky kind heading; Source: centered with context.\nTAB / Shift-TAB place the target group or root at the top.\nFiltering keeps a surviving selection; otherwise it selects the first match.\n↑ / ↓           Select each result\nTAB / Shift-TAB Kind: cycle categories; Source: next / previous tree root\nRET             Jump to the selected symbol\nC-g             Cancel\n\nPresentation\nC-c C-s         Toggle Kind / Source\nC-c C-l         Toggle Full / Compact columns\nC-c C-t         Toggle Source tree guides\nC-c C-r         Toggle the preview scope highlight\nC-c C-o         Toggle the original-position marker\nC-c C-d         Toggle full details for the selected result\nC-c C-w         Toggle collection errors\nC-c C-h         Toggle this help panel\nC-M-v / C-M-S-v Scroll the panel down / up\n\nColumns\nFull: Glyph | Symbol | Parent | Path | Type\nCompact: Glyph | Symbol | Path (subject to configured visibility).\nThe folder marker means the project root; — means no parent.\n• in the gutter marks the symbol enclosing the original cursor position; it stays there as you browse.\nEllipses and hidden columns change display only. Full names, paths and annotations remain searchable.\n\nConfiguration (M-x customize-variable)\nmy-symbols-column-widths: maximum widths, independently per column\nmy-symbols-visible-columns: columns enabled in Full layout\nmy-symbols-default-layout: full (default) or compact\nmy-symbols-tree-guides: default Source guides\nmy-symbols-scope-highlight: default scope highlighting\nmy-symbols-scope-face: M-x customize-face (optional scope background override)\nmy-symbols-origin-marker: default original-position marker\nmy-symbols-origin-marker-face: M-x customize-face\n\nScope preview\nThe cursor-line background marks the full range supplied by the server; the destination row uses the visual selection color.\nThe stale cursor-line highlight is hidden during preview and restored on exit.\nJump flashes are suppressed; the cursor lands at the exact LSP symbol start.\nNo scope is inferred from a name-only location. It clears when previewing stops.\n\nSearch\nExisting Orderless syntax applies; a trailing ~ enables fuzzy subsequence matching.\n\nKind filters\n"
    (if consult-narrow-key
        (format "%s ? opens this help; %s clears the kind filter.\n"
                consult-narrow-key (key-description (consult--widen-key)))
