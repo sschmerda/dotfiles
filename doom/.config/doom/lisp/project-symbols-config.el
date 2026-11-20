@@ -6,6 +6,7 @@
                            (file-name-directory (or load-file-name buffer-file-name))))
 (require 'hl-line)
 (defvar +nav-flash-exclude-commands)
+(defvar my-olivetti-center-preview)
 (eval-when-compile (require 'consult-lsp nil t))
 ;; These packages are required by the command, not eagerly at editor startup.
 (declare-function projectile-project-root "projectile" (&optional dir))
@@ -242,10 +243,15 @@ An explicitly customized scope background still takes precedence."
                         (uri (lsp-get location :uri))
                         (encodings (plist-get view :scope-encodings)))
                    (when uri
-                     (my--symbols-location-marker
-                      (funcall (if (eq action 'finish) #'find-file open) (lsp--uri-to-path uri))
-                      (lsp-get (lsp-get location :range) :start)
-                      (and encodings (gethash candidate encodings))))))))))
+                     (let ((buffer (funcall (if (eq action 'finish) #'find-file open)
+                                            (lsp--uri-to-path uri))))
+                       (when (and (eq action 'preview) (buffer-live-p buffer)
+                                  (string-prefix-p " Preview:" (buffer-name buffer)))
+                         (with-current-buffer buffer
+                           (setq-local my-olivetti-center-preview t)))
+                       (my--symbols-location-marker
+                        buffer (lsp-get (lsp-get location :range) :start)
+                        (and encodings (gethash candidate encodings)))))))))))
 
 (defun my--symbols-state (&optional view)
   "Return Consult's LSP preview state with picker scrolling and scope display."

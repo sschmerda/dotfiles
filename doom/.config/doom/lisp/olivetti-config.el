@@ -10,6 +10,8 @@
   (defvar-local my-olivetti-inhibit-centering nil
     "Non-nil to exclude this buffer from automatic centering.")
   (put 'my-olivetti-inhibit-centering 'permanent-local t)
+  (defvar-local my-olivetti-center-preview nil
+    "Allow automatic centering for this temporary source preview.")
   (defvar my-olivetti-inhibit-layout nil
     "Non-nil while workspace windows are being rebuilt.")
   (defun my--olivetti-treemacs-window-p (window)
@@ -25,7 +27,8 @@
          (not (bound-and-true-p org-tree-slide-mode))
          (not (bound-and-true-p +popup-buffer-mode))
          (not (derived-mode-p 'pdf-view-mode 'my--time-popup-mode 'treemacs-mode))
-         (not (string-prefix-p " " (buffer-name)))))
+         (or my-olivetti-center-preview
+             (not (string-prefix-p " " (buffer-name))))))
   (defun my--olivetti-enable-buffer (buffer)
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
