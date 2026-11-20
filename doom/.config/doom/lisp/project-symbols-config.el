@@ -381,7 +381,7 @@ An explicitly customized scope background still takes precedence."
            (if (plist-get view :tree-guides) "on" "off")
            (if (plist-get view :scope-highlight) "on" "off")
            (if (plist-get view :origin-marker) "on" "off"))
-   "Navigation\nBoth presentations initially select the symbol enclosing the original cursor.\nKind: selection at top with a sticky kind heading; Source: centered with context.\nTAB / Shift-TAB place the target group or root at the top.\nFiltering keeps a surviving selection; otherwise it selects the first match.\n↑ / ↓           Select each result\nTAB / Shift-TAB Kind: cycle categories; Source: next / previous tree root\nRET             Jump to the selected symbol\nC-g             Cancel\n\nPresentation\nC-c C-s         Toggle Kind / Source\nC-c C-l         Toggle Full / Compact columns\nC-c C-t         Toggle Source tree guides\nC-c C-r         Toggle the preview scope highlight\nC-c C-o         Toggle the original-position marker\nC-c C-d         Toggle full details for the selected result\nC-c C-w         Toggle collection errors\nC-c C-h         Toggle this help panel\nC-M-v / C-M-S-v Scroll the panel down / up\n\nColumns\nFull: Glyph | Symbol | Parent | Path | Type\nCompact: Glyph | Symbol | Path (subject to configured visibility).\nThe folder marker means the project root; — means no parent.\n• in the gutter marks the symbol enclosing the original cursor position; it stays there as you browse.\nEllipses and hidden columns change display only. Full names, paths and annotations remain searchable.\n\nConfiguration (M-x customize-variable)\nmy-symbols-column-widths: maximum widths, independently per column\nmy-symbols-visible-columns: columns enabled in Full layout\nmy-symbols-default-layout: full (default) or compact\nmy-symbols-tree-guides: default Source guides\nmy-symbols-scope-highlight: default scope highlighting\nmy-symbols-scope-face: M-x customize-face (optional scope background override)\nmy-symbols-origin-marker: default original-position marker\nmy-symbols-origin-marker-face: M-x customize-face\n\nScope preview\nThe cursor-line background marks the full range supplied by the server; the destination row uses the visual selection color.\nThe stale cursor-line highlight is hidden during preview and restored on exit.\nJump flashes are suppressed; the cursor lands at the exact LSP symbol start.\nNo scope is inferred from a name-only location. It clears when previewing stops.\n\nSearch\nC-c C-f toggles Normal (Orderless) / Fuzzy (Fussy). See the matching guide below.\nFuzzy queries show flat ranked results. Clearing the query restores Kind/Source.\nTAB / Shift-TAB select the next / previous result in a flat ranked list.\n\nKind filters\n"
+   "Navigation\nBoth presentations initially select the symbol enclosing the original cursor.\nKind: selection at top with a sticky kind heading; Source: centered with context.\nTAB / Shift-TAB place the target group or root at the top.\nFiltering in Kind or Source keeps a surviving selection. Ranked results start at the best match.\n↑ / ↓           Select each result\nTAB / Shift-TAB Kind: cycle categories; Source: next / previous tree root\nRET             Jump to the selected symbol\nC-g             Cancel\n\nPresentation\nC-c C-s         Toggle Kind / Source\nC-c C-l         Toggle Full / Compact columns\nC-c C-t         Toggle Source tree guides\nC-c C-r         Toggle the preview scope highlight\nC-c C-o         Toggle the original-position marker\nC-c C-d         Toggle full details for the selected result\nC-c C-w         Toggle collection errors\nC-c C-h         Toggle this help panel\nC-M-v / C-M-S-v Scroll the panel down / up\n\nColumns\nFull: Glyph | Symbol | Parent | Path | Type\nCompact: Glyph | Symbol | Path (subject to configured visibility).\nThe folder marker means the project root; — means no parent.\n• in the gutter marks the symbol enclosing the original cursor position; it stays there as you browse.\nEllipses and hidden columns change display only. Full names, paths and annotations remain searchable.\n\nConfiguration (M-x customize-variable)\nmy-symbols-column-widths: maximum widths, independently per column\nmy-symbols-visible-columns: columns enabled in Full layout\nmy-symbols-default-layout: full (default) or compact\nmy-symbols-tree-guides: default Source guides\nmy-symbols-scope-highlight: default scope highlighting\nmy-symbols-scope-face: M-x customize-face (optional scope background override)\nmy-symbols-origin-marker: default original-position marker\nmy-symbols-origin-marker-face: M-x customize-face\n\nScope preview\nThe cursor-line background marks the full range supplied by the server; the destination row uses the visual selection color.\nThe stale cursor-line highlight is hidden during preview and restored on exit.\nJump flashes are suppressed; the cursor lands at the exact LSP symbol start.\nNo scope is inferred from a name-only location. It clears when previewing stops.\n\nSearch\nC-c C-f toggles Normal (Orderless) / Fuzzy (Fussy). See the matching guide below.\nFuzzy queries show flat ranked results. Clearing the query restores Kind/Source.\nTAB / Shift-TAB select the next / previous result in a flat ranked list.\n\nKind filters\n"
    (if consult-narrow-key
        (format "%s ? opens this help; %s clears the kind filter.\n"
                consult-narrow-key (key-description (consult--widen-key)))
@@ -620,7 +620,8 @@ LSP ranges include their start and exclude their end."
       (vertico--exhibit))))
 
 (defun my--symbols-update-filter (original &rest args)
-  "Preserve a surviving selection when ORIGINAL updates this picker's filter."
+  "Update selection after ORIGINAL updates this picker's filter.
+Start ranked results at the best match and preserve selection in structured views."
   (if (not my--symbols-view) (apply original args)
     (let* ((signature (list (minibuffer-contents-no-properties) consult--narrow my--completion-search-mode))
            (changed (and (not (eq my--symbols-filter-signature :unset))
@@ -629,7 +630,9 @@ LSP ranges include their start and exclude their end."
            (result (apply original args)))
       (setq my--symbols-filter-signature signature)
       (when changed
-        (let ((index (and selected (cl-position selected vertico--candidates :test #'equal))))
+        (let ((index (and (not (my--completion-search-query-p))
+                          selected
+                          (cl-position selected vertico--candidates :test #'equal))))
           (setq vertico--index (or index (if vertico--candidates 0 -1))
                 vertico--lock-candidate nil)
           (my--symbols-place-selection (not index))))
@@ -643,30 +646,31 @@ LSP ranges include their start and exclude their end."
   "Move N tree roots in Source presentation, or cycle kind groups in Kind.
 When a root is filtered out, visit its first visible descendant instead."
   (interactive "p")
-  (cond ((my--completion-search-query-p) (vertico-next (or n 1)))
-        ((not (eq (plist-get my--symbols-view :order) 'source)) (vertico-next-group n))
-        (t
-         (vertico--update)
-         (let ((roots (plist-get my--symbols-view :roots))
-               (index 0) previous keys positions)
-           (dolist (candidate vertico--candidates)
-             (let ((root (gethash candidate roots)))
-               (unless (equal root previous)
-                 (push root keys)
-                 (push index positions)
-                 (setq previous root)))
-             (cl-incf index))
-           (setq keys (nreverse keys) positions (nreverse positions))
-           (when positions
-             (let* ((current (and (>= vertico--index 0)
-                                  (gethash (nth vertico--index vertico--candidates) roots)))
-                    (section (and current (cl-position current keys :test #'equal)))
-                    (steps (or n 1))
-                    (target (if (zerop steps) 0
-                              (if section (mod (+ section steps) (length positions))
-                                (if (> steps 0) 0 (1- (length positions)))))))
-               (vertico--goto (nth target positions)))))))
-  (my--symbols-place-selection t))
+  (if (my--completion-search-query-p)
+      (vertico-next (or n 1))
+    (cond ((not (eq (plist-get my--symbols-view :order) 'source)) (vertico-next-group n))
+          (t
+           (vertico--update)
+           (let ((roots (plist-get my--symbols-view :roots))
+                 (index 0) previous keys positions)
+             (dolist (candidate vertico--candidates)
+               (let ((root (gethash candidate roots)))
+                 (unless (equal root previous)
+                   (push root keys)
+                   (push index positions)
+                   (setq previous root)))
+               (cl-incf index))
+             (setq keys (nreverse keys) positions (nreverse positions))
+             (when positions
+               (let* ((current (and (>= vertico--index 0)
+                                    (gethash (nth vertico--index vertico--candidates) roots)))
+                      (section (and current (cl-position current keys :test #'equal)))
+                      (steps (or n 1))
+                      (target (if (zerop steps) 0
+                                (if section (mod (+ section steps) (length positions))
+                                  (if (> steps 0) 0 (1- (length positions)))))))
+                 (vertico--goto (nth target positions)))))))
+    (my--symbols-place-selection t)))
 
 (defun my--symbols-previous-group (&optional n)
   "Move N tree roots backward in Source, or cycle kind groups backward."
@@ -724,7 +728,8 @@ When a root is filtered out, visit its first visible descendant instead."
     (when (eq order 'source)
       (setf (plist-get view :source-opened) t)
       (when enclosing (my--symbols-select-initial enclosing)))
-    (my--symbols-place-selection)
+    (unless (my--completion-search-query-p)
+      (my--symbols-place-selection))
     (vertico--exhibit)))
 
 (defvar my-project-symbols-map
@@ -799,24 +804,26 @@ When a root is filtered out, visit its first visible descendant instead."
       (define-key map widen
                   (cons (my--project-symbols-count-label view nil "All") #'consult-narrow)))))
 
-(defun my--project-symbols-refresh-counts (view)
+(defun my--project-symbols-refresh-counts (view &optional use-visible-matches)
   "Refresh VIEW from the current query, independently of the active kind filter.
-Use the real completion table and styles, including Orderless annotations.
+USE-VISIBLE-MATCHES allows reuse of an up-to-date, unnarrowed Vertico result.
 Cache by input and cursor position; group callbacks reuse the same counts."
   (when (minibufferp)
     (let* ((input (minibuffer-contents-no-properties))
            (position (- (point) (minibuffer-prompt-end)))
            (signature (list input position my--completion-search-mode)))
       (unless (equal signature (plist-get view :signature))
-        (let ((matches (if (equal input "")
-                           (plist-get view :candidates)
+        (let ((matches (cond ((equal input "") (plist-get view :candidates))
+                             ((and use-visible-matches (not consult--narrow)
+                                   (equal vertico--input (cons input position)))
+                              vertico--candidates)
                          ;; A nil predicate deliberately ignores kind narrowing.
-                         (let* ((completion-lazy-hilit-fn nil)
-                                (result (completion-all-completions
-                                         input minibuffer-completion-table nil position)))
-                           ;; Completion results can have a dotted base-size tail.
-                           (when result (setcdr (last result) nil))
-                           result))))
+                             (t (let* ((completion-lazy-hilit-fn nil)
+                                       (result (completion-all-completions
+                                                input minibuffer-completion-table nil position)))
+                                  ;; Completion results can have a dotted base-size tail.
+                                  (when result (setcdr (last result) nil))
+                                  result)))))
           (setf (plist-get view :input) input
                 (plist-get view :signature) signature
                 (plist-get view :matches) (my--project-symbols-count-kinds matches)
@@ -886,23 +893,20 @@ Cache by input and cursor position; group callbacks reuse the same counts."
                    (add-hook 'post-command-hook
                              (lambda ()
                                (vertico--update)
-                               (my--project-symbols-refresh-counts view)
+                               (my--project-symbols-refresh-counts view t)
                                (my--symbols-show-order view)
                                (my--symbols-track-selection view)
                                (my--symbols-sync-scope view)
                                (my--symbols-update-panel view)) nil t))
           :group (lambda (candidate transform)
                    (if transform candidate
-                     (my--project-symbols-refresh-counts view)
                      (cond ((my--completion-search-query-p) nil)
                            ((eq (plist-get view :order) 'source)
                             (when (eq (plist-get view :scope) 'project)
-                              (let ((location (my--symbols-relative-location candidate (plist-get view :root))))
-                                (replace-regexp-in-string
-                                 ":[0-9]+\\'" ""
-                                 location))))
-                           (t (let* ((key (get-text-property 0 'consult--type candidate))
-                                     (name (alist-get key consult-lsp-symbols-narrow)))
+                              (my--symbols-relative-location candidate (plist-get view :root) t)))
+                           (t (my--project-symbols-refresh-counts view)
+                              (let* ((key (get-text-property 0 'consult--type candidate))
+                                      (name (alist-get key consult-lsp-symbols-narrow)))
                                 (my--project-symbols-count-label view key (or name "Other"))))))))))
 
 (defcustom my-project-symbols-excluded-directories
@@ -1066,6 +1070,29 @@ or error. Existing LSP documents stay open and unsaved edits are respected."
                        (or (lsp-get (lsp--workspace-server-capabilities workspace) :positionEncoding) "utf-16")
                        candidate)
     candidate))
+
+(defun my--symbols-disambiguate (candidates)
+  "Give colliding CANDIDATES distinct completion strings using LSP columns."
+  (let ((counts (make-hash-table :test #'equal)))
+    (dolist (candidate candidates)
+      (cl-incf (gethash candidate counts 0)))
+    (mapcar
+     (lambda (candidate)
+       (if (= (gethash candidate counts) 1) candidate
+         (let* ((symbol (get-text-property 0 'consult--candidate candidate))
+                (start (lsp-get (lsp-get (lsp-get symbol :location) :range) :start))
+                (column (format ":%d" (1+ (or (lsp-get start :character) 0))))
+                (suffix column)
+                (id 1)
+                (unique (concat candidate suffix)))
+           ;; Distinct workspaces can also yield the same relative location.
+           (while (gethash unique counts)
+             (setq suffix (format "%s#%d" column (cl-incf id))
+                   unique (concat candidate suffix)))
+           (puthash unique 1 counts)
+           (put-text-property 0 1 'my--symbols-location-suffix suffix unique)
+           unique)))
+     candidates)))
 
 (defconst my-project-symbols-icon-specs
   '((1 "symbol_file" font-lock-string-face)
@@ -1241,20 +1268,22 @@ Group titles occupy display rows only; they never enter the candidate list."
 (with-eval-after-load 'vertico
   (advice-add 'vertico--arrange-candidates :around #'my--symbols-arrange-with-header))
 
-(defun my--symbols-relative-location (candidate root)
-  "Return CANDIDATE's file:line relative to ROOT, preserving translated lines."
+(defun my--symbols-relative-location (candidate root &optional file-only)
+  "Return CANDIDATE's location relative to ROOT, preserving translated lines.
+With FILE-ONLY, omit the line and any disambiguating suffix."
   (let* ((symbol (get-text-property 0 'consult--candidate candidate))
          (name (lsp-get symbol :name))
-         (location (substring-no-properties candidate (+ (length name) 3))))
-    (if (not root) location
-      (condition-case nil
-          (let* ((file (lsp--uri-to-path (my--symbols-file candidate)))
-                 (line (and (string-match ":[0-9]+\\'" location)
-                            (match-string 0 location))))
-            (if (and file line)
-                (concat (file-relative-name file root) line)
-              location))
-        (error location)))))
+         (suffix (get-text-property 0 'my--symbols-location-suffix candidate))
+         (location (substring-no-properties candidate (+ (length name) 3)
+                                            (- (length candidate) (length suffix))))
+         (line-start (string-match ":[0-9]+\\'" location))
+         (path (substring location 0 line-start)))
+    (when (and root line-start)
+      (setq path (or (ignore-errors
+                       (file-relative-name (lsp--uri-to-path (my--symbols-file candidate)) root))
+                     path)))
+    (if file-only path
+      (concat path (when line-start (substring location line-start)) suffix))))
 
 (defun my--symbols-display-cell (text width &optional face display)
   "Keep full TEXT searchable but display it in WIDTH columns with FACE.
@@ -1262,6 +1291,9 @@ Optional DISPLAY replaces the visible text before truncation and padding."
   (let* ((raw (copy-sequence text))
          (shown (if (zerop width) ""
                   (truncate-string-to-width (or display text) width nil ?\s "…"))))
+    ;; Vertico applies the first raw character's face to the whole displayed
+    ;; string. Keep fuzzy emphasis on the matched display characters only.
+    (my--completion-search-clear-match-face raw)
     (when face (add-face-text-property 0 (length raw) face nil raw))
     (if (equal raw "") (propertize shown 'face face)
       (put-text-property 0 (length raw) 'display shown raw)
@@ -1384,7 +1416,8 @@ When STATUS is a plist with :failures, retain per-file errors there for the UI."
 (defun my--symbols-read (candidates prompt &optional scope root failures)
   "Browse CANDIDATES with PROMPT and buffer/project SCOPE's presentation.
 ROOT overrides the project base used for displayed relative paths."
-  (let* ((interface (my--project-symbols-interface candidates scope))
+  (let* ((candidates (my--symbols-disambiguate candidates))
+         (interface (my--project-symbols-interface candidates scope))
          (view (plist-get interface :view))
          (origin (when buffer-file-name
                     (let ((position (lsp--cur-position)))

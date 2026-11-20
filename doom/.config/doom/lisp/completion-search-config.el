@@ -44,6 +44,9 @@ An unavailable backend reports an error and leaves the current mode intact."
 (defvar fussy-compare-same-score-fn)
 (defvar fussy-cancel-on-input-fn)
 (defvar fussy--filtering-p)
+(defvar fussy-max-word-length-to-score)
+(defvar fussy-max-query-length)
+(defvar fussy-max-candidate-limit)
 (defvar fzf-native-highlight-fn)
 
 (defun my--completion-search-fuzzy-p ()
@@ -95,13 +98,14 @@ An unavailable backend reports an error and leaves the current mode intact."
 
 (defun my--completion-search-prepare-backend ()
   "Load the chosen fuzzy engine before changing any session settings."
-  (require 'fussy)
-  (pcase my-completion-fuzzy-backend
-    ('fzf-native
-     (require 'fzf-native)
-     (fzf-native-ensure-loaded))
-    ('flx nil)
-    (_ (user-error "Unknown fuzzy backend: %s" my-completion-fuzzy-backend))))
+  (let ((default-directory (file-name-as-directory user-emacs-directory)))
+    (require 'fussy)
+    (pcase my-completion-fuzzy-backend
+      ('fzf-native
+       (require 'fzf-native)
+       (fzf-native-ensure-loaded))
+      ('flx nil)
+      (_ (user-error "Unknown fuzzy backend: %s" my-completion-fuzzy-backend)))))
 
 (defun my--completion-search-set-mode (mode)
   "Apply MODE only in this supported completion session."
@@ -128,7 +132,12 @@ An unavailable backend reports an error and leaves the current mode intact."
                 fussy-compare-same-score-fn nil
                 fussy-cancel-on-input-fn #'ignore
                 fussy-propertize-fn #'my--completion-search-highlight-flx
-                fzf-native-highlight-fn #'my--completion-search-highlight-native))
+                fzf-native-highlight-fn #'my--completion-search-highlight-native)
+    (when (eq my-completion-fuzzy-backend 'flx)
+      ;; Fussy otherwise drops long candidates and can bypass scoring entirely.
+      (setq-local fussy-max-word-length-to-score most-positive-fixnum
+                  fussy-max-query-length most-positive-fixnum
+                  fussy-max-candidate-limit most-positive-fixnum)))
   (setq my--completion-search-mode mode))
 
 (defun my--completion-search-setup (context change-function)
@@ -140,12 +149,20 @@ This is an opt-in API: it installs no global minibuffer hooks or bindings."
               (mapcar (lambda (symbol) (cons symbol (copy-tree (symbol-value symbol))))
                       '(completion-styles completion-category-defaults
                                           completion-category-overrides completion-ignore-case)))
-  (my--completion-search-set-mode
-   (or (alist-get context my-completion-search-defaults) my-completion-search-default)))
+  (let ((mode (or (alist-get context my-completion-search-defaults)
+                  my-completion-search-default)))
+    (if (eq mode 'fuzzy)
+        (condition-case err
+            (my--completion-search-set-mode 'fuzzy)
+          (error
+           (my--completion-search-set-mode 'normal)
+           (message "Opened in Normal mode. Fuzzy backend unavailable: %s"
+                    (error-message-string err))))
+      (my--completion-search-set-mode mode))))
 
 (defun my--completion-search-toggle ()
   "Toggle Normal/Fuzzy matching in the active supported picker.
-Keep the query and any selected candidate that survives the new matcher."
+Keep the query and start a ranked result list at its best match."
   (interactive)
   (unless my--completion-search-session (user-error "This picker has no matching toggle"))
   (let* ((selected (and (>= vertico--index 0) (nth vertico--index vertico--candidates)))
@@ -156,7 +173,9 @@ Keep the query and any selected candidate that survives the new matcher."
     (when my--completion-search-change-function
       (funcall my--completion-search-change-function))
     (vertico--update)
-    (when-let ((index (and selected (cl-position selected vertico--candidates :test #'equal))))
+    (when-let ((index (and (not (my--completion-search-query-p))
+                           selected
+                           (cl-position selected vertico--candidates :test #'equal))))
       (vertico--goto index))
     (vertico--exhibit)))
 
