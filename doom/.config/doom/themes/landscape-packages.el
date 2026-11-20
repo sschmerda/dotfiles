@@ -98,6 +98,9 @@ inherit keyword styling. Only explicit server or parser roles should use it."
            (corfu-bar :background accent)
            (corfu-border :background border)
            (vertico-current :foreground selection-fg :background selection-bg :extend t)
+           (my-symbols-column-header-face :inherit 'default :foreground fg
+                                          :background symbol-header-bg :weight 'bold
+                                          :extend t)
            (company-tooltip :foreground fg :background bg-alt)
            (company-tooltip-selection :foreground selection-fg :background selection-bg)
            (company-tooltip-annotation :foreground comment)

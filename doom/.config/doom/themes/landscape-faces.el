@@ -141,6 +141,11 @@ Preserve its hue and brightest channel; already saturated colors stay intact."
               (heading-1 ,(if (equal (plist-get palette :accent)
                                       (plist-get palette :function)) 'constant 'accent))
               (heading-2 type) (heading-3 string)
+              (symbol-header-bg
+               ',(let ((color (doom-blend (plist-get palette :selection-accent)
+                                         (if light "#FFFFFF" "#000000")
+                                         (if light 0.22 0.40))))
+                   (list color color)))
               (org-navigation function)
               (modeline-bg ',(list modeline-background modeline-background))
               (modeline-bg-inactive ',(list inactive-background inactive-background))

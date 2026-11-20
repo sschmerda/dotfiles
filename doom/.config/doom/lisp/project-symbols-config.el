@@ -9,6 +9,7 @@
 (eval-when-compile (require 'consult-lsp nil t))
 ;; These packages are required by the command, not eagerly at editor startup.
 (declare-function projectile-project-root "projectile" (&optional dir))
+(declare-function doom-blend "doom-themes" (color1 color2 alpha))
 (declare-function projectile-current-project-files "projectile" ())
 (declare-function lsp-session "lsp-mode" ())
 (declare-function lsp--workspace-method-supported? "lsp-mode" (check method capability workspace))
@@ -93,6 +94,12 @@ that original symbol when selection, ordering, layout or filters change."
   '((t (:extend t)))
   "Scope styling; an unspecified background uses the cursor-line highlight.
 An explicitly customized background takes precedence over the derived color."
+  :group 'convenience)
+
+(defface my-symbols-column-header-face
+  '((t (:inherit mode-line-inactive :weight bold :box nil
+                 :underline nil :overline nil :extend t)))
+  "Face for the fixed column headings in the symbol pickers."
   :group 'convenience)
 
 (defcustom my-symbols-default-layout 'full
@@ -1178,6 +1185,23 @@ hide fields. Symbol remains available even when every optional column is off."
   (let ((plan (my--symbols-layout-plan window-width view)))
     (mapcar (lambda (column) (alist-get column plan 0)) '(symbol parent path type))))
 
+(defun my--symbols-column-header-style ()
+  "Use the configured header face or derive a tint for stock Doom themes."
+  (let ((face 'my-symbols-column-header-face))
+    (if (and (eq (face-attribute face :background) 'unspecified)
+             (fboundp 'doom-blend)
+             (cl-some (lambda (theme) (string-prefix-p "doom-" (symbol-name theme)))
+                      custom-enabled-themes))
+        (let* ((light (eq (frame-parameter nil 'background-mode) 'light))
+               (accent (face-foreground 'font-lock-string-face nil t))
+               (background (doom-blend accent (if light "#FFFFFF" "#000000")
+                                       (if light 0.22 0.40))))
+          (if background
+              `(:inherit ,face :background ,background
+                :foreground ,(face-foreground 'default nil t) :extend t)
+            face))
+      face)))
+
 (defun my--symbols-column-header ()
   "Build fixed column titles using exactly the result-row widths."
   (let ((plan (my--symbols-layout-plan (window-body-width (minibuffer-window)) my--symbols-view)))
@@ -1189,8 +1213,9 @@ hide fields. Symbol remains available even when every optional column is off."
                  (if (eq (car cell) 'glyph) "" (capitalize (symbol-name (car cell))))
                  (cdr cell) nil ?\s "…"))
               plan "  ")
+             (propertize " " 'display '(space :align-to (- right 1)))
              "\n")
-     'face '(:inherit (shadow bold)))))
+     'face (my--symbols-column-header-style))))
 
 (defun my--symbols-arrange-body ()
   "Render result rows with persistent group context and a stable viewport.
