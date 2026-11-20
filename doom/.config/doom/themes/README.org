@@ -15,6 +15,12 @@ Documentation and the Solaire/Vertico minibuffer retain their separate darker
 UI background. Light themes retain their shared darker UI surface. Syntax and
 code-block surfaces keep their existing colors.
 
+Matching names and passive search hits use a separate palette tint and underline,
+preserving syntax foreground colors. Their backgrounds stand apart from the
+cursor line in every variant. Their hue differs from the background, cursor,
+and visual selection. Visual selections retain the secondary accent;
+the active search hit uses the stronger search-current fill and contrast text.
+
 * Theme families
 - [[file:LANDSCAPE.org][Landscape]]: nine regional palettes, each light and dark, with =custom-landscape-= names.
 - [[file:REFERENCE-THEMES.org][Reference-inspired themes]]: Shades of Purple, Gruber, Rosé Pine and Catppuccin,

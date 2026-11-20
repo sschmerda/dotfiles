@@ -16,9 +16,37 @@
            sum (* weight (if (<= channel 0.04045) (/ channel 12.92)
                            (expt (/ (+ channel 0.055) 1.055) 2.4)))))
 
-(defun landscape--visual-selection-background (row tint light)
-  "Separate TINT from ROW by at least 1.65:1 luminance contrast.
-Lift the theme tint in dark themes and deepen it in LIGHT themes."
+(defun landscape--hue (hex)
+  "Return the HSL hue of hexadecimal color HEX without display lookups."
+  (car (apply #'color-rgb-to-hsl
+              (cl-loop for start in '(1 3 5)
+                       collect (/ (string-to-number
+                                   (substring hex start (+ start 2)) 16) 255.0)))))
+
+(defun landscape--hue-distance (one two)
+  "Return circular hue distance between hexadecimal colors ONE and TWO."
+  (let ((distance (abs (- (landscape--hue one) (landscape--hue two)))))
+    (min distance (- 1.0 distance))))
+
+(defun landscape--occurrence-accent (palette)
+  "Choose a PALETTE hue distinct from the background, cursor and selection."
+  (let ((references (mapcar (lambda (role) (plist-get palette role))
+                            '(:bg :accent :selection-accent)))
+        (score -1.0) best)
+    (dolist (role '(:type :string :function :constant :parameter-color :module-color))
+      (when-let ((candidate (plist-get palette role)))
+        (let ((distance (apply #'min (mapcar
+                                      (lambda (reference)
+                                        (landscape--hue-distance candidate reference))
+                                      references))))
+          (when (> distance score)
+            (setq score distance best candidate)))))
+    best))
+
+(defun landscape--highlight-background (row tint light contrast &optional step)
+  "Separate TINT from ROW by at least CONTRAST luminance contrast.
+Lift the theme tint in dark themes and deepen it in LIGHT themes.
+STEP defaults to 0.01; smaller steps avoid overshooting text contrast limits."
   (let ((row-luminance (landscape--color-luminance row))
         (hsl (apply #'color-rgb-to-hsl
                     (cl-loop for start in '(1 3 5)
@@ -33,9 +61,10 @@ Lift the theme tint in dark themes and deepen it in LIGHT themes."
                   (or (if light (>= luminance row-luminance)
                         (<= luminance row-luminance))
                       (< (/ (+ 0.05 (max luminance row-luminance))
-                            (+ 0.05 (min luminance row-luminance))) 1.65))))
+                            (+ 0.05 (min luminance row-luminance))) contrast))))
       ;; Adjust lightness without washing the secondary hue into gray.
-      (setf (nth 2 hsl) (max 0.0 (min 1.0 (+ (nth 2 hsl) (if light -0.01 0.01)))))
+      (setf (nth 2 hsl) (max 0.0 (min 1.0 (+ (nth 2 hsl)
+                                            (* (if light -1 1) (or step 0.01))))))
       (setq color (apply #'color-rgb-to-hex
                          (append (apply #'color-hsl-to-rgb hsl) '(2)))))
     color))
@@ -77,8 +106,23 @@ Preserve its hue and brightest channel; already saturated colors stay intact."
          (visual-tint (doom-blend (plist-get palette :selection-accent)
                                  (if light "#FFFFFF" "#000000")
                                  (if light 0.25 0.40)))
-         (visual-background (landscape--visual-selection-background
-                             current-line-background visual-tint light))
+         (visual-background (landscape--highlight-background
+                             current-line-background visual-tint light 1.65))
+         ;; A third palette hue separates occurrences from cursor and selection.
+         (occurrence-accent (landscape--occurrence-accent palette))
+         (occurrence-tint (doom-blend occurrence-accent
+                                     (if light "#FFFFFF" "#000000")
+                                     (if light 0.22 0.25)))
+         ;; Reserve normal-text contrast in palettes with lighter cursor rows.
+         ;; The occurrence-accent underline stays clear even with a gentler fill.
+         (row-luminance (landscape--color-luminance current-line-background))
+         (text-luminance (landscape--color-luminance (plist-get palette :fg)))
+         (occurrence-contrast
+          (min 1.50 (/ (/ (+ 0.05 (max row-luminance text-luminance))
+                          (+ 0.05 (min row-luminance text-luminance))) 4.7)))
+         (occurrence-background (landscape--highlight-background
+                                 current-line-background occurrence-tint light
+                                 occurrence-contrast 0.002))
          (bindings
           (cl-loop for (key value) on palette by #'cddr
                    collect (list (intern (substring (symbol-name key) 1))
@@ -100,6 +144,8 @@ Preserve its hue and brightest channel; already saturated colors stay intact."
               ;; surfaces, using this variant's secondary selection accent.
               (visual-bg ',(list visual-background visual-background))
               (current-line-bg ',(list current-line-background current-line-background))
+              (occurrence-bg ',(list occurrence-background occurrence-background))
+              (occurrence-accent ',(list occurrence-accent occurrence-accent))
               (receiver-tone
                ',(let ((color (doom-blend (plist-get palette :keyword)
                                          (plist-get palette :fg) 0.55)))
@@ -182,8 +228,12 @@ BACKGROUND-MODE can explicitly select light or dark for named flavors."
                    :distant-foreground 'unspecified :extend t)
            (secondary-selection :foreground selection-fg :background selection-bg)
            (highlight :foreground selection-fg :background selection-bg)
-           (match :foreground search-fg :background search-bg)
-           (lazy-highlight :foreground search-fg :background search-bg)
+           (match :inherit 'unspecified :foreground 'unspecified
+                  :background occurrence-bg :underline occurrence-accent :box nil)
+           (lazy-highlight :inherit 'unspecified :foreground 'unspecified
+                           :background occurrence-bg :underline occurrence-accent :box nil)
+           (evil-ex-lazy-highlight :inherit 'unspecified :foreground 'unspecified
+                                   :background occurrence-bg :underline occurrence-accent :box nil)
            (isearch :foreground search-current-fg :background search-current-bg)
            (evil-ex-search :foreground search-current-fg :background search-current-bg)
            (evil-ex-substitute-matches :foreground removed-fg :background removed-bg

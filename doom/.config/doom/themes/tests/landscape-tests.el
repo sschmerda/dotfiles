@@ -218,7 +218,7 @@ color-vision accessibility or of a major mode's token classifications."
       ;; custom-editor-visual-selection-preserves-syntax covers both families.
       (dolist (mapping '((vertico-current selection)
                          (corfu-current selection) (isearch search-current)
-                         (lazy-highlight search) (magit-diff-added added)
+                         (magit-diff-added added)
                          (magit-diff-removed removed) (ediff-current-diff-C changed)))
         (let ((attrs (landscape-test-spec theme (car mapping))) (prefix (cadr mapping)))
           (should (equal (plist-get attrs :foreground)

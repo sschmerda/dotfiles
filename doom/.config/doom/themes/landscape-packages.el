@@ -110,8 +110,10 @@ inherit keyword styling. Only explicit server or parser roles should use it."
            (completions-common-part :foreground fg :underline t)
            (completions-first-difference :foreground fg)
            (completions-annotations :foreground fg)
-           (consult-preview-match :foreground search-fg :background search-bg)
-           (consult-highlight-match :foreground search-fg :background search-bg)
+           (consult-preview-match :inherit 'unspecified :foreground 'unspecified
+                                     :background occurrence-bg :underline occurrence-accent :box nil)
+           (consult-highlight-match :inherit 'unspecified :foreground 'unspecified
+                                     :background occurrence-bg :underline occurrence-accent :box nil)
            (which-key-key-face :foreground accent)
            (which-key-command-description-face :foreground fg)
            (which-key-group-description-face :foreground function)
@@ -139,9 +141,12 @@ inherit keyword styling. Only explicit server or parser roles should use it."
            (lsp-ui-sideline-symbol-info :foreground comment)
            (lsp-ui-sideline-current-symbol :foreground accent :underline t)
            (lsp-ui-sideline-code-action :foreground warning)
-           (lsp-face-highlight-textual :foreground search-fg :background search-bg)
-           (lsp-face-highlight-read :foreground search-fg :background search-bg)
-           (lsp-face-highlight-write :foreground search-fg :background search-bg :underline t)
+           (lsp-face-highlight-textual :inherit 'unspecified :foreground 'unspecified
+                                     :background occurrence-bg :underline occurrence-accent :box nil)
+           (lsp-face-highlight-read :inherit 'unspecified :foreground 'unspecified
+                                     :background occurrence-bg :underline occurrence-accent :box nil)
+           (lsp-face-highlight-write :inherit 'unspecified :foreground 'unspecified
+                                     :background occurrence-bg :underline occurrence-accent :box nil)
            ;; Modifiers must add style without inheriting another token hue.
            (lsp-face-semhl-definition :inherit 'unspecified :foreground 'unspecified)
            (lsp-face-semhl-implementation :inherit 'unspecified :foreground 'unspecified)

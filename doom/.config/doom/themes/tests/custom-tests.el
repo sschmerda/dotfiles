@@ -71,6 +71,41 @@
             (should (eq (plist-get region :distant-foreground) 'unspecified))
             (should (eq (plist-get region :inherit) 'unspecified))))))))
 
+(ert-deftest custom-editor-occurrence-highlights-preserve-syntax ()
+  (dolist (family (list (cons "custom-landscape-" landscape-palettes)
+                       (cons "custom-" custom-editor-palettes)))
+    (dolist (entry (cdr family))
+      (let* ((palette (cdr entry))
+             (theme (intern (concat (car family) (symbol-name (car entry))))))
+        (landscape-test-select theme)
+        (let* ((row (plist-get (landscape-test-spec theme 'hl-line) :background))
+               (selection (plist-get (landscape-test-spec theme 'region) :background))
+               (background (plist-get (landscape-test-spec theme 'lazy-highlight) :background)))
+          (ert-info ((format "Occurrences in %s" theme))
+            (should (>= (landscape-test-contrast background row) 1.12))
+            (should (>= (landscape-test-contrast background (plist-get palette :bg)) 1.30))
+            (should-not (equal background selection))
+            (dolist (reference (list (plist-get palette :bg)
+                                     (plist-get palette :accent) selection))
+              (should (>= (landscape--hue-distance background reference) 0.10)))
+            (should-not (equal background (plist-get palette :search-current-bg)))
+            (should (>= (landscape-test-contrast background (plist-get palette :fg)) 4.5))
+            (dolist (face '(match lazy-highlight evil-ex-lazy-highlight
+                            consult-preview-match consult-highlight-match
+                            lsp-face-highlight-textual lsp-face-highlight-read
+                            lsp-face-highlight-write))
+              (let ((attrs (landscape-test-spec theme face)))
+                (should (equal (plist-get attrs :background) background))
+                (should (eq (plist-get attrs :foreground) 'unspecified))
+                (should (eq (plist-get attrs :inherit) 'unspecified))
+                (should (equal (plist-get attrs :underline)
+                               (landscape--occurrence-accent palette)))
+                (should (memq (plist-get attrs :box) '(nil unspecified)))))
+            ;; Current hits remain deliberately stronger with explicit contrast.
+            (should (>= (landscape-test-contrast
+                         (plist-get palette :search-current-bg)
+                         (plist-get palette :search-current-fg)) 4.5))))))))
+
 (ert-deftest custom-editor-ui-surfaces-are-darker-than-editor ()
   (dolist (family (list (cons "custom-landscape-" landscape-palettes)
                        (cons "custom-" custom-editor-palettes)))
