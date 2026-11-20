@@ -391,9 +391,17 @@ An explicitly customized scope background still takes precedence."
            (if (plist-get view :origin-marker) "on" "off"))
    "Navigation\nBoth presentations initially select the symbol enclosing the original cursor.\nKind: selection at top with a sticky kind heading. The list wraps from the last kind to the first. Source: centered with context.\nTAB / Shift-TAB place the target group or root at the top.\nFiltering in Kind or Source keeps a surviving selection. Ranked results start at the best match.\n↑ / ↓           Select each result\nTAB / Shift-TAB Kind: cycle categories; Source: next / previous tree root\nRET             Jump to the selected symbol\nC-g             Cancel\n\nPresentation\nC-c C-s         Toggle Kind / Source\nC-c C-l         Toggle Full / Compact columns\nC-c C-t         Toggle Source tree guides for unfiltered results\nC-c C-r         Toggle the preview scope highlight\nC-c C-o         Toggle the original-position marker\nC-c C-d         Toggle full details for the selected result\nC-c C-w         Toggle collection errors\nC-c C-h         Toggle this help panel\nC-M-v / C-M-S-v Scroll the panel down / up\n\nColumns\nFull: Glyph | Symbol | Parent | Path | Type\nCompact: Glyph | Symbol | Path (subject to configured visibility).\nThe folder marker means the project root; — means no parent.\n• in the gutter marks the symbol enclosing the original cursor position; it stays there as you browse.\nEllipses and hidden columns change display only. Full names, paths and annotations remain searchable.\n\nConfiguration (M-x customize-variable)\nmy-symbols-column-widths: maximum widths, independently per column\nmy-symbols-visible-columns: columns enabled in Full layout\nmy-symbols-default-layout: full (default) or compact\nmy-symbols-tree-guides: default Source guides\nmy-symbols-scope-highlight: default scope highlighting\nmy-symbols-scope-face: M-x customize-face (optional scope background override)\nmy-symbols-origin-marker: default original-position marker\nmy-symbols-origin-marker-face: M-x customize-face\n\nScope preview\nThe cursor-line background marks the full range supplied by the server; the destination row uses the visual selection color.\nThe stale cursor-line highlight is hidden during preview and restored on exit.\nJump flashes are suppressed; the cursor lands at the exact LSP symbol start.\nNo scope is inferred from a name-only location. It clears when previewing stops.\n\nSearch\nC-c C-f toggles Normal (Orderless) / Fuzzy (Fussy). See the matching guide below.\nFuzzy queries show flat ranked results. Clearing the query restores Kind/Source.\nTAB / Shift-TAB select the next / previous result in a flat ranked list.\n\nKind filters\n"
    (if consult-narrow-key
-       (format "%s ? opens this help; %s clears the kind filter.\n"
+       (format "%s ? opens this help. %s (All kinds) clears the kind filter.\n"
                consult-narrow-key (key-description (consult--widen-key)))
      "The Consult narrowing prefix is currently disabled.\n")
+   (when consult-narrow-key
+     (concat
+      (when (eq (plist-get view :scope) 'project)
+        (format "%s / selects files. " consult-narrow-key))
+      (format "%s ^ selects immediate parents.\n" consult-narrow-key)
+      (format "%s ! (All symbols) clears File, Parent and Kind and keeps the query.\n" consult-narrow-key)
+      "In either selector, type to search, TAB to mark, RET to apply, Esc or C-g to cancel, and C-c C-k to clear.\n"
+      "Within each filter, any marked entry matches. File, Parent and Kind combine.\n"))
    (mapconcat (lambda (entry)
                 (format "%s %c  %s" (or consult-narrow-key "") (car entry)
                         (my--project-symbols-count-label view (car entry) (cdr entry))))
@@ -426,7 +434,8 @@ An explicitly customized scope background still takes precedence."
                        ('details (my--symbols-selected))
                        ('help (list (plist-get view :input) (plist-get view :order)
                                     (plist-get view :tree-guides) (plist-get view :layout)
-                                    (plist-get view :scope-highlight) my--completion-search-mode))
+                                    (plist-get view :scope-highlight) my--completion-search-mode
+                                    (plist-get view :file-filter) (plist-get view :parent-filter)))
                        (_ kind))))
       (when (or force (not (equal signature (plist-get view :panel-signature))))
         ;; Resolve selected-candidate state before changing to the panel buffer.
@@ -630,7 +639,9 @@ LSP ranges include their start and exclude their end."
   "Update selection after ORIGINAL updates this picker's filter.
 Start ranked results at the best match and preserve selection in structured views."
   (if (not my--symbols-view) (apply original args)
-    (let* ((signature (list (minibuffer-contents-no-properties) consult--narrow my--completion-search-mode))
+    (let* ((signature (list (minibuffer-contents-no-properties) consult--narrow my--completion-search-mode
+                            (plist-get my--symbols-view :file-filter)
+                            (plist-get my--symbols-view :parent-filter)))
            (changed (and (not (eq my--symbols-filter-signature :unset))
                          (not (equal signature my--symbols-filter-signature))))
            (selected (my--symbols-selected))
@@ -698,6 +709,10 @@ When a root is filtered out, visit its first visible descendant instead."
                          (propertize (if (my--completion-search-query-p) "[Ranked] "
                                        (if (eq (plist-get view :order) 'kind) "[Kind] " "[Source] "))
                                      'face 'minibuffer-prompt)
+                         (when-let ((files (plist-get view :file-filter)))
+                           (propertize (format "[Files: %d] " (length files)) 'face 'minibuffer-prompt))
+                         (when-let ((parents (plist-get view :parent-filter)))
+                           (propertize (format "[Parents: %d] " (length parents)) 'face 'minibuffer-prompt))
                          (when (plist-get view :failures)
                            (propertize (format "[Incomplete: %d] " (length (plist-get view :failures)))
                                        'face 'warning))))))
@@ -783,6 +798,158 @@ When a root is filtered out, visit its first visible descendant instead."
                     '(6 12))
             (eq (get-text-property 0 'consult--type candidate) consult--narrow)))))
 
+(defun my--symbols-parent-key (candidate)
+  "Return the immediate parent of CANDIDATE, qualified by its file."
+  (when-let ((parent (get-text-property 0 'consult--container-name candidate)))
+    (unless (string-empty-p parent)
+      (cons (my--symbols-file candidate) parent))))
+
+(defun my--symbols-in-filter-p (view candidate)
+  "Return non-nil if CANDIDATE passes VIEW's file and parent filters."
+  (let ((files (plist-get view :file-filter))
+        (parents (plist-get view :parent-filter)))
+    (and (or (null files) (member (my--symbols-file candidate) files))
+         (or (null parents) (member (my--symbols-parent-key candidate) parents)))))
+
+(defun my--symbols-filter-table (view table input predicate action)
+  "Wrap TABLE with VIEW's exact filters, retaining the kind PREDICATE."
+  (if (or (plist-get view :file-filter) (plist-get view :parent-filter))
+      (completion-table-with-predicate
+       table (apply-partially #'my--symbols-in-filter-p view) t input predicate action)
+    (funcall table input predicate action)))
+
+(defun my--symbols-filter-options (view key)
+  "Collect unique display labels and exact identities for VIEW's filter KEY."
+  (let ((seen (make-hash-table :test #'equal))
+        (root (plist-get view :root))
+        options)
+    (dolist (candidate (plist-get view :candidates))
+      (when-let ((identity (if (eq key :file-filter)
+                              (my--symbols-file candidate)
+                            (my--symbols-parent-key candidate))))
+        (unless (gethash identity seen)
+          (puthash identity t seen)
+          (let ((path (my--symbols-relative-location candidate root t)))
+            (push (cons (if (eq key :file-filter) path
+                          (concat (cdr identity) " — " path))
+                        identity)
+                  options)))))
+    (sort options (lambda (a b) (string-lessp (car a) (car b))))))
+
+(defun my--symbols-filter-sort (candidates)
+  "Rank CANDIDATES by fuzzy score, breaking ties alphabetically."
+  (sort (copy-sequence candidates)
+        (lambda (a b)
+          (let ((score-a (or (get-text-property 0 'completion-score a) 0))
+                (score-b (or (get-text-property 0 'completion-score b) 0)))
+            (if (= score-a score-b) (string-lessp a b)
+              (> score-a score-b))))))
+
+(defun my--symbols-read-filter (label options selected)
+  "Read a multi-select filter for LABEL from OPTIONS and premark SELECTED.
+Return (apply . KEYS), including an empty list to clear, or nil on cancellation."
+  (let ((enable-recursive-minibuffers t)
+        (my-completion-search-default 'fuzzy)
+        (my-completion-search-defaults nil)
+        (my-completion-search-remember-mode nil)
+        (labels (mapcar #'car options))
+        (marked (cl-loop for (name . identity) in options
+                         when (member identity selected) collect name))
+        result)
+    (condition-case nil
+        (minibuffer-with-setup-hook
+            (:append
+             (lambda ()
+               (my--completion-search-setup 'symbol-filter nil)
+               (setq-local vertico-sort-override-function #'my--symbols-filter-sort)
+               (let ((map (copy-keymap (current-local-map))))
+                 (dolist (key '("TAB" "<tab>"))
+                   (define-key map (kbd key)
+                     (lambda ()
+                       (interactive)
+                       (vertico--update)
+                       (when-let ((candidate (my--symbols-selected)))
+                         (setq marked (if (member candidate marked)
+                                          (delete candidate marked)
+                                        (cons candidate marked)))
+                         (vertico--exhibit)))))
+                 (dolist (key '("RET" "<return>"))
+                   (define-key map (kbd key)
+                     (lambda ()
+                       (interactive)
+                       (vertico--update)
+                       (when-let ((names (or marked (when-let ((candidate (my--symbols-selected)))
+                                                      (list candidate)))))
+                         (setq result (cons 'apply
+                                            (mapcar (lambda (name) (cdr (assoc name options))) names)))
+                         (exit-minibuffer)))))
+                 (define-key map [escape] #'abort-recursive-edit)
+                 (define-key map (kbd "C-c C-k")
+                   (lambda () (interactive) (setq result '(apply)) (exit-minibuffer)))
+                 (define-key map (kbd "C-c C-h")
+                   (lambda ()
+                     (interactive)
+                     (minibuffer-message
+                      "Type to search. TAB marks across queries. RET applies marks or the current row. Esc/C-g cancels. C-c C-k clears.")))
+                 (use-local-map map))))
+          (completing-read
+           (format "%s [TAB mark · RET apply · Esc/C-g cancel · C-c C-k clear]: " label)
+           (lambda (input predicate action)
+             (if (eq action 'metadata)
+                 `(metadata
+                   (affixation-function
+                    . ,(lambda (candidates)
+                         (mapcar (lambda (candidate)
+                                   (list (my--completion-search-highlight candidate)
+                                         (if (member candidate marked) "✓ " "  ") ""))
+                                 candidates))))
+               (complete-with-action action labels input predicate)))
+           nil t))
+      (quit nil))
+    result))
+
+(defun my--symbols-apply-filters (view &optional clear-kind)
+  "Update VIEW after its exact filters change, optionally clearing Kind."
+  (let ((eligible (cl-remove-if-not (apply-partially #'my--symbols-in-filter-p view)
+                                     (plist-get view :candidates))))
+    (setf (plist-get view :eligible) eligible
+          (plist-get view :totals) (my--project-symbols-count-kinds eligible)
+          (plist-get view :signature) nil
+          (plist-get view :navigated) t))
+  (setq vertico--input nil vertico--lock-groups nil vertico--lock-candidate nil)
+  (when (and clear-kind consult--narrow)
+    (consult-narrow nil))
+  (vertico--update)
+  (my--project-symbols-refresh-counts view t)
+  (my--symbols-show-order view)
+  (vertico--exhibit))
+
+(defun my--symbols-select-filter (key label)
+  "Edit the active symbol picker's exact filter KEY using LABEL."
+  (let* ((view my--symbols-view)
+         (options (my--symbols-filter-options view key)))
+    (unless options (user-error "No %s available in these symbols" (downcase label)))
+    (when-let ((result (my--symbols-read-filter label options (plist-get view key))))
+      (setf (plist-get view key) (cdr result))
+      (my--symbols-apply-filters view))))
+
+(defun my--symbols-select-files ()
+  "Choose files to include in project symbol results."
+  (interactive)
+  (my--symbols-select-filter :file-filter "Files"))
+
+(defun my--symbols-select-parents ()
+  "Choose immediate parents to include in symbol results."
+  (interactive)
+  (my--symbols-select-filter :parent-filter "Parents"))
+
+(defun my--symbols-clear-filters ()
+  "Clear the current File, Parent and Kind filters, keeping the query."
+  (interactive)
+  (setf (plist-get my--symbols-view :file-filter) nil
+        (plist-get my--symbols-view :parent-filter) nil)
+  (my--symbols-apply-filters my--symbols-view t))
+
 (defun my--project-symbols-count-kinds (candidates)
   "Count CANDIDATES by narrowing key, including Functions + Methods."
   (let ((counts (make-hash-table :test #'eql)))
@@ -796,7 +963,7 @@ When a root is filtered out, visit its first visible descendant instead."
 (defun my--project-symbols-count-label (view key name)
   "Format NAME with VIEW's current and total counts for KEY (nil means all)."
   (let ((total (if key (gethash key (plist-get view :totals) 0)
-                 (length (plist-get view :candidates))))
+                 (length (plist-get view :eligible))))
         (matching (if key (gethash key (plist-get view :matches) 0)
                     (plist-get view :match-count))))
     (if (equal (plist-get view :input) "")
@@ -813,7 +980,7 @@ When a root is filtered out, visit its first visible descendant instead."
                           #'consult-narrow))))
     (when-let ((widen (consult--widen-key)))
       (define-key map widen
-                  (cons (my--project-symbols-count-label view nil "All") #'consult-narrow)))))
+                  (cons (my--project-symbols-count-label view nil "All kinds") #'consult-narrow)))))
 
 (defun my--project-symbols-refresh-counts (view &optional use-visible-matches)
   "Refresh VIEW from the current query, independently of the active kind filter.
@@ -824,7 +991,7 @@ Cache by input and cursor position; group callbacks reuse the same counts."
            (position (- (point) (minibuffer-prompt-end)))
            (signature (list input position my--completion-search-mode)))
       (unless (equal signature (plist-get view :signature))
-        (let ((matches (cond ((equal input "") (plist-get view :candidates))
+        (let ((matches (cond ((equal input "") (plist-get view :eligible))
                              ((and use-visible-matches (not consult--narrow)
                                    (equal vertico--input (cons input position)))
                               vertico--candidates)
@@ -870,15 +1037,24 @@ Cache by input and cursor position; group callbacks reuse the same counts."
                      :origin-candidate nil :opening-selection nil
                      :source-opened nil :navigated nil
                      :order-overlay nil :vertico-cycle nil
-                     :candidates candidates :totals totals :matches totals
+                     :candidates candidates :eligible candidates :totals totals :matches totals
+                     :file-filter nil :parent-filter nil
                      :match-count (length candidates) :input "" :signature nil
                      :keymap map :types types)))
     (setf (plist-get narrow :keys) types)
+    (when consult-narrow-key
+      (let ((prefix (kbd consult-narrow-key)))
+        (when (eq (plist-get view :scope) 'project)
+          (define-key map (vconcat prefix (kbd "/")) '("File…" . my--symbols-select-files)))
+        (define-key map (vconcat prefix (kbd "^")) '("Parent…" . my--symbols-select-parents))
+        (define-key map (vconcat prefix (kbd "!")) '("All symbols (clear filters)" . my--symbols-clear-filters))))
     (my--project-symbols-count-menu view)
     (list :keymap map :narrow narrow :view view
           :setup (lambda ()
                    (setq-local my--symbols-view view my--symbols-opening-offset nil my--symbols-placement nil
                                my--symbols-filter-signature :unset)
+                   (setq-local minibuffer-completion-table
+                               (apply-partially #'my--symbols-filter-table view minibuffer-completion-table))
                    (setf (plist-get view :vertico-cycle) vertico-cycle)
                    (my--completion-search-setup
                     (if (eq (plist-get view :scope) 'buffer) 'buffer-symbols 'project-symbols)
@@ -1392,6 +1568,8 @@ only in their common suffix, including through left-truncated path cells."
              (tree (if (and (eq (plist-get view :order) 'source)
                             (or (not (minibufferp))
                                 (and (not consult--narrow)
+                                     (not (plist-get view :file-filter))
+                                     (not (plist-get view :parent-filter))
                                      (string-blank-p (minibuffer-contents-no-properties)))))
                        (if (plist-get view :tree-guides)
                            (or (gethash candidate (plist-get view :tree-prefixes)) "")

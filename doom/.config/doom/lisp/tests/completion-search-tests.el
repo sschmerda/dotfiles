@@ -330,3 +330,51 @@
         (my--project-symbols-refresh-counts view t)
         (should (= 2 (plist-get view :match-count)))
         (should (= 2 (gethash ?M (plist-get view :matches))))))))
+
+(ert-deftest my-completion-search-combines-exact-file-parent-and-kind-filters ()
+  (let* ((workspace (make-lsp--workspace :root "/project"))
+         (candidates
+          (cl-loop for (file name kind parent) in
+                   '(("z.py" "method" 6 "Scope.Parent")
+                     ("a.py" "method" 6 "Scope.Parent")
+                     ("a.py" "method_fn" 12 "Scope.Parent")
+                     ("a.py" "other_method" 6 "Scope.Other")
+                     ("b.py" "method" 6 nil))
+                   collect
+                   (my--project-symbols-candidate
+                    workspace (my--project-symbols-object
+                               :name name :kind kind :containerName parent
+                               :location (my--project-symbols-object
+                                          :uri (concat "file:///project/" file)
+                                          :range (my--project-symbols-object
+                                                  :start (my--project-symbols-object :line 0 :character 0)))))))
+         (interface (my--project-symbols-interface candidates 'project))
+         (view (plist-get interface :view))
+         (predicate (plist-get (plist-get interface :narrow) :predicate))
+         (consult--narrow ?M)
+         (table (apply-partially #'my--symbols-filter-table view
+                                 (my--test-completion-search-table candidates))))
+    (setf (plist-get view :root) "/project/")
+    (let ((files (my--symbols-filter-options view :file-filter))
+          (parents (my--symbols-filter-options view :parent-filter)))
+      (should (equal (mapcar #'car files) '("a.py" "b.py" "z.py")))
+      (should (equal (mapcar #'car parents)
+                     '("Scope.Other — a.py" "Scope.Parent — a.py" "Scope.Parent — z.py")))
+      (setf (plist-get view :file-filter) (list (cdar files) (cdr (nth 2 files)))
+            (plist-get view :parent-filter) (list (cdr (nth 1 parents))))
+      (dolist (mode '(normal fuzzy))
+        (with-temp-buffer
+          (setq-local completion-styles '(orderless))
+          (my--completion-search-setup 'project-symbols nil)
+          (my--completion-search-set-mode mode)
+          (should (equal (my--test-completion-search-results "method" table predicate)
+                         (list (nth 1 candidates))))
+          (should (= 2 (length (my--test-completion-search-results "method" table)))))))))
+
+(ert-deftest my-completion-search-filter-sort-is-alphabetical-for-equal-scores ()
+  (should (equal (my--symbols-filter-sort
+                  (list (propertize "c.py" 'completion-score 8)
+                        (propertize "b.py" 'completion-score 8)
+                        (propertize "a.py" 'completion-score 2)))
+                 '("b.py" "c.py" "a.py")))
+  (should (equal (my--symbols-filter-sort '("z.py" "a.py")) '("a.py" "z.py"))))
