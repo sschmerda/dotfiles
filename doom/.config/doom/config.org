@@ -38,9 +38,9 @@ these are not selectable candidates. Dynamic-height sessions are unchanged.
 ** Optional ranked search
 [[file:lisp/completion-search-config.el][completion-search-config.el]] provides opt-in Normal/Fuzzy matching. The first integration is =my/project-symbols= and =my/buffer-symbols=. File, buffer and =M-x= pickers retain their existing behavior and will be integrated separately.
 
-=C-c C-f= toggles the current symbol picker between =[Normal]= (Orderless) and =[Fuzzy]= (Fussy). Both engines receive the collected symbol candidates; Fuzzy does not rank an Orderless-filtered subset. The query and kind filter are preserved. When a toggle opens ranked results, selection starts at the best match. The same text may mean something different to each engine. Session toggles do not change defaults or persist to the next invocation.
+=C-c C-f= toggles the current symbol picker between =[Normal]= (Orderless) and =[Fuzzy]= (Fussy). Both engines receive the collected symbol candidates; Fuzzy does not rank an Orderless-filtered subset. The query and kind filter are preserved. When a toggle opens ranked results, selection starts at the best match. The same text may mean something different to each engine. By default, each picker remembers its most recent toggle for the current Emacs session. Buffer and project symbols remember their choices independently. Set =my-completion-search-remember-mode= to =nil= to use the configured defaults on every invocation.
 
-Normal remains the default. In Fuzzy mode, a nonblank query produces a flat list ranked by match score, with no Kind headings, Source indentation or tree guides. Editing the query or changing the kind filter selects the best match at the top. Columns, previews, details and Consult kind filters remain available. TAB / Shift-TAB move to the next / previous result in this flat list. Clearing the query restores the chosen Kind or Source representation and retains the current selection. =C-c C-s= can still choose the representation to restore.
+Fuzzy is the configured default for buffer and project symbol searches. In Fuzzy mode, a nonblank query produces a flat list ranked by match score, with no Kind headings, Source indentation or tree guides. Editing the query or changing the kind filter selects the best match at the top. Columns, previews, details and Consult kind filters remain available. TAB / Shift-TAB move to the next / previous result in this flat list. Clearing the query restores the chosen Kind or Source representation and retains the current selection. =C-c C-s= can still choose the representation to restore.
 
 The default backend is =fzf-native=: Fussy uses its native C batch matcher for both filtering and scoring, without launching the =fzf= executable. Compatible macOS Intel/Apple Silicon binaries are bundled with the pinned package. If the configured Fuzzy default fails to load, the picker opens in Normal and reports the error. Use =C-c C-f= to retry during the session. Choose =flx= explicitly for the Emacs Lisp backend, whose syntax and scoring differ from fzf.
 
@@ -70,6 +70,8 @@ The matcher is language-independent and adds no language-server requests or symb
 
 #+begin_src emacs-lisp
 (load! "lisp/completion-search-config")
+(setq my-completion-search-defaults '((project-symbols . fuzzy)
+                                     (buffer-symbols . fuzzy)))
 #+end_src
 
 * Navigation

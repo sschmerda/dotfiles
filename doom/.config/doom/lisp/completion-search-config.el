@@ -8,14 +8,16 @@
   :group 'completion)
 
 (defcustom my-completion-search-default 'normal
-  "Matching profile for a newly opened supported picker."
+  "Matching profile for a picker without a remembered choice or override."
   :type '(choice (const normal) (const fuzzy)) :group 'my-completion-search)
 (defcustom my-completion-search-defaults nil
   "Per-context overrides of `my-completion-search-default'.
-Currently supported contexts are project-symbols and buffer-symbols.
-Other pickers are integrated separately. Session toggles are not remembered."
+Currently supported contexts are project-symbols and buffer-symbols."
   :type '(alist :key-type symbol :value-type (choice (const normal) (const fuzzy)))
   :group 'my-completion-search)
+(defcustom my-completion-search-remember-mode t
+  "Remember explicit matching toggles per picker for this Emacs session."
+  :type 'boolean :group 'my-completion-search)
 (defcustom my-completion-fuzzy-backend 'fzf-native
   "Fussy scoring backend used when entering Fuzzy mode.
 The native backend loads its bundled module; flx uses Emacs Lisp only.
@@ -26,6 +28,8 @@ An unavailable backend reports an error and leaves the current mode intact."
   "Strong fuzzy match emphasis, including on the selected result row."
   :group 'my-completion-search)
 
+(defvar my--completion-search-last-modes nil
+  "Matching modes explicitly chosen in this Emacs session, keyed by picker.")
 (defvar-local my--completion-search-session nil)
 (defvar-local my--completion-search-mode 'normal)
 (defvar-local my--completion-search-normal-settings nil)
@@ -149,7 +153,9 @@ This is an opt-in API: it installs no global minibuffer hooks or bindings."
               (mapcar (lambda (symbol) (cons symbol (copy-tree (symbol-value symbol))))
                       '(completion-styles completion-category-defaults
                                           completion-category-overrides completion-ignore-case)))
-  (let ((mode (or (alist-get context my-completion-search-defaults)
+  (let ((mode (or (and my-completion-search-remember-mode
+                       (alist-get context my--completion-search-last-modes))
+                  (alist-get context my-completion-search-defaults)
                   my-completion-search-default)))
     (if (eq mode 'fuzzy)
         (condition-case err
@@ -177,7 +183,9 @@ Keep the query and start a ranked result list at its best match."
                            selected
                            (cl-position selected vertico--candidates :test #'equal))))
       (vertico--goto index))
-    (vertico--exhibit)))
+    (vertico--exhibit)
+    (when my-completion-search-remember-mode
+      (setf (alist-get my--completion-search-session my--completion-search-last-modes) mode))))
 
 (defun my--completion-search-label ()
   "Return the active matching profile's short label."
@@ -195,7 +203,7 @@ Keep the query and start a ranked result list at its best match."
            "Fuzzy uses fzf syntax: words must all match; 'word is literal, ^word is a prefix, word$ is a suffix, !word excludes, and a | b provides alternatives.\nLowercase queries ignore case; uppercase makes matching case-sensitive.\nMatches are ranked and strongly highlighted. Orderless operators such as & and = do not apply.\n"
          "Fuzzy uses flx subsequence matching and scoring; it does not interpret Orderless operators or fzf query syntax.\nMatches are ranked and strongly highlighted.\n")
      "Orderless components match in any order, separated by spaces. Operators may be placed before or after a component:\n! exclude literal text     !test\n& match annotations       &Function\n= literal text            =foo.bar\n^ literal prefix          ^calculate\n~ fuzzy subsequence       clbn~\n` initials                `cb\n% character folding       %cafe\nUnmarked components retain Orderless literal/regexp matching.\n")
-   "\nDefaults: my-completion-search-default, my-completion-search-defaults.\nBackend: my-completion-fuzzy-backend (fzf-native or flx).\nMatch face: M-x customize-face RET my-completion-fuzzy-match.\n"
+   "\nDefaults: my-completion-search-default, my-completion-search-defaults.\nEach picker remembers toggles for this Emacs session when my-completion-search-remember-mode is enabled.\nBackend: my-completion-fuzzy-backend (fzf-native or flx).\nMatch face: M-x customize-face RET my-completion-fuzzy-match.\n"
    "Full manuals: Orderless Info (C-h i m orderless RET outside the picker),\nhttps://github.com/jojojames/fussy\nhttps://github.com/dangduc/fzf-native\n"))
 
 (provide 'completion-search-config)

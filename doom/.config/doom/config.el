@@ -6,6 +6,8 @@
 (load! "lisp/completion-config")
 
 (load! "lisp/completion-search-config")
+(setq my-completion-search-defaults '((project-symbols . fuzzy)
+                                     (buffer-symbols . fuzzy)))
 
 (load! "lisp/navigation-config")
 

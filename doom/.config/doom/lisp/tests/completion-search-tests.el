@@ -214,6 +214,7 @@
   (with-temp-buffer
     (setq-local completion-styles '(orderless))
     (let* ((my-completion-search-default 'normal)
+           (my--completion-search-last-modes nil)
            (vertico--candidates '("calculate_bonus" "calc_bonus"))
            (vertico--index 0) (vertico--input nil) (vertico--lock-groups nil)
            (vertico--lock-candidate nil) (consult--narrow ?F) (updates 0))
@@ -234,6 +235,34 @@
                (should (equal (buffer-string) "cb"))
                (should (eq consult--narrow ?F))
                (should (= updates 2))))))
+
+(ert-deftest my-completion-search-remembers-explicit-toggles-per-picker ()
+  (let ((my--completion-search-last-modes nil)
+        (my-completion-search-remember-mode t)
+        (my-completion-search-default 'normal)
+        (my-completion-search-defaults nil)
+        (my-completion-fuzzy-backend 'flx))
+    (with-temp-buffer
+      (my--completion-search-setup 'project-symbols nil)
+      (let ((vertico--index -1))
+        (cl-letf (((symbol-function 'my--completion-search-prepare-backend)
+                   (lambda () (error "Backend missing"))))
+          (should-error (my--completion-search-toggle))
+          (should-not my--completion-search-last-modes))
+        (cl-letf (((symbol-function 'minibuffer-contents-no-properties) (lambda () ""))
+                  ((symbol-function 'vertico--update) #'ignore)
+                  ((symbol-function 'vertico--exhibit) #'ignore))
+          (my--completion-search-toggle))))
+    (with-temp-buffer
+      (my--completion-search-setup 'buffer-symbols nil)
+      (should (eq my--completion-search-mode 'normal)))
+    (with-temp-buffer
+      (my--completion-search-setup 'project-symbols nil)
+      (should (my--completion-search-fuzzy-p)))
+    (let ((my-completion-search-remember-mode nil))
+      (with-temp-buffer
+        (my--completion-search-setup 'project-symbols nil)
+        (should (eq my--completion-search-mode 'normal))))))
 
 (ert-deftest my-completion-search-symbols-rank-from-top-after-query-edit ()
   (dolist (order '(kind source))
