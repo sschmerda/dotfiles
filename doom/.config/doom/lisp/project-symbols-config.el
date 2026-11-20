@@ -3,7 +3,12 @@
 (require 'cl-lib)
 (require 'completion-search-config
          (expand-file-name "completion-search-config.el"
-                           (file-name-directory (or load-file-name buffer-file-name))))
+                           (file-name-directory (or load-file-name (bound-and-true-p byte-compile-current-file)
+                                                    buffer-file-name))))
+(require 'symbol-index
+         (expand-file-name "symbol-index.el"
+                           (file-name-directory (or load-file-name (bound-and-true-p byte-compile-current-file)
+                                                    buffer-file-name))))
 (require 'hl-line)
 (defvar +nav-flash-exclude-commands)
 (defvar my-olivetti-center-preview)
@@ -253,6 +258,29 @@ An explicitly customized scope background still takes precedence."
                         buffer (lsp-get (lsp-get location :range) :start)
                         (and encodings (gethash candidate encodings)))))))))))
 
+(defun my--symbols-same-definition-p (a b)
+  (and a b (equal (lsp-get (lsp-get a :location) :uri) (lsp-get (lsp-get b :location) :uri))
+       (cl-every (lambda (key) (equal (lsp-get a key) (lsp-get b key)))
+                 '(:name :kind :containerName))))
+
+(defun my--symbols-validate-jump (index symbol)
+  "Resolve SYMBOL against the current document before accepting a project jump."
+  (let* ((path (lsp--uri-to-path (lsp-get (lsp-get symbol :location) :uri)))
+         (entry (gethash path (my--index-files index))))
+    (unless (and entry (file-exists-p path))
+      (user-error "Symbol file was removed"))
+    (let* ((buffer (my--index-visiting path))
+           (context (my--project-symbols-file-context path (my--index-workspaces index) buffer))
+           (rows (when context
+                   (my--index-buffer index path (car context) (nth 1 context) buffer)))
+           (matches (cl-loop for row in rows
+                             for candidate = (get-text-property 0 'consult--candidate row)
+                             when (my--symbols-same-definition-p symbol candidate)
+                             collect candidate)))
+      (or (cl-find symbol matches :test #'equal)
+          (and (= (length matches) 1) (car matches))
+          (user-error "Selected symbol moved ambiguously or was removed")))))
+
 (defun my--symbols-state (&optional view)
   "Return Consult's LSP preview state with picker scrolling and scope display."
   (let* ((view (or view (list :scope-highlight my-symbols-scope-highlight
@@ -264,6 +292,10 @@ An explicitly customized scope background still takes precedence."
     (unless (plist-member view :cursor-lines)
       (nconc view (list :cursor-lines nil)))
     (lambda (action candidate)
+      (when (and candidate (eq action 'return) (plist-get view :index))
+        (let ((original candidate) (encodings (plist-get view :scope-encodings)))
+          (setq candidate (my--symbols-validate-jump (plist-get view :index) candidate))
+          (puthash candidate (gethash original encodings) encodings)))
       (my--symbols-clear-scope view t)
       (when (memq action '(exit return))
         (my--symbols-restore-cursor-lines view))
@@ -327,12 +359,12 @@ An explicitly customized scope background still takes precedence."
            (eq (get-text-property 0 'consult--candidate selected) (plist-get view :scope-candidate)))
       (my--symbols-refresh-scope view)))))
 
-(defun my--symbols-tree-prefixes (candidates)
+(defun my--symbols-tree-prefixes (candidates &optional ordered)
   "Map CANDIDATES to connectors derived from their server-provided hierarchy."
   (let ((parents (make-hash-table :test #'equal))
         (siblings (make-hash-table :test #'equal))
         (prefixes (make-hash-table :test #'equal)) file stack)
-    (dolist (candidate (cl-stable-sort (copy-sequence candidates) #'my--symbols-source-less-p))
+    (dolist (candidate (or ordered (cl-stable-sort (copy-sequence candidates) #'my--symbols-source-less-p)))
       (let ((uri (my--symbols-file candidate))
             (depth (or (lsp-get (get-text-property 0 'consult--candidate candidate) :my-depth) 0)))
         (unless (equal file uri) (setq file uri stack nil))
@@ -395,6 +427,7 @@ An explicitly customized scope background still takes precedence."
            (if (plist-get view :tree-guides) "on" "off")
            (if (plist-get view :scope-highlight) "on" "off")
            (if (plist-get view :origin-marker) "on" "off"))
+   "Project indexing\nCached symbols are searchable during refresh. C-u before opening project symbols verifies all file hashes.\nM-x my/symbol-cache-status shows per-project sizes and the shared disk budget (my-symbol-index-byte-limit).\nM-x my/symbol-cache-clear clears this project from memory and disk. Prefix with C-u for all projects.\n\n"
    "Navigation\nBoth presentations initially select the symbol enclosing the original cursor.\nKind: selection at top with a sticky kind heading. The list wraps from the last kind to the first. Source: centered with context.\nTAB / Shift-TAB place the target group or root at the top.\nFiltering in Kind or Source keeps a surviving selection. Ranked results start at the best match.\n↑ / ↓           Select each result\nTAB / Shift-TAB Kind: cycle categories; Source: next / previous tree root\nRET             Jump to the selected symbol\nC-g             Cancel\n\nPresentation\nC-c C-s         Toggle Kind / Source\nC-c C-l         Toggle Full / Compact columns\nC-c C-t         Toggle Source tree guides for unfiltered results\nC-c C-r         Toggle the preview scope highlight\nC-c C-o         Toggle the original-position marker\nC-c C-d         Toggle full details for the selected result\nC-c C-w         Toggle collection errors\nC-c C-h         Toggle this help panel\nC-M-v / C-M-S-v Scroll the panel down / up\n\nColumns\nFull: Glyph | Symbol | Parent | Path | Type\nCompact: Glyph | Symbol | Path (subject to configured visibility).\nThe folder marker means the project root; — means no parent.\n• in the gutter marks the symbol enclosing the original cursor position; it stays there as you browse.\nEllipses and hidden columns change display only. Full names, paths and annotations remain searchable.\n\nConfiguration (M-x customize-variable)\nmy-symbols-column-widths: maximum widths, independently per column\nmy-symbols-visible-columns: columns enabled in Full layout\nmy-symbols-default-layout: full (default) or compact\nmy-symbols-tree-guides: default Source guides\nmy-symbols-scope-highlight: default scope highlighting\nmy-symbols-scope-face: M-x customize-face (optional scope background override)\nmy-symbols-origin-marker: default original-position marker\nmy-symbols-origin-marker-face: M-x customize-face\n\nScope preview\nThe cursor-line background marks the full range supplied by the server; the destination row uses the visual selection color.\nThe stale cursor-line highlight is hidden during preview and restored on exit.\nJump flashes are suppressed; the cursor lands at the exact LSP symbol start.\nNo scope is inferred from a name-only location. It clears when previewing stops.\n\nSearch\nC-c C-f toggles Normal (Orderless) / Fuzzy (Fussy). See the matching guide below.\nFuzzy queries show flat ranked results. Clearing the query restores Kind/Source.\nTAB / Shift-TAB select the next / previous result in a flat ranked list.\n\nKind filters\n"
    (if consult-narrow-key
        (format "%s ? opens this help. %s (All kinds) clears the kind filter.\n"
@@ -537,27 +570,30 @@ An explicitly customized scope background still takes precedence."
   "Return CANDIDATE's URI, used for stable file ordering and grouping."
   (or (lsp-get (lsp-get (get-text-property 0 'consult--candidate candidate) :location) :uri) ""))
 
-(defun my--symbols-source-less-p (a b)
-  "Compare A and B by file and source position, with parents before children."
-  (let* ((file-a (my--symbols-file a)) (file-b (my--symbols-file b))
-         (symbol-a (get-text-property 0 'consult--candidate a))
-         (symbol-b (get-text-property 0 'consult--candidate b))
-         (range-a (or (lsp-get symbol-a :my-range)
-                      (lsp-get (lsp-get symbol-a :location) :range)))
-         (range-b (or (lsp-get symbol-b :my-range)
-                      (lsp-get (lsp-get symbol-b :location) :range))))
-    (if (not (equal file-a file-b)) (string-lessp file-a file-b)
-      (let ((keys (lambda (range)
-                    (list (or (lsp-get (lsp-get range :start) :line) 0)
-                          (or (lsp-get (lsp-get range :start) :character) 0)
-                          (- (or (lsp-get (lsp-get range :end) :line) 0))
-                          (- (or (lsp-get (lsp-get range :end) :character) 0))))))
-        (cl-loop for x in (funcall keys range-a) for y in (funcall keys range-b)
-                 when (/= x y) return (< x y))))))
+(defun my--symbols-source-key (candidate)
+  "Cache the source ordering tuple on this immutable document candidate."
+  (or (get-text-property 0 'my--symbols-source-key candidate)
+      (let* ((symbol (get-text-property 0 'consult--candidate candidate))
+             (location (lsp-get symbol :location))
+             (range (or (lsp-get symbol :my-range) (lsp-get location :range)))
+             (start (lsp-get range :start)) (end (lsp-get range :end))
+             (key (list (or (lsp-get location :uri) "")
+                        (or (lsp-get start :line) 0) (or (lsp-get start :character) 0)
+                        (- (or (lsp-get end :line) 0)) (- (or (lsp-get end :character) 0)))))
+        (put-text-property 0 1 'my--symbols-source-key key candidate)
+        key)))
 
-(defun my--symbols-ranks (candidates order)
+(defun my--symbols-source-less-p (a b)
+  "Compare A and B by file and source position, placing parents before children."
+  (let ((ka (my--symbols-source-key a)) (kb (my--symbols-source-key b)))
+    (if (equal (car ka) (car kb))
+        (cl-loop for x in (cdr ka) for y in (cdr kb) when (/= x y) return (< x y))
+      (string-lessp (car ka) (car kb)))))
+
+(defun my--symbols-ranks (candidates order &optional ordered)
   "Precompute stable CANDIDATES ranks for ORDER."
-  (let ((sorted (cl-stable-sort (copy-sequence candidates) #'my--symbols-source-less-p))
+  (let ((sorted (if ordered (copy-sequence ordered)
+                  (cl-stable-sort (copy-sequence candidates) #'my--symbols-source-less-p)))
         (ranks (make-hash-table :test #'equal)) (index 0))
     (when (eq order 'kind)
       (setq sorted
@@ -582,13 +618,13 @@ An explicitly customized scope background still takes precedence."
       (cl-stable-sort (copy-sequence candidates)
                       (lambda (a b) (< (gethash a ranks 0) (gethash b ranks 0)))))))
 
-(defun my--symbols-roots (candidates)
+(defun my--symbols-roots (candidates &optional ordered)
   "Map all CANDIDATES to their source-tree roots, before query filtering.
 Flat server responses treat each symbol as a root. File boundaries always
 start a new root; names alone cannot identify roots across files."
   (let ((roots (make-hash-table :test #'equal)) file root)
-    (dolist (candidate (cl-stable-sort (copy-sequence candidates)
-                                     #'my--symbols-source-less-p) roots)
+    (dolist (candidate (or ordered (cl-stable-sort (copy-sequence candidates)
+                                                  #'my--symbols-source-less-p)) roots)
       (let ((uri (my--symbols-file candidate))
             (symbol (get-text-property 0 'consult--candidate candidate)))
         (when (or (not (equal file uri))
@@ -719,6 +755,11 @@ When a root is filtered out, visit its first visible descendant instead."
                            (propertize (format "[Files: %d] " (length files)) 'face 'minibuffer-prompt))
                          (when-let ((parents (plist-get view :parent-filter)))
                            (propertize (format "[Parents: %d] " (length parents)) 'face 'minibuffer-prompt))
+                         (when (plist-get view :refreshing)
+                           (propertize "[Refreshing] " 'face 'shadow))
+                         (when (and (plist-get view :index) (not (plist-get view :refreshing))
+                                    (not (plist-get view :candidates)) (not (plist-get view :failures)))
+                           (propertize "[No project symbols] " 'face 'shadow))
                          (when (plist-get view :failures)
                            (propertize (format "[Incomplete: %d] " (length (plist-get view :failures)))
                                        'face 'warning))))))
@@ -1014,7 +1055,18 @@ Cache by input and cursor position; group callbacks reuse the same counts."
                 (plist-get view :match-count) (length matches))
           (my--project-symbols-count-menu view))))))
 
-(defun my--project-symbols-interface (candidates &optional scope)
+(defun my--symbols-index-snapshot (index)
+  "Reuse immutable presentation data until a document changes."
+  (or (my--index-snapshot index)
+      (let* ((rows (my--symbols-disambiguate (my--index-candidates index)))
+             (ordered (cl-stable-sort (copy-sequence rows) #'my--symbols-source-less-p)))
+        (setf (my--index-snapshot index)
+              (list :candidates rows :kind-ranks (my--symbols-ranks rows 'kind ordered)
+                    :source-ranks (my--symbols-ranks rows 'source ordered)
+                    :roots (my--symbols-roots rows ordered)
+                    :tree-prefixes (my--symbols-tree-prefixes rows ordered))))))
+
+(defun my--project-symbols-interface (candidates &optional scope snapshot)
   "Build groups, filters and bindings for CANDIDATES in buffer/project SCOPE."
   (let* ((narrow (my--project-symbols-narrow))
          (totals (my--project-symbols-count-kinds candidates))
@@ -1022,10 +1074,10 @@ Cache by input and cursor position; group callbacks reuse the same counts."
          (map (my--project-symbols-keymap))
          (view (list :scope (or scope 'project)
                      :order (my--symbols-initial-order (or scope 'project))
-                     :kind-ranks (my--symbols-ranks candidates 'kind)
-                     :source-ranks (my--symbols-ranks candidates 'source)
-                     :roots (my--symbols-roots candidates)
-                     :tree-prefixes (my--symbols-tree-prefixes candidates)
+                     :kind-ranks (or (plist-get snapshot :kind-ranks) (my--symbols-ranks candidates 'kind))
+                     :source-ranks (or (plist-get snapshot :source-ranks) (my--symbols-ranks candidates 'source))
+                     :roots (or (plist-get snapshot :roots) (my--symbols-roots candidates))
+                     :tree-prefixes (or (plist-get snapshot :tree-prefixes) (my--symbols-tree-prefixes candidates))
                      :tree-guides my-symbols-tree-guides :header t :failures nil
                      :scope-highlight my-symbols-scope-highlight
                      :origin-marker my-symbols-origin-marker
@@ -1156,60 +1208,56 @@ recognized even when an environment uses a different directory name."
      (lsp-session-folder->servers (lsp-session)))
     workspaces))
 
-(defun my--project-symbols-file-context (file workspaces)
+(cl-defun my--project-symbols-file-context (file workspaces &optional (existing (find-buffer-visiting file)))
   "Return (WORKSPACE LANGUAGE BUFFER) for FILE, or nil if unsupported.
 Use filename mode associations without running mode hooks or local variables."
-  (let ((existing (find-buffer-visiting file)))
-    (with-temp-buffer
-      (setq buffer-file-name file
-            default-directory (file-name-directory file))
-      (setq major-mode
-            (if existing (buffer-local-value 'major-mode existing)
-              (let* ((case-fold-search auto-mode-case-fold)
-                     (mode (assoc-default file auto-mode-alist #'string-match)))
-                (if (consp mode) (car mode) mode))))
-      (when (and major-mode (symbolp major-mode))
-        (let ((lsp-enabled-clients nil)
-              (lsp-warn-no-matched-clients nil))
-          (when-let
-              ((workspace
-                (cl-find-if
-                 (lambda (workspace)
-                   (lsp--supports-buffer? (lsp--workspace-client workspace)))
-                 workspaces)))
-            (list workspace (lsp-buffer-language) existing)))))))
+  (with-temp-buffer
+    (setq buffer-file-name file
+          default-directory (file-name-directory file))
+    (setq major-mode
+          (if existing (buffer-local-value 'major-mode existing)
+            (let* ((case-fold-search auto-mode-case-fold)
+                   (mode (assoc-default file auto-mode-alist #'string-match)))
+              (if (consp mode) (car mode) mode))))
+    (when (and major-mode (symbolp major-mode))
+      (let ((lsp-enabled-clients nil)
+            (lsp-warn-no-matched-clients nil))
+        (when-let
+            ((workspace
+              (cl-find-if
+               (lambda (workspace)
+                 (lsp--supports-buffer? (lsp--workspace-client workspace)))
+               workspaces)))
+          (list workspace (lsp-buffer-language) existing))))))
+
+(defun my--project-symbols-open-document (file workspace language existing)
+  "Synchronize EXISTING or send a temporary didOpen. Return t for a temporary open."
+  (let ((lsp--cur-workspace workspace))
+    (if (and existing (memq workspace (buffer-local-value 'lsp--buffer-workspaces existing)))
+        (progn (with-current-buffer existing (lsp--flush-delayed-changes)) nil)
+      (let ((text (if existing
+                      (with-current-buffer existing
+                        (save-restriction (widen) (buffer-substring-no-properties (point-min) (point-max))))
+                    (with-temp-buffer (insert-file-contents file) (buffer-string)))))
+        (lsp-notify "textDocument/didOpen"
+                    (list :textDocument (list :uri (lsp--path-to-uri file) :languageId language
+                                              :version 0 :text text)))
+        t))))
+
+(defun my--project-symbols-close-document (file workspace)
+  "Close a temporary document unless a visiting buffer has since taken it over."
+  (let ((lsp--cur-workspace workspace) (buffer (find-buffer-visiting file)) (inhibit-quit t))
+    (unless (and buffer (memq workspace (buffer-local-value 'lsp--buffer-workspaces buffer)))
+      (ignore-errors
+        (lsp-notify "textDocument/didClose" (list :textDocument (list :uri (lsp--path-to-uri file))))))))
 
 (defun my--project-symbols-document (file workspace language existing)
-  "Ask WORKSPACE for FILE's symbols, using LANGUAGE and EXISTING buffer text.
-Temporarily open unopened documents to LSP only, then close them even on quit
-or error. Existing LSP documents stay open and unsaved edits are respected."
-  (let* ((lsp--cur-workspace workspace)
-         (uri (lsp--path-to-uri file))
-         (opened (and existing
-                      (memq workspace (buffer-local-value 'lsp--buffer-workspaces existing))))
-         temporary-open)
+  "Request symbols for FILE from WORKSPACE, respecting EXISTING buffer text."
+  (let ((lsp--cur-workspace workspace)
+        (temporary (my--project-symbols-open-document file workspace language existing)))
     (unwind-protect
-        (progn
-          (if opened
-              (with-current-buffer existing (lsp--flush-delayed-changes))
-            (let ((text (if existing
-                            (with-current-buffer existing
-                              (save-restriction
-                                (widen)
-                                (buffer-substring-no-properties (point-min) (point-max))))
-                          (with-temp-buffer
-                            (insert-file-contents file)
-                            (buffer-string)))))
-              (lsp-notify "textDocument/didOpen"
-                          (list :textDocument
-                                (list :uri uri :languageId language :version 0 :text text)))
-              (setq temporary-open t)))
-          (lsp-request "textDocument/documentSymbol"
-                       (list :textDocument (list :uri uri))))
-      (when temporary-open
-        (let ((inhibit-quit t))
-          (ignore-errors
-            (lsp-notify "textDocument/didClose" (list :textDocument (list :uri uri)))))))))
+        (lsp-request "textDocument/documentSymbol" (list :textDocument (list :uri (lsp--path-to-uri file))))
+      (when temporary (my--project-symbols-close-document file workspace)))))
 
 (defun my--project-symbols-object (&rest properties)
   "Make an LSP object from PROPERTIES in the configured JSON representation."
@@ -1644,20 +1692,61 @@ When STATUS is a plist with :failures, retain per-file errors there for the UI."
     (message "Collected %d symbols from %d project files" (length candidates) queried)
     (nreverse candidates)))
 
-(defun my--symbols-read (candidates prompt &optional scope root failures)
+(defun my--symbols-index-update (view index)
+  "Publish a batch of changed documents without replacing the minibuffer."
+  (let* ((selected (my--symbols-selected))
+         (snapshot (my--symbols-index-snapshot index))
+         (rows (plist-get snapshot :candidates)))
+    (setf (plist-get view :refreshing) (or (my--index-scanning index) (my--index-flight index)
+                                           (my--index-queue index))
+          (plist-get view :failures) (hash-table-values (my--index-errors index)))
+    (if (eq rows (plist-get view :candidates))
+        (my--symbols-show-order view)
+      (let ((encodings (plist-get view :scope-encodings)))
+        (clrhash encodings)
+        (dolist (row rows)
+          (puthash (get-text-property 0 'consult--candidate row)
+                   (get-text-property 0 'my--symbols-position-encoding row) encodings)))
+      (dolist (key '(:candidates :kind-ranks :source-ranks :roots :tree-prefixes))
+        (setf (plist-get view key) (plist-get snapshot key)))
+      (let* ((pending (plist-get view :pending-origin))
+             (origin (and pending (apply #'my--symbols-enclosing rows pending))))
+        (my--symbols-apply-filters view)
+        (when origin
+          (setf (plist-get view :pending-origin) nil
+                (plist-get view :origin-candidate) origin)
+          (when (and (null selected) (not consult--narrow)
+                     (equal (minibuffer-contents-no-properties) ""))
+            (setf (plist-get view :opening-selection) origin
+                  (plist-get view :navigated) nil)
+            (my--symbols-select-initial origin))))
+      (when selected
+        (let* ((exact (cl-position selected vertico--candidates :test #'equal))
+               (symbol (get-text-property 0 'consult--candidate selected))
+               (moved (unless exact
+                        (cl-loop for row in vertico--candidates for i from 0
+                                 when (my--symbols-same-definition-p
+                                       symbol (get-text-property 0 'consult--candidate row))
+                                 collect i)))
+               (position (or exact (and (= (length moved) 1) (car moved)))))
+          (when position (vertico--goto position) (vertico--exhibit)))))))
+
+(defun my--symbols-read (candidates prompt &optional scope root failures index)
   "Browse CANDIDATES with PROMPT and buffer/project SCOPE's presentation.
 ROOT overrides the project base used for displayed relative paths."
-  (let* ((candidates (my--symbols-disambiguate candidates))
-         (interface (my--project-symbols-interface candidates scope))
+  (let* ((snapshot (and index (my--symbols-index-snapshot index)))
+         (candidates (if snapshot (plist-get snapshot :candidates) (my--symbols-disambiguate candidates)))
+         (interface (my--project-symbols-interface candidates scope snapshot))
          (view (plist-get interface :view))
-         (origin (when buffer-file-name
-                    (let ((position (lsp--cur-position)))
-                      (my--symbols-enclosing
-                       candidates (lsp--path-to-uri buffer-file-name)
-                       (my--project-symbols-object
-                        :line (plist-get position :line)
-                        :character (plist-get position :character))))))
-         (initial origin))
+         (origin-location
+          (when buffer-file-name
+            (let ((position (lsp--cur-position)))
+              (list (lsp--path-to-uri buffer-file-name)
+                    (my--project-symbols-object :line (plist-get position :line)
+                                                :character (plist-get position :character))))))
+         (origin (and origin-location (apply #'my--symbols-enclosing candidates origin-location)))
+         (initial origin)
+         refresh-timer dirty)
     (setf (plist-get view :root)
           (or root (and (featurep 'projectile) (ignore-errors (projectile-project-root)))
               (and (bound-and-true-p lsp--buffer-workspaces)
@@ -1667,6 +1756,18 @@ ROOT overrides the project base used for displayed relative paths."
           (plist-get view :failures) failures
           (plist-get view :origin-candidate) origin
           (plist-get view :source-opened) (eq (plist-get view :order) 'source))
+    (when index
+      (nconc view (list :refreshing (or (my--index-scanning index) (my--index-queue index) (my--index-flight index))
+                        :index index :pending-origin (unless origin origin-location)))
+      (setf (my--index-listener index) (lambda () (setq dirty t)))
+      (setq refresh-timer
+            (run-at-time
+             0.15 0.15
+             (lambda ()
+               (when-let ((window (active-minibuffer-window)))
+                 (when (and dirty (eq (window-buffer window) (plist-get view :picker-buffer)))
+                   (setq dirty nil)
+                   (with-selected-window window (my--symbols-index-update view index))))))))
     (unwind-protect
         (minibuffer-with-setup-hook (plist-get interface :setup)
           ;; Wait for Vertico's setup before selecting a candidate. The query
@@ -1680,7 +1781,9 @@ ROOT overrides the project base used for displayed relative paths."
                                  (and (>= vertico--index 0)
                                       (nth vertico--index vertico--candidates))))))
             (consult--read
-             candidates :prompt prompt :require-match t
+             (if index (lambda (action) (when (null action) (plist-get view :candidates)))
+               candidates)
+             :async-wrap nil :prompt prompt :require-match t
              :keymap (plist-get interface :keymap)
              :category 'consult-lsp-symbols :sort nil
              :annotate (my--project-symbols-annotate-builder view)
@@ -1688,6 +1791,8 @@ ROOT overrides the project base used for displayed relative paths."
              :group (plist-get interface :group)
              :narrow (plist-get interface :narrow)
              :state (my--symbols-state view))))
+      (when refresh-timer (cancel-timer refresh-timer))
+      (when index (my--index-unwatch index))
       (my--symbols-clear-scope view t)
       (my--symbols-restore-cursor-lines view)
       (my--symbols-close-panel view)
@@ -1721,22 +1826,30 @@ Projectile project is required. Local variables follow the server's settings."
                    lsp--buffer-workspaces)))
     (unless workspace
       (user-error "Start a language server with document-symbol support in this buffer first"))
-    (let* ((response (my--project-symbols-document
-                      buffer-file-name workspace (lsp-buffer-language) (current-buffer)))
-           (symbols (my--project-symbols-normalize response (lsp--path-to-uri buffer-file-name)))
-           (candidates (mapcar (apply-partially #'my--project-symbols-candidate workspace) symbols)))
+    (my--index-track-buffer)
+    (let* ((root (or (and (featurep 'projectile) (ignore-errors (projectile-project-root)))
+                     (lsp--workspace-root workspace) default-directory))
+           (candidates
+            (if (file-remote-p buffer-file-name)
+                (mapcar (apply-partially #'my--project-symbols-candidate workspace)
+                        (my--project-symbols-normalize
+                         (my--project-symbols-document buffer-file-name workspace (lsp-buffer-language) (current-buffer))
+                         (lsp--path-to-uri buffer-file-name)))
+              (my--index-buffer (my--index-get (file-name-as-directory root))
+                                buffer-file-name workspace (lsp-buffer-language) (current-buffer)))))
       (unless candidates
         (user-error "No symbols returned for the current buffer"))
       (my--symbols-read candidates (format "Buffer symbols (%s): " (buffer-name)) 'buffer))))
 
-(defun my/project-symbols ()
+(defun my/project-symbols (&optional verify)
   "Browse project definitions from active language servers.
 No search query is required. Ask LSP for document symbols in each supported
 project source file; never parse source definitions in this configuration.
 Project/environment exclusions apply; servers for other languages must already
 be active in the project. Ruff is not used, since it has no document symbols.
 
-Collection happens on each invocation and can be interrupted with C-g. Unsaved
+With prefix VERIFY, check saved file contents even when metadata matches.
+Local projects reuse an incremental index and refresh changed files asynchronously. Unsaved
 edits in existing buffers are included. Unopened files are opened to LSP only
 for the request, without visiting buffers or evaluating directory-local code.
 After collection, ordinary Orderless filtering (including a trailing ~) works
@@ -1747,7 +1860,7 @@ With the configured Consult narrowing prefix (normally <), a filters
 Functions + Methods, ? shows filter help, and doubling the prefix clears the
 filter. Group headings and the narrowing menu show totals, or matching/total
 counts while searching. RET jumps to a definition; Consult previews are available."
-  (interactive)
+  (interactive "P")
   (require 'projectile)
   (require 'consult-lsp)
   (consult--forbid-minibuffer)
@@ -1756,7 +1869,20 @@ counts while searching. RET jumps to a definition; Consult previews are availabl
          (workspaces (my--project-symbols-workspaces root)))
     (unless workspaces
       (user-error "Start LSP in a project source buffer first"))
-    (let* ((status (list :failures nil))
-           (candidates (my--project-symbols-collect root workspaces status)))
-      (unless candidates (user-error "No project symbols returned by the active servers"))
-      (my--symbols-read candidates "Project symbols: " 'project root (plist-get status :failures)))))
+    (if (file-remote-p root)
+        (let* ((status (list :failures nil))
+               (candidates (my--project-symbols-collect root workspaces status)))
+          (unless candidates (user-error "No project symbols returned by the active servers"))
+          (my--symbols-read candidates "Project symbols: " 'project root (plist-get status :failures)))
+      (let ((index (my--index-get root)))
+        (unless (and (cl-subsetp workspaces (my--index-workspaces index) :test #'eq)
+                     (cl-subsetp (my--index-workspaces index) workspaces :test #'eq))
+          (setf (my--index-loaded index) nil))
+        (setf (my--index-workspaces index) workspaces
+              (my--index-listener index) #'ignore)
+        (unwind-protect
+            (progn
+              (my--index-scan index verify t buffer-file-name)
+              (my--symbols-read nil "Project symbols: " 'project root
+                                (hash-table-values (my--index-errors index)) index))
+          (my--index-unwatch index))))))
